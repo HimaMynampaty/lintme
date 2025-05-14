@@ -1,0 +1,29 @@
+rules:
+  hate_speech_filter:
+    required: true
+    auto_fix: true
+    use_retext: true  # Enables retext-equality + retext-profanities + simplify
+    hate_words:
+      - blacklist
+      - whitelist
+      - master
+      - slave
+      - guys
+    suggestions:
+      blacklist: blocklist
+      whitelist: allowlist
+      master: main
+      slave: replica
+      guys: folks
+
+description: |
+  This rule detects potentially harmful, biased, or profane language using both Retext plugins and user-defined terms.  
+  It highlights flagged terms and suggests alternatives where possible.  
+  When `auto_fix: true`, flagged words are automatically replaced using provided suggestions or Retext recommendations.
+
+error: |
+  Possible issues:
+    - Offensive or biased terms detected (e.g., "master", "guys", etc.).
+    - Profanity or insensitive phrasing flagged by Retext.
+    - Auto-fix errors (e.g., failed replacement, missing suggestions).
+    - Invalid configuration (e.g., missing `hate_words` or `suggestions` mapping).

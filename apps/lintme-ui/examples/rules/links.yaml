@@ -1,0 +1,32 @@
+rules:
+  linkValidation:
+    formatting:
+      required: true    # Must follow correct Markdown syntax
+      valid_schemes:      # Allow only these URL schemes
+        - "https"
+      auto_fix: true
+    availability:
+      required: true    # Must check if links are reachable
+      check_external: 
+        required: true  # Validate external links
+        timeout: 5000     # Timeout in milliseconds for link requests
+        allowed_status_codes:  # Consider these response codes as valid
+          - 200
+          - 301
+          - 302
+      check_internal:
+        required: true  # Validate internal links
+
+description: |
+  This rule validates all Markdown links for correctness and availability. Specifically, it:
+    - Checks Markdown links for proper formatting, identifying malformed or empty links, and optionally auto-fixes them.
+    - Ensures URLs use allowed schemes (e.g., "https") as specified.
+    - Validates internal links against actual headings within the document.
+    - Checks external links by verifying their reachability and allowed HTTP response codes.
+
+error: |
+  Possible failure scenarios include:
+    - Malformed links (e.g., missing brackets or parentheses, empty links).
+    - URLs using disallowed schemes (e.g., "http" instead of "https").
+    - Internal links pointing to non-existent headings within the document.
+    - External links returning unexpected HTTP status codes, or failing due to request errors or timeouts.

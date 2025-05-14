@@ -1,0 +1,20 @@
+rules:
+  images:
+    alt_text:
+      required: true   # Throws a warning if alt_text is missing
+      level: warning   # Can be 'error' or 'warning'
+    llm_validation:
+      prompt: "Identify the images with missing alt text and fix the issue in fixed markdown in square brackets"
+      model: llama-3.3-70b-versatile
+      fix: true
+
+description: |
+  This rule verifies that all images in the markdown file have appropriate alternative (alt) text.
+  It parses the markdown AST, identifies all images, and checks if their alt text is neither empty nor whitespace-only.
+  Optionally, it can generate AI-based suggestions for missing alt text.
+
+error: |
+  Possible failure scenarios:
+    - Image has no alt text provided.
+    - Alt text contains only whitespace or is invalid.
+    - Issues in generating AI-based alt text suggestions (if enabled), such as communication errors with the AI backend or invalid responses.

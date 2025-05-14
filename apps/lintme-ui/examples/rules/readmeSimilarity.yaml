@@ -1,0 +1,34 @@
+rules:
+  readme_alignment:
+    required: true
+    similarity_method: damerau_levenshtein   # or cosine | embedding_cosine | sectional_embedding | euclidean
+    threshold: 80       # user-defined similarity % threshold
+    repo: tensorflow/tensorflow              # GitHub "owner/repo"
+    version_count: 2                         # compare with the last N README edits
+    # github_urls: # you can allow explicit urls; if both version_count and github_urls are present, urls win.
+    #   - https://raw.githubusercontent.com/tensorflow/tensorflow/v2.10.0/README.md
+    #   - https://raw.githubusercontent.com/tensorflow/tensorflow/v2.15.0/README.md
+
+description: |
+  This rule ensures that the current README content remains consistent with one or more previous versions.
+  It compares the current README against the historical versions provided via `github_urls` and reports
+  both whole-document and per-section similarity scores.
+
+  The `similarity_method` defines how this comparison is performed. Available options:
+
+    - cosine: Compares term frequency vectors using classic TF-IDF + cosine similarity.
+    - embedding_cosine: Uses sentence embeddings to measure meaning-level similarity via cosine distance.
+    - sectional_embedding: Compares each section independently using embeddings and aggregates their scores.
+    - euclidean: Measures absolute distance between document embeddings (sensitive to magnitude).
+    - damerau_levenshtein: Calculates raw character-level edit distance (insertions, deletions, substitutions, swaps).
+
+  If no method is specified, the linter defaults to `embedding_cosine`.
+
+  Use this rule to detect major changes, inconsistencies, or regressions in README documentation across versions.
+
+error: |
+  Possible failure scenarios include:
+    - README has drifted significantly from one or more historical versions.
+    - Required sections are missing, renamed, or heavily modified.
+    - The similarity score between versions falls below an acceptable threshold.
+    - Section-level similarity is low, even if the overall score is high.

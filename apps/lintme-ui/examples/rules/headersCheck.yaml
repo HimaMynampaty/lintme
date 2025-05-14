@@ -1,0 +1,24 @@
+rules:
+  headers:
+    auto_fix: true
+    heading_increment: true                     # MD001
+    first_heading_top_level: true               # MD002
+    heading_style:
+      style: atx  #atx or atx_closed
+      required: true                              # MD003
+    only_one_h1: true                           # MD025
+
+    formatting:
+      space_after_hash: true                    # MD018
+      multiple_spaces_after_hash: true          # MD021
+      no_trailing_hashes: true                  # MD019 + MD020
+      multiple_spaces_in_heading: true          # MD027
+      heading_punctuation:
+        allow: []                               # MD026
+
+    spacing:
+      heading_surround_blank_lines: true        # MD022
+      heading_start_of_line: true               # MD023
+
+    emphasis_as_heading: true                   # MD036
+    first_line_is_top_level_heading: true       # MD041

@@ -1,0 +1,33 @@
+rules:
+  inlineCommands:  
+    # markLanguageOfSnippet:
+    #   required:
+    #   level:
+    #   language:              
+    execution:
+      required: true    # Run the command, report errors if it fails
+      level: warning    # Can be 'error' or 'warning'
+      timeout: 5000     # Timeout in milliseconds
+      safe_mode: true   # If true, runs commands in a sandbox (restricted mode)  
+    llm_validation:   # Sub-key inside execution
+      required: true    # Ask LLM if the command is valid
+      model: "llama-3.3-70b-versatile"  # User can set "gemma2-9b-it", "whisper-large-v3", etc.  
+      prompt: "Validate this command and suggest corrections if necessary."
+    formatting:
+      required: true
+      check_spaces: true  # No extra spaces
+
+description: |
+  This rule validates inline commands embedded within Markdown content. Specifically, it:
+    - Extracts and optionally executes inline commands, reporting execution errors or timeouts.
+    - Ensures commands conform to safe execution practices (sandboxed if enabled).
+    - Optionally uses an AI model to validate commands and provide correction suggestions.
+    - Checks commands for formatting issues, such as unnecessary spaces or empty command blocks.
+
+error: |
+  Possible failure scenarios include:
+    - Inline commands failing execution due to runtime errors, invalid commands, or timeouts.
+    - Command execution blocked due to sandboxed safe-mode restrictions.
+    - Invalid or unsafe commands identified by the AI validation process.
+    - Commands containing formatting issues like leading/trailing whitespace or empty commands.
+    - Issues communicating with the AI backend or command validation service.

@@ -1,0 +1,22 @@
+rules:
+  timelinessCheck:
+    end_of_support: # Checks if the README contains information on when the tool will stop being supported.
+      required: true
+    dependencies:
+     # This prompt instructs the LLM to analyze the README and list all prerequisite tools with versions.
+      llm_validation:
+        prompt: "Extract all prerequisite tools, their versions mentioned in the README and compare it with latest versions of the tools"
+        model: llama-3.3-70b-versatile
+        fix: false
+
+        
+description: |
+  This rule validates that Markdown documentation includes timely and accurate information on tool support status and dependency versions. Specifically, it:
+    - Checks if the README explicitly mentions the end-of-support (EOL) information.
+    - Uses AI-based validation to extract prerequisite tools and their specified versions from the README, comparing them with the latest available versions to identify outdated or inaccurate version details.
+
+error: |
+  Possible failure scenarios include:
+    - Missing or unclear end-of-support (EOL) information in the README.
+    - Dependencies or prerequisite tools listed in the README are outdated or incorrect when compared to their latest available versions.
+    - Issues with AI-based dependency validation, such as communication failures or invalid responses from the AI model.

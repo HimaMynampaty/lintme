@@ -1,0 +1,39 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "private": true,
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@xenova/transformers": "^2.17.2",
+    "cors": "^2.8.5",
+    "diff": "^8.0.1",
+    "diff-dom": "^5.1.4",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "groq-sdk": "^0.21.0",
+    "js-yaml": "^4.1.0",
+    "jsdom": "^26.1.0",
+    "markdown-it": "^14.1.0",
+    "marked": "^15.0.8",
+    "natural": "^8.0.1",
+    "node-fetch": "^3.3.2",
+    "nspell": "^2.1.5",
+    "pixelmatch": "^7.1.0",
+    "playwright": "^1.52.0",
+    "puppeteer": "^24.8.2",
+    "retext": "^9.0.0",
+    "retext-english": "^5.0.0",
+    "retext-equality": "^7.1.0",
+    "retext-indefinite-article": "^5.0.0",
+    "retext-profanities": "^8.0.0",
+    "retext-repeated-words": "^5.0.0",
+    "retext-simplify": "^8.0.0",
+    "retext-spell": "^6.1.0",
+    "talisman": "^1.1.4",
+    "unified": "^11.0.5"
+  }
+}

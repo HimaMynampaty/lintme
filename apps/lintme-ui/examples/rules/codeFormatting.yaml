@@ -1,0 +1,27 @@
+rules:
+  codeFormatting:
+    required: true 
+    language:
+      required: true             # Each fenced code block must specify a language
+      allowed: ["javascript", "python"]    
+    formatting:      
+      required: true             # Checks for spacing and indentation issues inside code blocks
+      auto_fix: false             # Autofix markdown syntax issues
+      valid_formats: ["fenced", "indented"] # "fenced" or/and "indented"
+      
+description: |
+  This rule verifies Markdown code block correctness, enforcing proper syntax and formatting standards. Specifically, it:
+    - Ensures all fenced code blocks specify an allowed programming language.
+    - Validates that only approved code block formats ("fenced" and/or "indented") are used.
+    - Detects malformed code fences (incorrect backtick usage or incomplete fences).
+    - Checks indentation consistency within code blocks (identifies irregular spacing, inconsistent indentation, and mixing tabs with spaces).
+    - Provides optional auto-fixing for detected formatting issues, such as malformed fences.
+
+error: |
+  Possible failure scenarios include:
+    - Missing or invalid language tags in fenced code blocks.
+    - Usage of disallowed code block formats ("fenced" or "indented") per defined rules.
+    - Malformed code fences (e.g., incorrect number of backticks).
+    - Indentation issues within code blocks, including inconsistent spacing or mixing tabs with spaces.
+    - Failures in automatic fixing (if enabled), potentially due to complex formatting issues.
+

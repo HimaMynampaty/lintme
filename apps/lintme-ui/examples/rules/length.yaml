@@ -1,0 +1,17 @@
+rules:
+  length:
+    required: true
+    enforceLength:
+      paragraph: 80
+      heading: 10
+
+description: |
+  This rule enforces maximum content length for specific Markdown elements.  
+  It checks if paragraphs or headings exceed configured character limits (e.g., paragraph: 80, heading: 10).  
+  Violations trigger diagnostics with suggestions to break up or shorten the content.
+
+error: |
+  Possible issues:
+    - Paragraph or heading exceeds the allowed length limit.
+    - Invalid `enforceLength` config (e.g., non-numeric values).
+    - Node types not found or unsupported (e.g., misspelled type names).

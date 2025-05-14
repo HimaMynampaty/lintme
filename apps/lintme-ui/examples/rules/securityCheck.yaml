@@ -1,0 +1,25 @@
+rules:
+  securityCheck:
+    sensitive_data:
+      required: true     # Must check for secrets
+      regex_patterns:    # Common patterns for secrets detection
+        - "AKIA[0-9A-Z]{16}"  # AWS Access Key
+        - "sk_live_[0-9a-zA-Z]{24,64}"  # Stripe Secret Key
+        - "(gh[pors]_[0-9a-zA-Z]{36})|(github_pat_[0-9a-zA-Z_]{22,255})"  # GitHub Personal Access Token
+        - "-----BEGIN (RSA|DSA|EC|OPENSSH) PRIVATE KEY-----"  # SSH Keys
+        - "eyJ[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+"  # JWT Token
+      llm_validation:
+        required: false
+        model: gemma2-9b-it # User can set "gemma2-9b-it", "whisper-large-v3", etc.  
+        prompt: "Check for any sensitive information such as API keys, passwords, tokens, or secrets that may not match predefined patterns but still pose a security risk."
+
+description: |
+  This rule scans Markdown content for potential sensitive information or secrets. Specifically, it:
+    - Detects sensitive credentials such as API keys, tokens, private keys, and passwords based on predefined regex patterns.
+    - Utilizes an AI-based validation step to identify sensitive data that may not match known patterns but still poses security risks.
+
+error: |
+  Possible failure scenarios include:
+    - Detection of sensitive data matching known secret patterns (e.g., AWS keys, Stripe keys, GitHub tokens, SSH private keys, JWT tokens).
+    - Sensitive information identified through AI validation that does not match predefined patterns, including API keys, passwords, tokens, or other confidential details.
+    - Issues with AI backend validation, such as communication errors or invalid responses.

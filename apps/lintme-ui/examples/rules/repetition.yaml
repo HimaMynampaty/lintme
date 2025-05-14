@@ -1,0 +1,33 @@
+rules:
+  repetition:
+    required: true
+    count: true  # Show total document usage count for each word/phrase
+    detect_consecutive: true  # "very very"
+    detect_duplicate_sentences: true  # same sentence in multiple locations
+    count_occurances: # count occurances of words from words and word_file
+      paragraph: 2
+      page: 5
+      code: 1
+      inlineCode: 1
+      heading: 1
+    level: warning
+    words:
+      - "very"
+      - "just"
+      - "actually"
+      - "Sample"
+      - "npm install"
+      - "node index.js"
+    word_file: "C:/Users/Hima/Documents/Utah-edu-sem2/papers/LintMe/lintme/examples/textInputs/repetitionWordsList.txt"        # Match words from list and file if both are given in rule
+
+description: |
+  This rule detects redundant repetition in the Markdown, including overused words/phrases, repeated sentences, and consecutive duplicates (e.g., "very very").  
+  It counts total usage (`count: true`), flags frequency by type (`count_occurances`), and uses both inline and file-based word lists.  
+  Violations are reported by paragraph, page, heading, or code block, with configurable thresholds.
+
+error: |
+  Possible issues:
+    - Target word/phrase exceeds allowed frequency in a section or entire document.
+    - Consecutive word repetition found (e.g., "just just").
+    - Identical sentence appears in multiple locations.
+    - Invalid word list path or malformed `count_occurances` config.

@@ -1,0 +1,19 @@
+rules:
+  emojis:
+    required: true
+    max_per_line: 3           # Max 3 emojis per line
+    max_per_paragraph: 5     # Max 5 emojis per paragraph
+    max_per_document: 50      # Max 50 emojis in the entire document
+    level: warning
+
+description: |
+  This rule validates emoji usage in Markdown content, ensuring emoji density remains reasonable and readable. Specifically, it:
+    - Limits the maximum number of emojis allowed per line.
+    - Controls emoji usage within each paragraph, restricting their total number per paragraph.
+    - Restricts the total number of emojis permitted within the entire document.
+
+error: |
+  Possible failure scenarios include:
+    - Exceeding the maximum allowed emojis per individual line.
+    - Exceeding the maximum allowed emojis within a single paragraph.
+    - Surpassing the total emoji limit defined for the entire document.

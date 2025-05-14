@@ -1,0 +1,13 @@
+rules:
+  require_newline_at_eof:
+    required: true       # This rule enforces that the file must end with a single newline character.
+    level: warning       # Options: "warning" or "error"
+
+description: |
+  This rule ensures that Markdown files end with exactly one newline character. Specifically, it:
+    - Validates that the file ends properly, promoting compatibility across various editors and tools.
+    - Improves consistency in file formatting and readability.
+
+error: |
+  Possible failure scenarios include:
+    - File does not end with a newline character.

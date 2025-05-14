@@ -1,0 +1,18 @@
+rules:
+  back_to_top:
+    required: true
+    auto_fix: true
+    mode: after_each_section             # bottom or: after_each_section
+    link_texts: ["Back to Top", "Top", "Return"]
+
+description: |
+  This rule checks for a "Back to Top" navigation link to improve readability in longer documents.  
+  It looks for a link with configured text (e.g., "Back to Top", "Top", "Return") that points to the top heading.  
+  If missing and `auto_fix: true`, a link is inserted after each section or at the bottom, based on `mode`.
+
+error: |
+  Possible issues:
+    - Missing "Back to Top" link in the document.
+    - No headings detected to generate a valid anchor.
+    - Auto-fix failure (e.g., invalid config, write errors).
+    - Incorrect or unrecognized `mode` value.

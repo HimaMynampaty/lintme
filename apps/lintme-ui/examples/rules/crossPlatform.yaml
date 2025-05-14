@@ -1,0 +1,21 @@
+rules:
+  cross_platform:
+    required: true      # Whether to enforce this rule
+    level: error        # Lint severity: error, warning, or info
+    compare:
+      # 'first' and 'second' specify which tools to compare.
+      # Valid options:
+      #   - marked        # Node.js markdown engine
+      #   - markdown-it   # Node.js markdown engine
+      #   - puppeteer     # Render in a browser using Puppeteer
+      #   - playwright    # Render in a browser using Playwright
+      # Example: Compare output of 'marked' with that rendered in a real browser via Puppeteer
+      first: markdown-it
+      second: puppeteer
+      image:
+        # turn image diff on/off without touching code
+        enabled: true
+        viewport:          # ⤵ guarantee identical size for both renderers
+          width: 800
+          height: 600
+        threshold: 0.10    # pixelmatch ≤ 0.10 is usually visually lossless

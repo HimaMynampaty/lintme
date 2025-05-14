@@ -1,0 +1,24 @@
+rules:
+  dateValidation:
+    required: true                 # Enable or disable the date validation rule
+    level: warning                 # Options: "warning" or "error"
+    formats:                       # List of acceptable date formats
+      - "DD/MM/YYYY"
+      - "MM/DD/YYYY"
+      - "YYYY-MM-DD"
+      - "YYYY/MM/DD"
+      - "MM-DD-YYYY"      
+    day_check: true                # Enable day-to-date validation
+
+description: |
+  This rule checks dates mentioned in the Markdown content to ensure they conform to specified formats and represent valid calendar dates. Specifically, it:
+    - Validates that dates match one of the allowed formats exactly (e.g., "DD/MM/YYYY", "MM-DD-YYYY").
+    - Confirms the existence of the date (rejects impossible dates like "31/02/2025").
+    - Optionally verifies that the specified day of the week correctly corresponds to the given date.
+
+error: |
+  Possible failure scenarios include:
+    - Date strings not matching any specified acceptable format.
+    - Date strings containing invalid separators (e.g., using "-" instead of "/" when only "/" is allowed).
+    - Impossible or logically incorrect dates (e.g., February 30th or invalid leap year dates).
+    - Incorrect day names provided alongside valid dates (e.g., "Monday" provided when the actual date is a "Tuesday").

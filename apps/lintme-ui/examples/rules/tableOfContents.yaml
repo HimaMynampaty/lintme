@@ -1,0 +1,15 @@
+rules:
+  table_of_contents:
+    required: true
+    auto_fix: true
+
+description: |
+  This rule ensures the Markdown file includes a "## Table of Contents" followed by a list linking to level 2–4 headings.  
+  If missing, it reports a warning (or specified level) at the first heading or line 4, whichever is lower.  
+  When `auto_fix: true`, a TOC is generated and inserted after the first heading.
+
+error: |
+  Possible issues:
+    - Missing or malformed TOC (e.g., no list after the heading).
+    - Auto-fix errors (e.g., AST parse failure, insertion issues).
+    - Misconfigured rule (e.g., missing `level` or invalid config).
