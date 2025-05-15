@@ -6,19 +6,15 @@
   const params = new URLSearchParams(window.location.search);
   let rulesYaml = decodeURIComponent(params.get("rule") || "");
 
-  // The content that the user sees/edits in the Markdown editor
   let markdownText = "";
-
-  // We'll store the original text (prior to fixes) when we run the linter,
-  // so the diff can compare original vs. fixed
   let originalText = "";
 
   let lintResults = "";
   let fixedMarkdown = "";
   let diagnostics      = [];  
-  let highlightedMarkdown = ""; // you can remove this entirely if not needed
+  let highlightedMarkdown = ""; 
 
-  let showDiff = false;  // toggles side-by-side diff editor
+  let showDiff = false;
 
   let rulesFiles = [];
   let readmeFiles = [];
@@ -30,12 +26,10 @@
   let rulesEditor;
   let markdownEditor;
 
-  // diff editor references
   let diffEditorContainer;
   let diffEditor;
 
   onMount(() => {
-    // 1) Create rules editor
     rulesEditor = monaco.editor.create(rulesEditorContainer, {
       value: rulesYaml,
       language: 'yaml',
@@ -46,7 +40,6 @@
       rulesYaml = rulesEditor.getValue();
     });
 
-    // 2) Create the main markdown editor
     markdownEditor = monaco.editor.create(markdownEditorContainer, {
       value: markdownText,
       language: 'markdown',
@@ -56,20 +49,16 @@
     markdownEditor.onDidChangeModelContent(() => {
       markdownText = markdownEditor.getValue();
     });
-
-    // 3) Create the diff editor (hidden initially)
     diffEditor = monaco.editor.createDiffEditor(diffEditorContainer, {
       readOnly: true,
       automaticLayout: true,
       minimap: { enabled: false }
     });
 
-    // Optional: load available files from your server
     fetchFiles("rules");
     fetchFiles("readme");
   });
 
-  // Build the models for the side-by-side diff
   function updateDiffModels() {
     const originalModel = monaco.editor.createModel(originalText, "markdown");
     const modifiedModel = monaco.editor.createModel(fixedMarkdown, "markdown");
@@ -82,7 +71,6 @@
       return;
     }
 
-    // 1) capture the user's original text before fixes
     originalText = markdownEditor.getValue();
     const ctx = await runPipeline(rulesYaml, originalText);
     console.log("AST result:", ctx);
@@ -90,14 +78,12 @@
     diagnostics   = ctx.diagnostics || [];
     fixedMarkdown = ctx.fixedMarkdown || originalText;
 
-    /* 1. Show a human‑readable summary ------------------------------- */
     lintResults = diagnostics.length
       ? diagnostics
           .map(d => `${d.severity.toUpperCase()} [${d.line}]: ${d.message}`)
           .join('\n')
       : 'No issues found.';
 
-    /* 2. Push Monaco markers ----------------------------------------- */
     const model = markdownEditor.getModel();
     monaco.editor.setModelMarkers(
       model,
@@ -117,16 +103,11 @@
       }))
     );
 
-    // 6) We do NOT overwrite the main editor with fixedMarkdown automatically
-    //    This ensures we can see the actual difference in the diff editor.
-
-    // 7) If the user has the diff panel open, refresh it
     if (showDiff) {
       updateDiffModels();
     }
   }
 
-  // Let the user toggle the diff
   function toggleDiffView() {
     showDiff = !showDiff;
     if (showDiff) {
@@ -134,13 +115,10 @@
     }
   }
 
-  // Optionally let the user "apply" the fixes to the main editor if they want:
   function applyFixesToEditor() {
-    // Overwrite the editor content with the new fixed text
     markdownEditor.setValue(fixedMarkdown);
   }
 
-  // fetch list of files from server
   async function fetchFiles(type) {
     try {
       const response = await fetch(`http://localhost:5000/api/files?type=${type}`);
@@ -155,7 +133,6 @@
     }
   }
 
-  // load a chosen file’s content
   async function loadFileContent(type, event) {
     const fileName = event.target.value;
     if (!fileName) return;
@@ -255,7 +232,7 @@
 
   .diff-editor-container {
     flex: 1;
-    display: none; /* hidden by default */
+    display: none;
     overflow: auto;
   }
   .diff-editor-container.show {
@@ -270,14 +247,12 @@
     <button on:click={toggleDiffView}>
       {showDiff ? "Hide Diff View" : "Show Diff View"}
     </button>
-    <!-- Optional: "Apply Fixes" button to overwrite the main editor -->
     <button on:click={applyFixesToEditor}>
       Apply Fixes to Editor
     </button>
   </div>
 
   <div class="container">
-    <!-- Left side: rules editor -->
     <div class="file-upload">
       <select on:change={(e) => loadFileContent('rules', e)}>
         <option value="">Select rules.yaml</option>
@@ -288,7 +263,6 @@
       <div class="editor-container" bind:this={rulesEditorContainer}></div>
     </div>
 
-    <!-- Right side: normal markdown editor -->
     <div class="file-upload" style="display: {showDiff ? 'none' : 'flex'}">
       <select on:change={(e) => loadFileContent('readme', e)}>
         <option value="">Select README</option>
@@ -299,14 +273,12 @@
       <div class="editor-container" bind:this={markdownEditorContainer}></div>
     </div>
 
-    <!-- Right side: diff editor (only visible if showDiff) -->
     <div
       class="diff-editor-container"
       class:show={showDiff}
       bind:this={diffEditorContainer}
     ></div>
-  </div> <!-- .container -->
-
+  </div> 
   <div class="output">
     {#if lintResults}
       <pre>{lintResults}</pre>
@@ -315,7 +287,6 @@
     {/if}
   </div>
 
-  <!-- If you no longer use highlightedMarkdown, remove this block -->
   {#if highlightedMarkdown}
     <div class="lint-preview" bind:this={markdownPreviewDiv}>
       {@html highlightedMarkdown}

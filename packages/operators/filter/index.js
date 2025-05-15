@@ -1,15 +1,14 @@
-import { visit } from 'unist-util-visit';
-import { toString } from 'mdast-util-to-string';
+import { visit }   from 'unist-util-visit';
+import { toString} from 'mdast-util-to-string';
 
-const EMOJI_REGEX = /:[a-zA-Z0-9_+-]+:|[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{FE0F}\u{1F1E6}-\u{1F1FF}]/gu;
-const BUILTIN     = { emoji: EMOJI_REGEX, newline: /\n/g };
+const EMOJI_REGEX  = /:[a-zA-Z0-9_+-]+:|[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{FE0F}\u{1F1E6}-\u{1F1FF}]/gu;
+const BUILTIN_RX   = { emoji: EMOJI_REGEX, newline: /\n/g };
 
 const escapeRE  = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const toRegExp  = tgt => BUILTIN[tgt] || new RegExp(escapeRE(tgt), 'gi');
-const matchesOf = (text, re) => [...text.matchAll(re)].map(m => m[0]);
+const toRegExp  = t => BUILTIN_RX[t] || new RegExp(escapeRE(t), 'gi');
+const rxTargets = new Set(Object.keys(BUILTIN_RX));  
 
 export function run(ctx, cfg = {}) {
-  /* ---------- guards ---------- */
   if (!ctx.ast) {
     ctx.diagnostics.push({ line: 1, severity: 'error',
       message: 'filter operator needs generateAST to run first' });
@@ -23,43 +22,70 @@ export function run(ctx, cfg = {}) {
   }
 
   const scopes = cfg.scopes ?? ['document'];
-  const re     = toRegExp(target);
   const md     = ctx.markdown ?? '';
 
-  /* ---------- result skeleton ---------- */
+  const isRegex = rxTargets.has(target) || target.startsWith('/') || target.endsWith('/');
+  const re      = isRegex ? toRegExp(target) : null;
+
+  const matchNode = node =>
+    !isRegex && node.type === target;            
+
+  const matchText = txt =>
+    isRegex ? [...txt.matchAll(re)].map(m => m[0]) : [];  
+
   const res = { document: [], paragraph: [], line: {}, endoffile: [] };
 
-  /* ---------- document scope ---------- */
-  if (scopes.includes('document'))
-    res.document = matchesOf(md, re);
+  if (scopes.includes('document')) {
+    if (isRegex) {
+      res.document = matchText(md);
+    } else {
+      visit(ctx.ast, node => { if (matchNode(node)) res.document.push(node); });
+    }
+  }
 
-  /* ---------- paragraph scope ---------- */
   if (scopes.includes('paragraph')) {
-    visit(ctx.ast, 'paragraph', node => {
-      const txt  = toString(node);
-      const line = node.position?.start?.line ?? 1;
-      res.paragraph.push({ line, matches: matchesOf(txt, re) });
+    visit(ctx.ast, 'paragraph', para => {
+      let matches = [];
+
+      if (isRegex) {
+        matches = matchText(toString(para));
+      } else {
+        visit(para, node => { if (matchNode(node)) matches.push(node); });
+      }
+
+      res.paragraph.push({
+        line: para.position?.start?.line ?? 1,
+        matches
+      });
     });
   }
 
-  /* ---------- line scope (AST‑only) ---------- */
   if (scopes.includes('line')) {
-    visit(ctx.ast, 'text', node => {
-      const line = node.position?.start?.line;
-      if (!line) return;
+    if (isRegex) {
+      visit(ctx.ast, 'text', node => {
+        const hits = matchText(node.value);
+        if (hits.length) {
+          const ln = node.position?.start?.line;
+          res.line[ln] ??= [];
+          res.line[ln].push(...hits);
+        }
+      });
+    }
 
-      const hits = matchesOf(node.value, re);
-      if (hits.length === 0) return;
-
-      res.line[line] ??= [];
-      res.line[line].push(...hits);
-    });
+    if (!isRegex) {
+      visit(ctx.ast, node => {
+        if (!matchNode(node)) return;
+        const ln = node.position?.start?.line;
+        res.line[ln] ??= [];
+        res.line[ln].push(node);
+      });
+    }
   }
 
-  /* ---------- end‑of‑file scope ---------- */
   if (scopes.includes('endoffile')) {
-    const m = md.match(new RegExp(`(${re.source})+$`, re.flags));
-    res.endoffile = m ? matchesOf(m[0], re) : [];
+    if (target === 'newline') {
+      res.endoffile = md.endsWith('\n') ? ['\n'] : [];
+    }
   }
 
   ctx.filtered = { target, scopes, data: res };

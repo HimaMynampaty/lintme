@@ -4,7 +4,7 @@
   const dispatch = createEventDispatcher();
   $: data.scopes ||= [];
 
-  const targets = ['emoji', 'newline', 'date', 'word'];
+  const targets = ['emoji', 'newline', 'image', 'word'];
   const scopes = ['line', 'paragraph', 'document', 'endoffile'];
 
   const changed = () => dispatch('input');

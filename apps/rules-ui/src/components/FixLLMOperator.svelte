@@ -1,8 +1,8 @@
 <script>
   export let data;
 
-  $: data.model ||= 'llama-3';    // default model
-  $: data.prompt ||= '';          // default prompt
+  $: data.model ||= 'llama-3';    
+  $: data.prompt ||= '';         
 
   const changed = () => dispatch('input');
   import { createEventDispatcher } from 'svelte';
@@ -10,7 +10,6 @@
 </script>
 
 <div class="space-y-4">
-  <!-- Model Selection -->
   <div>
     <label for="model" class="block text-sm font-medium text-gray-700 mb-1">
       Model
@@ -25,7 +24,6 @@
     </select>
   </div>
 
-  <!-- Prompt Textarea -->
   <div>
     <label for="prompt" class="block text-sm font-medium text-gray-700 mb-1">
       Prompt

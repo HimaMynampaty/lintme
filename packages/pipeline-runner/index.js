@@ -2,7 +2,6 @@ import { parseRules } from './utils/parseRules.js';
 import { OPERATORS } from './operator-registry.js';
 
 /**
- * Execute a YAML‑defined pipeline on a markdown string.
  *
  * @param {string} yamlText   – the rule YAML block
  * @param {string} markdown   – raw README markdown
@@ -28,8 +27,8 @@ export async function runPipeline(yamlText, markdown) {
       continue;
     }
 
-    const run = await loader();        // lazy import = no dead‑code in FE bundle
-    await run(ctx, step);              // pass ctx + op‑specific config
+    const run = await loader();        
+    await run(ctx, step);             
   }
 
   return ctx;

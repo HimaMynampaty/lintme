@@ -2,8 +2,8 @@
   import { createEventDispatcher } from 'svelte';
   import { pipeline } from '../stores/pipeline.js';
 
-  export let data;          // this threshold step
-  export let storeIndex;    // index of this step inside pipeline
+  export let data;        
+  export let storeIndex;    
 
   const dispatch = createEventDispatcher();
   const types = ['lessthan', 'greaterthan', 'greaterthanequalto', 'lessthanequalto', 'equal','equalto'];
@@ -13,7 +13,6 @@
   let countTarget = '';
   let targetMismatch = false;
 
-  // Locate the previous count step
   $: {
     const steps = $pipeline;
     let foundScopes = [];
@@ -36,12 +35,10 @@
     countScopes = foundScopes;
   }
 
-  // Live validation: check if threshold.target matches prior count.target
   $: {
     targetMismatch = data.target && countTarget && data.target !== countTarget;
   }
 
-  // Keep data.conditions in sync with scopes
   $: {
     data.conditions ||= {};
     let changed = false;
@@ -67,7 +64,6 @@
 </script>
 
 <div class="space-y-4">
-  <!-- Target selector -->
   <div>
     <label class="block text-sm font-medium text-gray-700 mb-1"
            for="target">Target</label>
@@ -87,14 +83,12 @@
     {/if}
   </div>
 
-  <!-- Validation: no count step -->
   {#if countScopes.length === 0}
     <p class="text-sm text-red-500">
       ⚠ Add a <code>count</code> step with scopes before this threshold.
     </p>
   {/if}
 
-  <!-- Per-scope threshold controls -->
   {#each countScopes as s}
     <div class="border-t pt-4">
       <h4 class="text-sm font-semibold text-indigo-700 mb-2 capitalize">
@@ -102,7 +96,6 @@
       </h4>
 
       <div class="flex gap-4">
-        <!-- Type -->
         <div class="w-1/2">
           <label class="block text-sm font-medium text-gray-700 mb-1"
                  for={`type-${s}`}>Type</label>
@@ -117,7 +110,6 @@
           </select>
         </div>
 
-        <!-- Value -->
         <div class="w-1/2">
           <label class="block text-sm font-medium text-gray-700 mb-1"
                  for={`val-${s}`}>Value</label>

@@ -1,5 +1,4 @@
 <script>
-  //eslint-disable-next-line svelte/no-unused-export-let
   export let data;
   console.debug('FixManualOperator data:', data);
 

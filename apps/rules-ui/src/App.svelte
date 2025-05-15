@@ -1,4 +1,3 @@
-<!-- apps/rules-ui/src/App.svelte -->
 <script>
   import OperatorPalette from "./components/OperatorPalette.svelte";
   import PipelineEditor from "./editor/PipelineEditor.svelte";
@@ -9,14 +8,12 @@
   let ruleDescription = "";
   let yamlText = "";
 
-  /* update YAML every time pipeline OR metadata changes --------------- */
   $: yamlText = generateYAML(ruleName, ruleDescription, $pipeline);
 
-  /* replace one step when a child emits update ------------------------ */
   function updateStep(i, newStep) {
     pipeline.update((arr) => {
       const next = [...arr];
-      next[i] = { ...newStep }; // new object ref to trigger reactivity
+      next[i] = { ...newStep }; 
       return next;
     });
   }
@@ -31,7 +28,6 @@
   <h1 class="text-3xl font-bold text-center mb-8">Create Your Rule</h1>
 
   <div class="flex gap-6">
-    <!-- Palette ------------------------------------------------------- -->
     <div class="w-1/3 space-y-4">
       <div class="bg-white p-4 rounded shadow">
         <h2 class="text-lg font-semibold mb-2">Add Operator</h2>
@@ -39,9 +35,7 @@
       </div>
     </div>
 
-    <!-- Right column --------------------------------------------------- -->
     <div class="flex-1 space-y-6">
-      <!-- Metadata card -->
       <div class="bg-white p-4 rounded shadow">
         <h2 class="text-lg font-semibold mb-2">Rule Metadata</h2>
 
@@ -65,10 +59,8 @@
         ></textarea>
       </div>
 
-      <!-- Pipeline editor -->
       <PipelineEditor {updateStep} />
 
-      <!-- YAML preview -->
       <div class="bg-white p-4 rounded shadow">
         <div class="flex justify-between items-center mb-2">
           <h2 class="text-lg font-semibold">Generated YAML</h2>

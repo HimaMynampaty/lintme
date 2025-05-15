@@ -1,11 +1,6 @@
-/* -----------------------------------------------------------
- *  threshold operator
- *  – one pass, no copy‑pasted loops
- * ---------------------------------------------------------- */
 export function run(ctx, cfg = {}) {
   const { conditions = {}, target, level = 'warning' } = cfg;
 
-  /* ---------- early guards ---------- */
   if (!target) {
     pushErr(ctx, 'threshold operator missing "target"');          return ctx;
   }
@@ -14,7 +9,6 @@ export function run(ctx, cfg = {}) {
     pushErr(ctx, `No counts for "${target}". Run 'count' first.`); return ctx;
   }
 
-  /* ---------- per‑scope adapters ---------- */
   const adapters = {
     document : () => [{ line: 1, actual: counts.document ?? 0 }],
     endoffile: () => [{ line: 1, actual: counts.endoffile ?? 0 }],
@@ -24,7 +18,6 @@ export function run(ctx, cfg = {}) {
                      .map(p => ({ line: p.line, actual: p.count }))
   };
 
-  /* ---------- apply thresholds ---------- */
   for (const [scope, cfg] of Object.entries(conditions)) {
     const rows = adapters[scope]?.() ?? [];
     const { type, value } = cfg;
@@ -43,9 +36,6 @@ export function run(ctx, cfg = {}) {
   return ctx;
 }
 
-/* -----------------------------------------------------------
- * helpers
- * ---------------------------------------------------------- */
 function compare(actual, type, expected) {
   const ops = {
     '<'  : (a,b) => a <  b,
@@ -53,26 +43,24 @@ function compare(actual, type, expected) {
     '>'  : (a,b) => a >  b,
     '>=' : (a,b) => a >= b,
     '='  : (a,b) => a === b,
-    '==' : (a,b) => a === b          // explicit so no alias lookup needed
+    '==' : (a,b) => a === b         
   };
 
-  // alias map → canonical symbol
   const alias = {
     lessthan              : '<',
     greaterthan           : '>',
     lessthanequal         : '<=',
-    lessthanequalto       : '<=',   // <-- your earlier value
+    lessthanequalto       : '<=',   
     greaterthanequal      : '>=',
-    greaterthanequalto    : '>=',   // <-- your earlier value
+    greaterthanequalto    : '>=',   
     equal                 : '=',
     equalto               : '='
   };
 
   const key = String(type).toLowerCase().trim();
-  const sym = ops[key]            // direct hit
-           || ops[alias[key]];    // alias hit
+  const sym = ops[key]            
+           || ops[alias[key]];   
 
-  // if still missing, treat as “pass” so linter doesn’t crash
   return sym ? sym(actual, expected) : true;
 }
 

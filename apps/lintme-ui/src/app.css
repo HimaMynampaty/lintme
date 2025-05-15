@@ -35,10 +35,9 @@ h1 {
   padding: 2em;
 }
 #app {
-  /* only keep the properties you truly need */
-  max-width: 1480px;  /* if you want a max width, that’s fine */
-  margin: 0 auto;     /* if you want to center the container as a block at large widths */
-  text-align: left;   /* or remove this property if you do not want text alignment forced */
+  max-width: 1480px;  
+  margin: 0 auto;     
+  text-align: left;
 }
 
 
