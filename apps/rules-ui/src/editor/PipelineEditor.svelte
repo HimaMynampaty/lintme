@@ -13,7 +13,7 @@
   <h2 class="text-lg font-semibold mb-2">Pipeline</h2>
 
   <div class="bg-slate-100 p-2 rounded text-sm">
-    <strong>Step 1:</strong> parseAST (auto‑included)
+    <strong>Step 1:</strong> generateAST (auto‑included)
   </div>
 
   {#each $pipeline.slice(1) as step, i}

@@ -1,6 +1,5 @@
 <script>
   import { pipeline } from '../stores/pipeline.js';
-  import { v4 as uuid } from 'uuid';
 
   let search = '';
 
