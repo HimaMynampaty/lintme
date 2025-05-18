@@ -1,26 +1,26 @@
 import yaml from 'js-yaml';
 
-/**
- * Build YAML from current UI state
- * @param {string} name
- * @param {string} description
- * @param {Array}  steps  
- */
 export function generateYAML(name = '', description = '', steps = []) {
-    const pipeline = steps
+  const pipeline = steps
     .filter(step => step.operator !== 'generateAST')
     .map(step => {
-    const result = { operator: step.operator };
+      const out = { operator: step.operator };
 
-    if ('target' in step)        result.target = step.target;
-    if (Array.isArray(step.scopes)) result.scopes = step.scopes;
-    if ('scope' in step)         result.scope = step.scope;
-    if ('level' in step)         result.level = step.level;
-    if ('conditions' in step)    result.conditions = step.conditions;
-    if ('word' in step)          result.word = step.word;
+      /* 🔹 Only the FILTER step serializes target / scopes / word */
+      if (step.operator === 'filter') {
+        if ('target' in step)           out.target     = step.target;
+        if (Array.isArray(step.scopes)) out.scopes     = step.scopes;
+        if ('word' in step)             out.word       = step.word;
+      }
 
-    return result;
-  });
+      /* 🔹 Common optional props for all operators */
+      if ('scope' in step && step.operator !== 'isPresent')
+        out.scope = step.scope;
+      if ('level' in step)             out.level      = step.level;
+      if ('conditions' in step)        out.conditions = step.conditions;
+
+      return out;
+    });
 
   return yaml.dump({ rule: name, description, pipeline }, { sortKeys: false });
 }

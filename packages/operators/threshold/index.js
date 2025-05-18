@@ -1,26 +1,37 @@
 export function run(ctx, cfg = {}) {
-  const { conditions = {}, target, level = 'warning' } = cfg;
+  /* ── locate target ──────────────────────────────────────── */
+  let { target, conditions = {}, level = 'warning' } = cfg;
+
+  // If YAML omitted target, try to inherit the ONLY one we have in ctx.counts
+  if (!target && ctx.counts) {
+    const keys = Object.keys(ctx.counts);
+    if (keys.length === 1) target = keys[0];
+  }
 
   if (!target) {
-    pushErr(ctx, 'threshold operator missing "target"');          return ctx;
+    pushErr(ctx, 'threshold operator missing "target"');
+    return ctx;
   }
+
   const counts = ctx.counts?.[target];
   if (!counts) {
-    pushErr(ctx, `No counts for "${target}". Run 'count' first.`); return ctx;
+    pushErr(ctx, `No counts for "${target}". Run 'count' first.`);
+    return ctx;
   }
 
+  /* ── adapters + evaluation (unchanged) ─────────────────── */
   const adapters = {
-    document : () => [{ line: 1, actual: counts.document ?? 0 }],
+    document : () => [{ line: 1, actual: counts.document  ?? 0 }],
     endoffile: () => [{ line: 1, actual: counts.endoffile ?? 0 }],
     line     : () => Object.entries(counts.line ?? {}).map(
-                     ([ln, c]) => ({ line: Number(ln), actual: c })),
+                      ([ln, c]) => ({ line: +ln, actual: c }) ),
     paragraph: () => (counts.paragraph ?? [])
-                     .map(p => ({ line: p.line, actual: p.count }))
+                      .map(p => ({ line: p.line, actual: p.count }))
   };
 
-  for (const [scope, cfg] of Object.entries(conditions)) {
+  for (const [scope, rule] of Object.entries(conditions)) {
     const rows = adapters[scope]?.() ?? [];
-    const { type, value } = cfg;
+    const { type, value } = rule;
     if (value == null) continue;
 
     for (const { line, actual } of rows) {
@@ -35,6 +46,7 @@ export function run(ctx, cfg = {}) {
   }
   return ctx;
 }
+
 
 function compare(actual, type, expected) {
   const ops = {

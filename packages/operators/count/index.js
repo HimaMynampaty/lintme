@@ -1,45 +1,43 @@
 export function run(ctx, cfg = {}) {
-  const filtered = ctx.filtered;
-  if (!filtered) {
+  /* ── validate pre‑condition ─────────────────────────────────────────── */
+  if (!ctx.filtered) {
     ctx.diagnostics.push({
-      line: 1,
-      severity: 'error',
+      line: 1, severity: 'error',
       message: 'count operator needs filter to run first'
     });
     return ctx;
   }
 
-  const { target, scopes, data } = filtered;
+  const { target, scopes, data } = ctx.filtered;
   const summary = { document: 0, endoffile: 0, line: {}, paragraph: [] };
 
-  if (scopes.includes('document')) {
-    summary.document = data.document.length;
-  }
+  /* ── scope‑specific counters in a map ───────────────────────────────── */
+  const counters = {
+    document: () => { summary.document = data.document.length; },
 
-  if (scopes.includes('paragraph')) {
-    summary.paragraph = data.paragraph.map(p => ({
-      line: p.line,
-      count: p.matches.length
-    }));
-  }
+    paragraph: () => {
+      summary.paragraph = data.paragraph.map(p => ({
+        line: p.line,
+        count: p.matches.length
+      }));
+    },
 
-  if (scopes.includes('line')) {
-    const totalLines = (ctx.markdown ?? '').split('\n').length;
-    for (let ln = 1; ln <= totalLines; ln++) {
-      const n = (data.line[ln]?.length) ?? 0;
-      summary.line[ln] = n;
-    }
-  }
+    line: () => {
+      const lines = (ctx.markdown ?? '').split('\n');
+      lines.forEach((_, i) => {
+        const ln = i + 1;
+        summary.line[ln] = (data.line[ln]?.length) ?? 0;
+      });
+    },
 
-  if (scopes.includes('endoffile')) {
-    summary.endoffile = data.endoffile.length;
-  }
-
-  ctx.counted = {
-    target,
-    scopes,
-    data: summary
+    endoffile: () => { summary.endoffile = data.endoffile.length; }
   };
+
+  /* ── execute only requested scopes ──────────────────────────────────── */
+  for (const s of scopes) counters[s]?.();
+
+  /* ── update ctx ─────────────────────────────────────────────────────── */
+  ctx.counted = { target, scopes, data: summary };
 
   ctx.counts ??= {};
   ctx.counts[target] = Object.fromEntries(

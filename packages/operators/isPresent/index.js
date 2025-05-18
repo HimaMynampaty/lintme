@@ -1,9 +1,9 @@
 export function run(ctx, cfg = {}) {
-  const {
-    target,
-    scope = 'document',
-    level = 'warning'
-  } = cfg;
+  const target = cfg.target
+              ?? (ctx.filtered?.target === 'image' ? 'alt' : ctx.filtered?.target)
+              ?? '';
+  const level  = cfg.level ?? 'warning';
+  const scope  = cfg.scope ?? ctx.filtered?.scopes?.[0] ?? 'document';
 
   if (!ctx.filtered) {
     ctx.diagnostics.push({
@@ -13,6 +13,7 @@ export function run(ctx, cfg = {}) {
     });
     return ctx;
   }
+
   if (!target) {
     ctx.diagnostics.push({
       line: 1,
@@ -40,46 +41,46 @@ export function run(ctx, cfg = {}) {
       const isMatchArray = doc.length === 0 || typeof doc[0] === 'string';
 
       if (isMatchArray) {
-        // ✅ Fail if no matches at all
         if (doc.length === 0) {
           push(1, `Missing any "${target}" in document`);
         }
       } else {
         for (const item of doc) {
           if (!checkObjectProp(item)) {
-            push(item.line ?? 1, `Missing "${target}" on ${ctx.filtered.target} node`);
+            const label = ctx.filtered.target ?? 'node';
+            push(item.line ?? 1, `Missing "${target}" on ${label} node`);
           }
         }
       }
     }
   }
 
-
-
   else if (scope === 'paragraph') {
     (data.paragraph ?? []).forEach(p => {
       const ok = Array.isArray(p.matches)
         ? checkMatchArray(p.matches)
         : checkObjectProp(p);
-      if (!ok)
-        push(p.line ?? 1,
-             `Paragraph at line ${p.line} missing "${target}"`);
+      if (!ok) {
+        push(p.line ?? 1, `Paragraph at line ${p.line} missing "${target}"`);
+      }
     });
+  }
 
-  } else if (scope === 'line') {
+  else if (scope === 'line') {
     const lines = ctx.markdown?.split('\n').length ?? 0;
     for (let ln = 1; ln <= lines; ln++) {
       const row = (data.line ?? {})[ln];
-      const ok = row
-        ? checkMatchArray(row)          
-        : false;                         
-      if (!ok)
+      const ok = row ? checkMatchArray(row) : false;
+      if (!ok) {
         push(ln, `Line ${ln} missing "${target}"`);
+      }
     }
+  }
 
-  } else if (scope === 'endoffile') {
-    if (!checkMatchArray(data.endoffile ?? []))
+  else if (scope === 'endoffile') {
+    if (!checkMatchArray(data.endoffile ?? [])) {
       push(1, `End of file missing "${target}"`);
+    }
   }
 
   return ctx;

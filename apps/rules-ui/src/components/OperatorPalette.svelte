@@ -15,13 +15,12 @@
     const newId = crypto.randomUUID(); // generates a unique ID
 
     pipeline.update(p => {
-      if (opName === 'isPresent') {
-        return [...p, {
-          id: newId,
-          operator: 'isPresent',
-          target: 'alt',
-          scope: 'document'
-        }];
+       if (opName === 'isPresent') {
+         return [...p, {
+           id: newId,
+           operator: 'isPresent',
+           target: 'alt'   // user can still change field; no scope stored
+         }];
       }
 
       return [...p, {
