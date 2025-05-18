@@ -39,9 +39,17 @@ export function run(ctx, cfg = {}) {
     if (isRegex) {
       res.document = matchText(md);
     } else {
-      visit(ctx.ast, node => { if (matchNode(node)) res.document.push(node); });
+      visit(ctx.ast, node => {
+        if (matchNode(node)) {
+          res.document.push({
+            ...node,
+            line: node.position?.start?.line ?? 1
+          });
+        }
+      });
     }
   }
+
 
   if (scopes.includes('paragraph')) {
     visit(ctx.ast, 'paragraph', para => {
@@ -83,10 +91,26 @@ export function run(ctx, cfg = {}) {
   }
 
   if (scopes.includes('endoffile')) {
-    if (target === 'newline') {
-      res.endoffile = md.endsWith('\n') ? ['\n'] : [];
+    const lines = md.split('\n');
+    const lastLine = lines[lines.length - 1] || '';
+
+    if (isRegex) {
+      const matches = matchText(lastLine);
+      if (matches.length > 0) res.endoffile = matches;
+    } else {
+      visit(ctx.ast, node => {
+        const line = node.position?.start?.line;
+        const isLastLine = line === lines.length;
+        if (isLastLine && matchNode(node)) {
+          res.endoffile.push({
+            ...node,
+            line
+          });
+        }
+      });
     }
   }
+
 
   ctx.filtered = { target, scopes, data: res };
   return ctx;

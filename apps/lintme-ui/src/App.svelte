@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import * as monaco from 'monaco-editor';
   import { runPipeline } from '@himamynampaty/pipeline-runner';
-
+  import { parseRules } from '@himamynampaty/pipeline-runner';
   const params = new URLSearchParams(window.location.search);
   let rulesYaml = decodeURIComponent(params.get("rule") || "");
 
@@ -65,6 +65,56 @@
     diffEditor.setModel({ original: originalModel, modified: modifiedModel });
   }
 
+
+  function formatOperatorOutput(key, data, scopes = Object.keys(data)) {
+    let result = `\n${key.toUpperCase()}:\n`;
+
+    for (const scope of scopes) {
+      const value = data[scope];
+
+      if (!value || (Array.isArray(value) && value.length === 0)) {
+        result += `  ${scope}: (no matches)\n`;
+        continue;
+      }
+
+      if (Array.isArray(value)) {
+        result += `  ${scope}:\n`;
+      for (const item of value) {
+        if (typeof item === 'string') {
+          const label = item === '\n' ? 'newline character' : item;
+          result += `    - ${label}\n`;
+        } else if (item.line && item.matches) {
+          result += `    - Line ${item.line}: ${item.matches.join(', ')}\n`;
+        } else if (item.line && item.count !== undefined) {
+          result += `    - Line ${item.line}: ${item.count} match(es)\n`;
+        } else if (item.type && item.line) {
+          result += `    - Line ${item.line}: ${item.type}\n`;
+        } else {
+          result += `    - ${JSON.stringify(item)}\n`;
+        }
+      }
+
+      } else if (typeof value === 'object') {
+        const entries = Object.entries(value);
+        if (entries.length === 0) {
+          result += `  ${scope}: (no matches)\n`;
+          continue;
+        }
+
+        result += `  ${scope}:\n`;
+        for (const [line, matches] of entries) {
+          result += `    - Line ${line}: ${Array.isArray(matches) ? matches.join(', ') : matches}\n`;
+        }
+      } else if (typeof value === 'number') {
+        result += `  ${scope}: ${value}\n`;
+      }
+    }
+
+    return result;
+  }
+
+
+
   async function runLinter() {
     if (!rulesYaml || !markdownText) {
       alert("Please enter both rules.yaml and README content!");
@@ -78,11 +128,61 @@
     diagnostics   = ctx.diagnostics || [];
     fixedMarkdown = ctx.fixedMarkdown || originalText;
 
-    lintResults = diagnostics.length
-      ? diagnostics
-          .map(d => `${d.severity.toUpperCase()} [${d.line}]: ${d.message}`)
-          .join('\n')
-      : 'No issues found.';
+    const judgmentOperators = new Set(['threshold', 'isPresent']);
+
+    if (diagnostics.length > 0) {
+      const errorCount = diagnostics.filter(d => d.severity === 'error').length;
+      const warningCount = diagnostics.filter(d => d.severity === 'warning').length;
+      const infoCount = diagnostics.filter(d => d.severity === 'info').length;
+
+      if (errorCount > 0 || warningCount > 0) {
+        lintResults = `Lint failed with ${errorCount} error(s) and ${warningCount} warning(s).\n\n` +
+          diagnostics.map(d => `${d.severity.toUpperCase()} [${d.line}]: ${d.message}`).join('\n');
+      } else {
+        lintResults = `Lint successful! No issues found.\n\n` +
+          diagnostics.map(d => `${d.severity.toUpperCase()} [${d.line}]: ${d.message}`).join('\n');
+      }
+    } else {
+      let lastOperator = null;
+      try {
+        const yamlText = rulesEditor?.getValue?.() ?? rulesYaml;
+        const parsed = parseRules(yamlText);
+        if (!parsed.error) {
+          const steps = parsed?.pipeline ?? [];
+          lastOperator = steps[steps.length - 1]?.operator;
+        } else {
+          console.warn("YAML parse error:", parsed.error);
+        }
+      } catch (err) {
+        console.warn("Failed to determine last operator:", err);
+      }
+
+      const isJudging = judgmentOperators.has(lastOperator);
+
+      lintResults = isJudging
+        ? 'Lint successful! No issues found.'
+        : 'This rule does not produce actual lint results. It may be missing a judgment step like "threshold".';
+
+      if (!isJudging) {
+        const extraOutputs = Object.entries(ctx)
+          .filter(([key, val]) =>
+            typeof val === 'object' &&
+            val !== null &&
+            val.data &&
+            Object.keys(val.data).length > 0
+          );
+
+        if (extraOutputs.length) {
+          lintResults += '\n\nInternal analysis:\n';
+          for (const [key, obj] of extraOutputs) {
+            const scopes = obj.scopes ?? Object.keys(obj.data); 
+            lintResults += formatOperatorOutput(key, obj.data, scopes);
+          }
+
+        }
+      }
+    }
+
 
     const model = markdownEditor.getModel();
     monaco.editor.setModelMarkers(

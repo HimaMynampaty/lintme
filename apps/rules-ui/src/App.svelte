@@ -10,13 +10,6 @@
 
   $: yamlText = generateYAML(ruleName, ruleDescription, $pipeline);
 
-  function updateStep(i, newStep) {
-    pipeline.update((arr) => {
-      const next = [...arr];
-      next[i] = { ...newStep }; 
-      return next;
-    });
-  }
   function openLintmeUI() {
     const encoded = encodeURIComponent(yamlText);
     window.open(`http://localhost:5173/?rule=${encoded}`, '_blank');
@@ -59,7 +52,7 @@
         ></textarea>
       </div>
 
-      <PipelineEditor {updateStep} />
+      <PipelineEditor />
 
       <div class="bg-white p-4 rounded shadow">
         <div class="flex justify-between items-center mb-2">

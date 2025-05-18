@@ -11,14 +11,26 @@
     { name: 'fixUsingLLM',         label: 'fixUsingLLM' },
     { name: 'isPresent',           label: 'isPresent' } 
   ];
-
   function addOperator(opName) {
+    const newId = crypto.randomUUID(); // generates a unique ID
+
     pipeline.update(p => {
       if (opName === 'isPresent') {
-        return [...p, { operator: 'isPresent', target: 'alt', scope: 'document' }];
+        return [...p, {
+          id: newId,
+          operator: 'isPresent',
+          target: 'alt',
+          scope: 'document'
+        }];
       }
-      return [...p, { operator: opName }];
-    });  }
+
+      return [...p, {
+        id: newId,
+        operator: opName
+      }];
+    });
+  }
+
 
   $: filtered = availableOperators.filter(op =>
     op.label.toLowerCase().includes(search.toLowerCase())

@@ -1,28 +1,45 @@
 <script>
+  import { dndzone } from 'svelte-dnd-action';
   import { pipeline } from '../stores/pipeline.js';
-  import OperatorBox  from '../components/OperatorBox.svelte';
+  import OperatorBox from '../components/OperatorBox.svelte';
 
-  export let updateStep;
+  /** keep drag‑and‑drop in sync with the store */
+  function handleReorder(e) {
+    // e.detail.items is *only* the user‑visible steps (index ≥ 1)
+    pipeline.set([{ operator: 'generateAST' }, ...e.detail.items]);
+  }
 
-  function removeStep(i) {
-    pipeline.update(arr => arr.filter((_, idx) => idx !== i));
+  /** propagate edits coming from an OperatorBox */
+  function handleUpdate(storeIndex, newStep) {
+    pipeline.update(arr => {
+      const next = [...arr];
+      next[storeIndex] = { ...newStep };
+      return next;
+    });
+  }
+
+  function removeStep(storeIndex) {
+    pipeline.update(arr => arr.filter((_, i) => i !== storeIndex));
   }
 </script>
 
-<div class="bg-white p-4 rounded shadow space-y-4">
-  <h2 class="text-lg font-semibold mb-2">Pipeline</h2>
-
-  <div class="bg-slate-100 p-2 rounded text-sm">
-    <strong>Step 1:</strong> generateAST (auto‑included)
-  </div>
-
-  {#each $pipeline.slice(1) as step, i}
+<!-- drag‑and‑drop zone shows everything *after* generateAST -->
+<div
+  use:dndzone={{
+    items: $pipeline.slice(1),
+    flipDurationMs: 150
+  }}
+  on:consider={handleReorder}
+  on:finalize={handleReorder}
+  class="space-y-4"
+>
+  {#each $pipeline.slice(1) as step, i (step.id)}
     <OperatorBox
       {step}
-      storeIndex={i + 1}        
-      index={i + 2}              
-      on:update={e => updateStep(i + 1, e.detail)}
-      on:remove={() => removeStep(i + 1)}  
+      index={i + 1}        
+      storeIndex={i + 1}     
+      on:update={(e) => handleUpdate(i + 1, e.detail)}
+      on:remove={() => removeStep(i + 1)}
     />
   {/each}
 </div>

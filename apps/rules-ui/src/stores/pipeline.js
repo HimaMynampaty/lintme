@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
 
 export const pipeline = writable([
-  { operator: 'generateAST' }
+  { id: 'internal-generate-ast', operator: 'generateAST' }
 ]);

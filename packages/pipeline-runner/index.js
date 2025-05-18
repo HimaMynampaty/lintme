@@ -15,6 +15,9 @@ export async function runPipeline(yamlText, markdown) {
   /** @type {object} */
   const ctx = { markdown, diagnostics: [] };
 
+  const generateAST = await OPERATORS['generateAST']();
+  await generateAST(ctx);
+
   for (const step of pipeline) {
     const opName = step.operator;
     const loader  = OPERATORS[opName];
@@ -28,8 +31,10 @@ export async function runPipeline(yamlText, markdown) {
     }
 
     const run = await loader();        
-    await run(ctx, step);             
+    await run(ctx, step);
   }
+
 
   return ctx;
 }
+export { parseRules } from './utils/parseRules.js';

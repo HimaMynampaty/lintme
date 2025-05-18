@@ -7,7 +7,9 @@ import yaml from 'js-yaml';
  * @param {Array}  steps  
  */
 export function generateYAML(name = '', description = '', steps = []) {
-  const pipeline = steps.map(step => {
+    const pipeline = steps
+    .filter(step => step.operator !== 'generateAST')
+    .map(step => {
     const result = { operator: step.operator };
 
     if ('target' in step)        result.target = step.target;

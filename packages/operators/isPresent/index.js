@@ -33,25 +33,27 @@ export function run(ctx, cfg = {}) {
 
   const checkMatchArray = arr => Array.isArray(arr) && arr.length > 0;
 
-    if (scope === 'document') {
-      const doc = data.document ?? [];
+  if (scope === 'document') {
+    const doc = data.document ?? [];
 
-      if (Array.isArray(doc)) {
-        const isMatchArray = doc.length === 0 || typeof doc[0] === 'string';
+    if (Array.isArray(doc)) {
+      const isMatchArray = doc.length === 0 || typeof doc[0] === 'string';
 
-        if (isMatchArray) {
-          if (doc.length === 0) {
-            push(1, `Document missing any matches for "${target}"`);
-          }
-        } else {
-          for (const item of doc) {
-            if (!checkObjectProp(item)) {
-              push(item.line ?? 1, `Missing "${target}" on ${ctx.filtered.target} node`);
-            }
+      if (isMatchArray) {
+        // ✅ Fail if no matches at all
+        if (doc.length === 0) {
+          push(1, `Missing any "${target}" in document`);
+        }
+      } else {
+        for (const item of doc) {
+          if (!checkObjectProp(item)) {
+            push(item.line ?? 1, `Missing "${target}" on ${ctx.filtered.target} node`);
           }
         }
       }
     }
+  }
+
 
 
   else if (scope === 'paragraph') {
