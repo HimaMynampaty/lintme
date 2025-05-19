@@ -6,6 +6,7 @@
   import FixManualOperator  from './FixManualOperator.svelte';
   import FixLLMOperator     from './FixLLMOperator.svelte';
   import IsPresentOperator  from './IsPresentOperator.svelte';
+  import RegexMatchOperator from './RegexMatchOperator.svelte';
 
   export let step;
   export let index;
@@ -43,6 +44,8 @@
     <FixLLMOperator        bind:data={step} on:input={changed} />
   {:else if step.operator === 'isPresent'}
     <IsPresentOperator bind:data={step} {storeIndex} on:input={changed} />
+  {:else if step.operator === 'regexMatch'}
+    <RegexMatchOperator bind:data={step} {storeIndex} on:input={changed} />
 
   {/if}
 </div>

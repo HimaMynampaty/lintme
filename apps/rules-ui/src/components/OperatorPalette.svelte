@@ -9,18 +9,28 @@
     { name: 'threshold',           label: 'threshold' },
     { name: 'fixUsingLintMeCode',  label: 'fixUsingLintMeCode' },
     { name: 'fixUsingLLM',         label: 'fixUsingLLM' },
-    { name: 'isPresent',           label: 'isPresent' } 
+    { name: 'isPresent',           label: 'isPresent' },
+    { name: 'regexMatch',          label: 'regexMatch' }    // ✅ new operator
   ];
+
   function addOperator(opName) {
     const newId = crypto.randomUUID(); // generates a unique ID
 
     pipeline.update(p => {
-       if (opName === 'isPresent') {
-         return [...p, {
-           id: newId,
-           operator: 'isPresent',
-           target: 'alt'   // user can still change field; no scope stored
-         }];
+      if (opName === 'isPresent') {
+        return [...p, {
+          id: newId,
+          operator: 'isPresent',
+          target: 'alt'
+        }];
+      }
+
+      if (opName === 'regexMatch') {
+        return [...p, {
+          id: newId,
+          operator: 'regexMatch',
+          pattern: ''  
+        }];
       }
 
       return [...p, {
@@ -29,7 +39,6 @@
       }];
     });
   }
-
 
   $: filtered = availableOperators.filter(op =>
     op.label.toLowerCase().includes(search.toLowerCase())

@@ -1,0 +1,13 @@
+[build]
+command = "yarn workspace lintme-ui build"
+publish = "apps/lintme-ui/dist"
+
+[dev]
+command = "yarn workspace lintme-ui dev"
+targetPort = 5173
+port = 8888
+framework = "vite"
+publish = "apps/lintme-ui"
+
+[functions]
+directory = "netlify/functions"

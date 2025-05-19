@@ -19,10 +19,23 @@ export function run (ctx, cfg = {}) {
   const isRegex   = target in BUILTIN_RX || /^[./].*[./]$/.test(target);
   const re        = isRegex ? toRegExp(target) : null;
 
-  const matchNode = n  => !isRegex && n.type === target;
+/* ── insert just after the other shared helpers ─────────────────────────── */
+  const isExternal = url => /^https?:\/\//i.test(url);   // http:// or https://
+  const isInternal = url => !isExternal(url);            // …everything else
+
+  /* overwrite the old matchNode with the extended version */
+  const matchNode = n => {
+    if (target === 'internallink')
+      return n.type === 'link' && isInternal(n.url || '');
+    if (target === 'externallink')
+      return n.type === 'link' && isExternal(n.url || '');
+    return !isRegex && n.type === target;                // existing rule
+  };
   const matchText = txt=> isRegex ? [...txt.matchAll(re)].map(m => m[0]) : [];
 
   const result = { document: [], paragraph: [], line: {}, endoffile: [] };
+
+  
 
   /* ── scope‑specific handlers in one map ─────────────────────────────────── */
   const handlers = {
@@ -64,21 +77,25 @@ export function run (ctx, cfg = {}) {
         });
       }
     },
-
-    endoffile () {
-      const lines     = md.split('\n');
-      const lastLine  = lines.at(-1) ?? '';
-
-      if (isRegex) {
-        const hits = matchText(lastLine);
-        if (hits.length) result.endoffile = hits;
-      } else {
-        visit(ctx.ast, n => {
-          if (n.position?.start?.line === lines.length && matchNode(n))
-            result.endoffile.push({ ...n, line: lines.length });
-        });
+  endoffile () {
+    if (isRegex) {
+      // find last regex match
+      let last = null;
+      for (const m of md.matchAll(re)) last = m;      // ← “manual” .at(-1) keeps TS/ES2020 happy
+      if (last && last.index + last[0].length === md.length) {
+        result.endoffile.push(last[0]);               // match really ends at EOF
       }
+    } else {
+      const endLine = md.split('\n').length;
+      visit(ctx.ast, n => {
+        if (n.position?.start?.line === endLine && matchNode(n)) {
+          result.endoffile.push({ ...n, line: endLine });
+        }
+      });
     }
+  }
+
+
   };
 
   /* ── run only requested scopes ──────────────────────────────────────────── */

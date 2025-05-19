@@ -12,7 +12,13 @@
 
   function openLintmeUI() {
     const encoded = encodeURIComponent(yamlText);
-    window.open(`http://localhost:5173/?rule=${encoded}`, '_blank');
+    const BASE_URL = import.meta.env.DEV
+      ? 'http://localhost:8888' 
+      : 'https://lintme-ui.netlify.app';
+
+    window.open(`${BASE_URL}/?rule=${encoded}`, '_blank');
+
+    //window.open(`http://localhost:5173/?rule=${encoded}`, '_blank');
   }
 
 </script>

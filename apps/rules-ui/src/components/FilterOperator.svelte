@@ -4,7 +4,7 @@
   const dispatch = createEventDispatcher();
   $: data.scopes ||= [];
 
-  const targets = ['emoji', 'newline', 'image'];
+  const targets = ['emoji', 'newline', 'image', 'internallink', 'externallink'];
   const scopes = ['line', 'paragraph', 'document', 'endoffile'];
 
   let showDropdown = false;
@@ -43,8 +43,8 @@
 
   <!-- Scopes Dropdown -->
   <div class="relative dropdown-container">
-      <label for="scope-toggle" class="text-sm font-medium block mb-1">Scopes</label>
-    
+    <label for="scope-toggle" class="text-sm font-medium block mb-1">Scopes</label>
+
     <button
       class="w-full border rounded px-3 py-1 text-sm cursor-pointer bg-white text-left"
       aria-haspopup="listbox"

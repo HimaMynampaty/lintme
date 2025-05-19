@@ -3,6 +3,6 @@ export const OPERATORS = {
   'filter':      () => import('@himamynampaty/operator-filter').then(m => m.run),
   'count':       () => import('@himamynampaty/operator-count').then(m => m.run),
   'threshold':   () => import('@himamynampaty/operator-threshold').then(m => m.run),
-   'isPresent':   () => import('@himamynampaty/operator-ispresent').then(m => m.run)
-
+  'isPresent':   () => import('@himamynampaty/operator-ispresent').then(m => m.run),
+  'regexMatch': () => import('@himamynampaty/operator-regexmatch').then(m => m.run),
 };

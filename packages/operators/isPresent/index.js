@@ -78,10 +78,26 @@ export function run(ctx, cfg = {}) {
   }
 
   else if (scope === 'endoffile') {
-    if (!checkMatchArray(data.endoffile ?? [])) {
+    const eof = data.endoffile ?? [];
+
+    // 1 ⃣  No matches at all → always a warning
+    if (eof.length === 0) {
       push(1, `End of file missing "${target}"`);
+      return ctx;
+    }
+
+    // 2 ⃣  If matches are simple strings (regex mode), success
+    if (typeof eof[0] === 'string') return ctx;
+
+    // 3 ⃣  Otherwise we have AST-nodes: check the requested property
+    for (const n of eof) {
+      if (!checkObjectProp(n)) {
+        const label = ctx.filtered.target ?? 'node';
+        push(n.line ?? 1, `Missing "${target}" on ${label} node`);
+      }
     }
   }
+
 
   return ctx;
 }

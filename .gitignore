@@ -143,3 +143,6 @@ dist/
 .DS_Store
 *.log
 coverage/
+
+# Local Netlify folder
+.netlify

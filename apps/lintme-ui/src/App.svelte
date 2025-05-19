@@ -1,8 +1,6 @@
 <script>
   import { onMount } from 'svelte';
   import * as monaco from 'monaco-editor';
-  import { runPipeline } from '@himamynampaty/pipeline-runner';
-  import { parseRules } from '@himamynampaty/pipeline-runner';
   const params = new URLSearchParams(window.location.search);
   let rulesYaml = decodeURIComponent(params.get("rule") || "");
 
@@ -122,9 +120,24 @@
     }
 
     originalText = markdownEditor.getValue();
-    const ctx = await runPipeline(rulesYaml, originalText);
-    console.log("AST result:", ctx);
 
+    const response = await fetch('/.netlify/functions/runPipeline', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        yamlText: rulesEditor.getValue(),
+        markdown: originalText,
+      }),
+    });
+
+    const ctx = await response.json();
+
+    if (ctx.error) {
+      alert(`Pipeline error: ${ctx.error}`);
+      return;
+    }
     diagnostics   = ctx.diagnostics || [];
     fixedMarkdown = ctx.fixedMarkdown || originalText;
 
@@ -143,21 +156,9 @@
           diagnostics.map(d => `${d.severity.toUpperCase()} [${d.line}]: ${d.message}`).join('\n');
       }
     } else {
-      let lastOperator = null;
-      try {
-        const yamlText = rulesEditor?.getValue?.() ?? rulesYaml;
-        const parsed = parseRules(yamlText);
-        if (!parsed.error) {
-          const steps = parsed?.pipeline ?? [];
-          lastOperator = steps[steps.length - 1]?.operator;
-        } else {
-          console.warn("YAML parse error:", parsed.error);
-        }
-      } catch (err) {
-        console.warn("Failed to determine last operator:", err);
-      }
 
-      const isJudging = judgmentOperators.has(lastOperator);
+
+      const isJudging = ['threshold', 'isPresent'].includes(ctx.lastOperator);
 
       lintResults = isJudging
         ? 'Lint successful! No issues found.'
