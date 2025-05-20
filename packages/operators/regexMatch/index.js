@@ -8,10 +8,9 @@ export function run(ctx, cfg = {}) {
     return ctx;
   }
 
-  const { target, scopes = [], data } = ctx.filtered;
-  const pattern = cfg.pattern;
-  const level   = 'warning';
+  console.log(ctx.filtered);
 
+  const pattern = cfg.pattern;
   if (!pattern) {
     ctx.diagnostics.push({
       line: 1,
@@ -21,63 +20,72 @@ export function run(ctx, cfg = {}) {
     return ctx;
   }
 
-  const re = new RegExp(pattern, 'i');
+ let re;
+ try {
+   re = new RegExp(pattern, 'i');
+  } catch (err) {
+    ctx.diagnostics.push({
+      line: 1,
+      severity: 'error',
+      message: `Invalid regular expression: ${err.message}`
+    });
+    return ctx;
+  }
 
-  const matchFails = str => !re.test(str ?? '');
+  const strOf = e => {
+    if (typeof e === 'string') return e;
 
-  const push = (line, msg) =>
-    ctx.diagnostics.push({ line, severity: level, message: msg });
-
-  const checkStringArray = (arr, line = 1) => {
-    for (const str of arr) {
-      if (typeof str === 'string' && matchFails(str)) {
-        push(line, `Mismatch: "${str}" does not match pattern`);
-      }
+    if (e?.url) {
+      const text =
+        e.alt ??
+        e.content ??
+        (e.children?.map(c => c.value).join('') || '');
+      const title = e.title ? ` "${e.title}"` : ''; 
+      return `[${text}](${e.url}${title})`;
     }
+
+    return e?.content ?? e?.value ?? '';
   };
 
-  const checkNodeProps = (nodes, line = 1) => {
-    for (const n of nodes) {
-      const value =
-        n?.url ?? n?.alt ?? n?.title ?? (n.children?.[0]?.value ?? '');
-      if (typeof value === 'string' && matchFails(value)) {
-        push(n.line ?? line, `Link value "${value}" does not match pattern`);
-      }
+  const { scopes = [], data } = ctx.filtered;
+  let failures = 0;
+
+  const testEntry = (entry, line = 1) => {
+    const txt = strOf(entry);
+    if (txt && !re.test(txt)) {
+      failures++;
+      ctx.diagnostics.push({
+        line,
+        severity: 'error',
+        message: `"${txt}" does not match /${pattern}/`
+      });
     }
   };
 
   for (const scope of scopes) {
     const entries = data[scope];
-
     if (!entries) continue;
 
     if (scope === 'document' || scope === 'endoffile') {
-      const isStringArray = Array.isArray(entries) && typeof entries[0] === 'string';
-      if (isStringArray) {
-        checkStringArray(entries);
-      } else {
-        checkNodeProps(entries);
-      }
+      entries.forEach(e => testEntry(e, e.line ?? 1));
     }
 
     else if (scope === 'paragraph') {
-      for (const p of entries) {
-        const content = p.matches;
-        if (Array.isArray(content)) {
-          checkStringArray(content, p.line);
-        } else if (Array.isArray(p)) {
-          checkNodeProps(p, p.line);
-        }
-      }
+      entries.forEach(p => p.matches.forEach(e => testEntry(e, e.line ?? p.line)));
     }
 
     else if (scope === 'line') {
-      for (const [line, arr] of Object.entries(entries)) {
-        if (Array.isArray(arr)) {
-          checkStringArray(arr, Number(line));
-        }
-      }
+      Object.entries(entries).forEach(([ln, arr]) =>
+        arr.forEach(e => testEntry(e, Number(ln))));
     }
+  }
+
+  if (failures === 0) {
+    ctx.diagnostics.push({
+      line: 1,
+      severity: 'info',
+      message: `All entries match /${pattern}/`
+    });
   }
 
   return ctx;

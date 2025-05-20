@@ -8,6 +8,7 @@ targetPort = 5173
 port = 8888
 framework = "vite"
 publish = "apps/lintme-ui"
+autoLaunch = true  
 
 [functions]
 directory = "netlify/functions"

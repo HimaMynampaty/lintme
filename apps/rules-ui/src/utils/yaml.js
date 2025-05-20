@@ -13,6 +13,9 @@ export function generateYAML(name = '', description = '', steps = []) {
         if ('word' in step)             out.word       = step.word;
       }
 
+      if (step.operator === 'regexMatch') {
+        if ('pattern' in step)          out.pattern    = step.pattern;
+      }
       /* 🔹 Common optional props for all operators */
       if ('scope' in step && step.operator !== 'isPresent')
         out.scope = step.scope;
@@ -21,6 +24,9 @@ export function generateYAML(name = '', description = '', steps = []) {
 
       return out;
     });
+   return yaml.dump(
+     { rule: name, description, pipeline },
+     { sortKeys: false, defaultStringType: 'QUOTE_DOUBLE' }  
+   );
 
-  return yaml.dump({ rule: name, description, pipeline }, { sortKeys: false });
 }

@@ -85,8 +85,10 @@
           result += `    - Line ${item.line}: ${item.matches.join(', ')}\n`;
         } else if (item.line && item.count !== undefined) {
           result += `    - Line ${item.line}: ${item.count} match(es)\n`;
-        } else if (item.type && item.line) {
-          result += `    - Line ${item.line}: ${item.type}\n`;
+         } else if (item.content) {          
+           result += `    - Line ${item.line}: ${item.content}\n`;
+         } else if (item.type && item.line) {
+           result += `    - Line ${item.line}: ${item.type}\n`;
         } else {
           result += `    - ${JSON.stringify(item)}\n`;
         }
@@ -133,7 +135,7 @@
     });
 
     const ctx = await response.json();
-
+console.log(ctx.ast);
     if (ctx.error) {
       alert(`Pipeline error: ${ctx.error}`);
       return;
