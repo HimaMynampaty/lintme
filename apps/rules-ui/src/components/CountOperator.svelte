@@ -2,27 +2,37 @@
   import { createEventDispatcher } from 'svelte';
   import { pipeline } from '../stores/pipeline.js';
 
-  export let data;        // config object for this step
-  export let storeIndex;  // index of this step inside $pipeline
+  export let data;        
+  export let storeIndex;  
 
   const dispatch  = createEventDispatcher();
   let   hasFilter = false;
 
-  /* ── reactive block: find previous filter and inherit values ─────────── */
-  $: {
-    hasFilter = false;
+$: {
+  let prevTarget = data.target;
+  let prevScopes = JSON.stringify(data.scopes);
 
-    for (let i = storeIndex - 1; i >= 0; i--) {
-      const step = $pipeline[i];
-      if (step?.operator === 'filter') {
-        hasFilter    = true;
-        data.target  = step.target  ?? '';
-        data.scopes  = [...(step.scopes ?? [])];
-        dispatch('input');          // let parent know we mutated data
-        break;
+  let found = false;
+  for (let i = storeIndex - 1; i >= 0 && !found; i--) {
+    const step = $pipeline[i];
+    if (step?.operator === 'filter') {
+      found = true;
+
+      const newTarget = step.target ?? '';
+      const newScopes = step.scopes ? [...step.scopes] : [];
+
+      if (newTarget !== prevTarget ||
+          JSON.stringify(newScopes) !== prevScopes) {
+
+        data.target = newTarget;
+        data.scopes = newScopes;
+        dispatch('input');
       }
     }
   }
+  hasFilter = found;
+}
+
 </script>
 
 {#if !hasFilter}

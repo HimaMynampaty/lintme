@@ -30,8 +30,14 @@ export async function runPipeline(yamlText, markdown) {
       continue;
     }
 
-    const run = await loader();        
-    await run(ctx, step);
+    const run      = await loader();
+
+    const opOutput = await run(ctx, step);   
+
+    if (opOutput && typeof opOutput === 'object' && opOutput !== ctx) {
+      ctx.pipelineResults ??= [];
+      ctx.pipelineResults.push({ name: opName, data: opOutput });
+    }
   }
 
 

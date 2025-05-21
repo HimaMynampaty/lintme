@@ -88,5 +88,5 @@ export function run(ctx, cfg = {}) {
     });
   }
 
-  return ctx;
+  return { scopes, data: {} }; 
 }

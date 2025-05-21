@@ -1,4 +1,4 @@
-import { visit } from 'unist-util-visit';
+import { visit,EXIT } from 'unist-util-visit';
 import { toString } from 'mdast-util-to-string';
 
 const EMOJI_REGEX = /:[\w+-]+:|[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{FE0F}\u{1F1E6}-\u{1F1FF}]/gu;
@@ -16,6 +16,30 @@ export function run(ctx, cfg = {}) {
   const isRegex = target in BUILTIN_RX || /^[./].*[./]$/.test(target);
   const re = isRegex ? toRegExp(target) : null;
 
+  const isExternal = url => /^https?:\/\//i.test(url);
+  const isInternal = url => !isExternal(url);
+
+    if (!isRegex && !['internallink', 'externallink'].includes(target)) {
+    let found = false;
+    visit(ctx.ast, n => {
+      if (n.type === target) {
+        found = true;
+        return EXIT;            // stop scanning early
+      }
+    });
+
+    if (!found) {
+      ctx.diagnostics.push({
+        line: 1,
+        severity: 'warning',
+        message:
+          `filter: no “${target}” nodes found. ` +
+         `Either this markdown doesn’t contain that node type ` +
+          `or “${target}” isn’t a valid mdast node type.`
+      });
+    }
+  }
+
   const checkLinkFormatting = markdown => {
     const RX = {
       missingCloseParen: [/\[[^\]]*\]\([^\)]*$/, "Malformed link: missing closing parenthesis ')'."],
@@ -24,6 +48,7 @@ export function run(ctx, cfg = {}) {
       missingOpenParen: [/\[[^\]]*\][^\(]*[^)]$/, "Malformed link: missing opening parenthesis '('."],
       emptyLinkPattern: [/\[\s*\]\(\s*\)/, "Empty link: both text and URL are missing."],
     };
+
     const out = [];
     markdown.split('\n').forEach((ln, i) => {
       for (const [_k, [rx, msg]] of Object.entries(RX)) {
@@ -36,11 +61,6 @@ export function run(ctx, cfg = {}) {
     return out;
   };
 
-  const isExternal = url => /^https?:\/\//i.test(url);
-  const isInternal = url => !isExternal(url);
-
-  const malformed = checkLinkFormatting(md);
-
   const matchNode = n => {
     if (target === 'internallink')
       return n.type === 'link' && isInternal(n.url || '');
@@ -51,12 +71,17 @@ export function run(ctx, cfg = {}) {
 
   const matchText = txt => isRegex ? [...txt.matchAll(re)].map(m => m[0]) : [];
 
-  const serializeLink = n => {
-    const label = toString(n);
-    const title = n.title ? ` "${n.title}"` : '';
-    return `[${label}](${n.url}${title})`;
+  const serializeNode = n => {
+    if (n.type === 'link') {
+      const label = toString(n);
+      const title = n.title ? ` "${n.title}"` : '';
+      return `[${label}](${n.url}${title})`;
+    }
+    if (typeof n.value === 'string') return n.value;
+    return toString(n);
   };
 
+  const malformed = checkLinkFormatting(md);
   const result = { document: [], paragraph: [], line: {}, endoffile: [] };
 
   const handlers = {
@@ -69,7 +94,7 @@ export function run(ctx, cfg = {}) {
             result.document.push({
               ...n,
               line: n.position?.start?.line ?? 1,
-              content: serializeLink(n),
+              content: serializeNode(n),
             });
           }
         });
@@ -93,11 +118,10 @@ export function run(ctx, cfg = {}) {
           ? matchText(toString(p))
           : collectMatches(p, matchNode);
 
-        const decorated = matches.map(m =>
-          m.type === 'link'
-            ? { ...m, content: serializeLink(m) }
-            : m
-        );
+        const decorated = matches.map(m => ({
+          ...m,
+          content: serializeNode(m),
+        }));
 
         result.paragraph.push({ line: p.position?.start?.line ?? 1, matches: decorated });
 
@@ -132,7 +156,7 @@ export function run(ctx, cfg = {}) {
           const ln = n.position?.start?.line;
           (result.line[ln] ??= []).push({
             ...n,
-            content: serializeLink(n),
+            content: serializeNode(n),
           });
         });
 
@@ -163,7 +187,7 @@ export function run(ctx, cfg = {}) {
             result.endoffile.push({
               ...n,
               line: endLine,
-              content: serializeLink(n),
+              content: serializeNode(n),
             });
           }
         });
@@ -185,7 +209,7 @@ export function run(ctx, cfg = {}) {
 
   for (const s of scopes) handlers[s]?.();
   ctx.filtered = { target, scopes, data: result };
-  return ctx;
+  return { target, scopes, data: result };   
 }
 
 function collectMatches(parent, predicate) {

@@ -5,4 +5,6 @@ export const OPERATORS = {
   'threshold':   () => import('@himamynampaty/operator-threshold').then(m => m.run),
   'isPresent':   () => import('@himamynampaty/operator-ispresent').then(m => m.run),
   'regexMatch': () => import('@himamynampaty/operator-regexmatch').then(m => m.run),
+  'sage':        () => import('@himamynampaty/operator-sage').then(m => m.run),
+  'compare': () => import('@himamynampaty/operator-compare').then(m => m.run)
 };

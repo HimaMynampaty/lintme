@@ -10,11 +10,13 @@
     { name: 'fixUsingLintMeCode',  label: 'fixUsingLintMeCode' },
     { name: 'fixUsingLLM',         label: 'fixUsingLLM' },
     { name: 'isPresent',           label: 'isPresent' },
-    { name: 'regexMatch',          label: 'regexMatch' }    // ✅ new operator
+    { name: 'regexMatch',          label: 'regexMatch' },
+    { name: 'sage',       label: 'sage' },
+    { name: 'compare', label: 'compare' } 
   ];
 
   function addOperator(opName) {
-    const newId = crypto.randomUUID(); // generates a unique ID
+    const newId = crypto.randomUUID();
 
     pipeline.update(p => {
       if (opName === 'isPresent') {
@@ -24,6 +26,13 @@
           target: 'alt'
         }];
       }
+      if (opName === 'compare') {
+        return [...p, { id: newId, operator: 'compare', baseline: '', against: '' }];
+      }
+      if (opName === 'sage') {
+         return [...p, { id: newId, operator: 'sage' }];
+      }
+
 
       if (opName === 'regexMatch') {
         return [...p, {

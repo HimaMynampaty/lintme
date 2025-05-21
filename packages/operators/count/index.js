@@ -1,5 +1,4 @@
 export function run(ctx, cfg = {}) {
-  /* ── validate pre‑condition ─────────────────────────────────────────── */
   if (!ctx.filtered) {
     ctx.diagnostics.push({
       line: 1, severity: 'error',
@@ -11,7 +10,6 @@ export function run(ctx, cfg = {}) {
   const { target, scopes, data } = ctx.filtered;
   const summary = { document: 0, endoffile: 0, line: {}, paragraph: [] };
 
-  /* ── scope‑specific counters in a map ───────────────────────────────── */
   const counters = {
     document: () => { summary.document = data.document.length; },
 
@@ -33,10 +31,8 @@ export function run(ctx, cfg = {}) {
     endoffile: () => { summary.endoffile = data.endoffile.length; }
   };
 
-  /* ── execute only requested scopes ──────────────────────────────────── */
   for (const s of scopes) counters[s]?.();
 
-  /* ── update ctx ─────────────────────────────────────────────────────── */
   ctx.counted = { target, scopes, data: summary };
 
   ctx.counts ??= {};
@@ -44,5 +40,5 @@ export function run(ctx, cfg = {}) {
     Object.entries(summary).filter(([k]) => scopes.includes(k))
   );
 
-  return ctx;
+  return { target, scopes, data: summary };
 }

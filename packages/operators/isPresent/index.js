@@ -99,5 +99,5 @@ export function run(ctx, cfg = {}) {
   }
 
 
-  return ctx;
+  return { target, scopes: [scope], data: {} }; 
 }

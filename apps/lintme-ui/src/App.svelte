@@ -94,7 +94,23 @@
         }
       }
 
-      } else if (typeof value === 'object') {
+            } else if (
+        typeof value === 'object' &&
+        value.missing !== undefined &&
+        value.extra   !== undefined
+      ) {
+        result += `  ${scope}:\n`;
+        result += `    missing (${value.missing.length}):\n`;
+        value.missing.forEach(item =>
+          result += `      • ${item}\n`
+        );
+        result += `    extra   (${value.extra.length}):\n`;
+        value.extra.forEach(item =>
+          result += `      • ${item}\n`
+        );
+        
+      }      
+      else if (typeof value === 'object') {
         const entries = Object.entries(value);
         if (entries.length === 0) {
           result += `  ${scope}: (no matches)\n`;
@@ -143,7 +159,7 @@ console.log(ctx.ast);
     diagnostics   = ctx.diagnostics || [];
     fixedMarkdown = ctx.fixedMarkdown || originalText;
 
-    const judgmentOperators = new Set(['threshold', 'isPresent']);
+    const judgmentOperators = new Set(['threshold', 'isPresent', 'compare']);
 
     if (diagnostics.length > 0) {
       const errorCount = diagnostics.filter(d => d.severity === 'error').length;
@@ -160,29 +176,26 @@ console.log(ctx.ast);
     } else {
 
 
-      const isJudging = ['threshold', 'isPresent'].includes(ctx.lastOperator);
+      const isJudging = judgmentOperators.has(ctx.lastOperator);
 
       lintResults = isJudging
         ? 'Lint successful! No issues found.'
         : 'This rule does not produce actual lint results. It may be missing a judgment step like "threshold".';
 
       if (!isJudging) {
-        const extraOutputs = Object.entries(ctx)
-          .filter(([key, val]) =>
-            typeof val === 'object' &&
-            val !== null &&
-            val.data &&
-            Object.keys(val.data).length > 0
-          );
-
-        if (extraOutputs.length) {
+        if (ctx.pipelineResults && ctx.pipelineResults.length) {
           lintResults += '\n\nInternal analysis:\n';
-          for (const [key, obj] of extraOutputs) {
-            const scopes = obj.scopes ?? Object.keys(obj.data); 
-            lintResults += formatOperatorOutput(key, obj.data, scopes);
-          }
 
+          ctx.pipelineResults.forEach(({ name, data }, idx) => {
+            const header  = `${name.toUpperCase()} ${idx + 1}`;
+            const payload = data.data ?? data;             
+            const scopes  = data.scopes ?? Object.keys(payload);
+
+            lintResults  += `\n${header}:\n`;
+            lintResults  += formatOperatorOutput(name, payload, scopes);
+          });
         }
+
       }
     }
 

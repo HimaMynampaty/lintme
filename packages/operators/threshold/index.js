@@ -1,8 +1,6 @@
 export function run(ctx, cfg = {}) {
-  /* ── locate target ──────────────────────────────────────── */
   let { target, conditions = {}, level = 'warning' } = cfg;
 
-  // If YAML omitted target, try to inherit the ONLY one we have in ctx.counts
   if (!target && ctx.counts) {
     const keys = Object.keys(ctx.counts);
     if (keys.length === 1) target = keys[0];
@@ -19,7 +17,6 @@ export function run(ctx, cfg = {}) {
     return ctx;
   }
 
-  /* ── adapters + evaluation (unchanged) ─────────────────── */
   const adapters = {
     document : () => [{ line: 1, actual: counts.document  ?? 0 }],
     endoffile: () => [{ line: 1, actual: counts.endoffile ?? 0 }],
@@ -44,7 +41,7 @@ export function run(ctx, cfg = {}) {
       }
     }
   }
-  return ctx;
+  return { target, data: {} }; 
 }
 
 

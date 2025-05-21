@@ -21,6 +21,11 @@ export function generateYAML(name = '', description = '', steps = []) {
         out.scope = step.scope;
       if ('level' in step)             out.level      = step.level;
       if ('conditions' in step)        out.conditions = step.conditions;
+      if (step.operator === 'compare') {
+        if ('baseline' in step) out.baseline = step.baseline;
+        if ('against'  in step) out.against  = step.against;
+      }
+
 
       return out;
     });
