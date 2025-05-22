@@ -1,7 +1,10 @@
 <script>
   import { onMount } from 'svelte';
   import * as monaco from 'monaco-editor';
-  import { saveRule, allRules, loadRule } from './lib/rules-db';
+  import { saveRule, allRules, loadRule, deleteRule } from './lib/rules-db';
+  import OperatorTriggerPanel from './components/OperatorTriggerPanel.svelte';
+  import { pipeline } from './stores/pipeline.js';
+
 
   const params = new URLSearchParams(window.location.search);
   let rulesYaml = decodeURIComponent(params.get("rule") || "");
@@ -13,7 +16,7 @@
   let fixedMarkdown = "";
   let diagnostics      = [];  
   let highlightedMarkdown = ""; 
-
+  
   let showDiff = false;
 
   let rulesFiles = [];
@@ -29,6 +32,23 @@
   let diffEditorContainer;
   let diffEditor;
   let ruleList = [];
+  let combinedRuleOptions = [];
+  let showPalette = false;
+
+  $: combinedRuleOptions = [
+    ...ruleList.map(r => ({
+      label: r.name,
+      value: r.id,
+      type: 'saved'
+    })),
+    ...rulesFiles.map(file => ({
+      label: file,
+      value: file,
+      type: 'yaml'
+    }))
+  ];
+
+  let selectedCombinedRule = '';
 
   onMount(async () => {
     rulesEditor = monaco.editor.create(rulesEditorContainer, {
@@ -80,6 +100,24 @@
       if (rulesEditor) rulesEditor.setValue(rec.yaml);
     }
   }
+
+  
+  function togglePalette() {
+    showPalette = !showPalette;
+  }
+
+  async function handleCombinedRuleSelection(event) {
+    const selectedValue = event.target.value;
+    const selectedOption = combinedRuleOptions.find(opt => opt.value === selectedValue);
+    if (!selectedOption) return;
+
+    if (selectedOption.type === 'saved') {
+      await loadRuleFromDB(selectedOption.value);
+    } else if (selectedOption.type === 'yaml') {
+      await loadFileContent('rules', { target: { value: selectedOption.value } });
+    }
+  }
+
 
   function formatOperatorOutput(key, data, scopes = Object.keys(data)) {
     let result = `\n${key.toUpperCase()}:\n`;
@@ -307,6 +345,9 @@
     z-index: 10;
   }
 
+
+
+
   h2 {
     font-size: 1.5rem;
     color: #005a9e;
@@ -378,6 +419,17 @@
     <h2>LintMe - Markdown Linter</h2>
     <button on:click={runLinter}>Run Linter</button>
     <button on:click={saveCurrentRule}>Save rule</button>
+    {#if combinedRuleOptions.find(o => o.value === selectedCombinedRule && o.type === 'saved')}
+      <button class="delete-btn" on:click={async () => {
+        if (confirm("Delete this rule?")) {
+          await deleteRule(selectedCombinedRule);
+          ruleList = await allRules();
+          selectedCombinedRule = '';
+        }
+      }}>
+        Delete Rule
+      </button>
+    {/if}
 
     <button on:click={toggleDiffView}>
       {showDiff ? "Hide Diff View" : "Show Diff View"}
@@ -389,23 +441,27 @@
 
   <div class="container">
     <div class="file-upload">
-      <select on:change={(e) => loadRuleFromDB(e.target.value)}>
-        <option value="">Select saved rule</option>
-        {#each ruleList as r}
-          <option value={r.id}>
-            {r.name} (v{r.version})
-          </option>
-        {/each}
+      <select on:change={handleCombinedRuleSelection} bind:value={selectedCombinedRule}>
+        <option value="">Select Rule</option>
+        <optgroup label="Saved Rules">
+          {#each ruleList as r}
+            <option value={r.id}>{r.name}</option>
+          {/each}
+        </optgroup>
+        <optgroup label="YAML Files">
+          {#each rulesFiles as file}
+            <option value={file}>{file}</option>
+          {/each}
+        </optgroup>
       </select>
+      <div class="min-h-screen bg-gray-50 p-6">
+        <OperatorTriggerPanel />
+      </div>
 
-      <select on:change={(e) => loadFileContent('rules', e)}>
-        <option value="">Select rules.yaml</option>
-        {#each rulesFiles as file}
-          <option value={file}>{file}</option>
-        {/each}
-      </select>
+
       <div class="editor-container" bind:this={rulesEditorContainer}></div>
     </div>
+
 
     <div class="file-upload" style="display: {showDiff ? 'none' : 'flex'}">
       <select on:change={(e) => loadFileContent('readme', e)}>

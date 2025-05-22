@@ -12,22 +12,17 @@ export const dbPromise = openDB('lintmerules', 1, {
    const db  = await dbPromise;
    const tx  = db.transaction('rules', 'readwrite');
    const idx = tx.store.index('name');
-   const prev = await idx.getAll(name);  
-    if (prev.length >= 3) {
-    prev.sort((a, b) => a.version - b.version)
-        .slice(0, prev.length - 2)
-        .forEach(p => tx.store.delete(p.id));
+   const existing = (await idx.getAll(name))[0];
+    const next = {
+      id: existing?.id ?? nanoid(10),
+      name,
+      yaml,
+      ts: Date.now()
+    };
+
+    await tx.store.put(next);
+    return next;
   }
-  const next = {
-    id: nanoid(10),
-    name,
-    yaml,
-    ts: Date.now(),
-    version: (prev.at(-1)?.version ?? 0) + 1
-  };
-  await db.add('rules', next);
-  return next;
-}
 
 export async function allRules() {
   return (await dbPromise).getAll('rules');
