@@ -31,21 +31,20 @@ export function run(ctx, cfg = {}) {
     });
     return ctx;
   }
+  const strOf = (entry) => {
+    if (typeof entry === 'string') return entry;
 
-  const strOf = e => {
-    if (typeof e === 'string') return e;
+    if (entry?.raw) return entry.raw;
+    if (entry?.value) return entry.value;
+    if (entry?.content) return entry.content;
 
-    if (e?.url) {
-      const text =
-        e.alt ??
-        e.content ??
-        (e.children?.map(c => c.value).join('') || '');
-      const title = e.title ? ` "${e.title}"` : ''; 
-      return `[${text}](${e.url}${title})`;
+    if (entry?.children?.length) {
+      return entry.children.map(c => c.value ?? '').join('');
     }
 
-    return e?.content ?? e?.value ?? '';
+    return JSON.stringify(entry);
   };
+
 
   const { scopes = [], data } = ctx.filtered;
   let failures = 0;

@@ -1,6 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import * as monaco from 'monaco-editor';
+  import { saveRule, allRules, loadRule } from './lib/rules-db';
+
   const params = new URLSearchParams(window.location.search);
   let rulesYaml = decodeURIComponent(params.get("rule") || "");
 
@@ -26,8 +28,9 @@
 
   let diffEditorContainer;
   let diffEditor;
+  let ruleList = [];
 
-  onMount(() => {
+  onMount(async () => {
     rulesEditor = monaco.editor.create(rulesEditorContainer, {
       value: rulesYaml,
       language: 'yaml',
@@ -55,6 +58,7 @@
 
     fetchFiles("rules");
     fetchFiles("readme");
+    ruleList = await allRules();
   });
 
   function updateDiffModels() {
@@ -63,6 +67,19 @@
     diffEditor.setModel({ original: originalModel, modified: modifiedModel });
   }
 
+  async function saveCurrentRule() {
+    const name = prompt('Rule name?', 'my-rule');
+    if (!name) return;
+    await saveRule(name, rulesEditor.getValue());
+    ruleList = await allRules();   
+  }
+  async function loadRuleFromDB(id) {
+    const rec = await loadRule(id);
+    if (rec) {
+      rulesYaml = rec.yaml;
+      if (rulesEditor) rulesEditor.setValue(rec.yaml);
+    }
+  }
 
   function formatOperatorOutput(key, data, scopes = Object.keys(data)) {
     let result = `\n${key.toUpperCase()}:\n`;
@@ -151,7 +168,7 @@
     });
 
     const ctx = await response.json();
-console.log(ctx.ast);
+    console.log(ctx.ast);
     if (ctx.error) {
       alert(`Pipeline error: ${ctx.error}`);
       return;
@@ -360,6 +377,8 @@ console.log(ctx.ast);
   <div class="header-container">
     <h2>LintMe - Markdown Linter</h2>
     <button on:click={runLinter}>Run Linter</button>
+    <button on:click={saveCurrentRule}>Save rule</button>
+
     <button on:click={toggleDiffView}>
       {showDiff ? "Hide Diff View" : "Show Diff View"}
     </button>
@@ -370,6 +389,15 @@ console.log(ctx.ast);
 
   <div class="container">
     <div class="file-upload">
+      <select on:change={(e) => loadRuleFromDB(e.target.value)}>
+        <option value="">Select saved rule</option>
+        {#each ruleList as r}
+          <option value={r.id}>
+            {r.name} (v{r.version})
+          </option>
+        {/each}
+      </select>
+
       <select on:change={(e) => loadFileContent('rules', e)}>
         <option value="">Select rules.yaml</option>
         {#each rulesFiles as file}
@@ -408,4 +436,5 @@ console.log(ctx.ast);
       {@html highlightedMarkdown}
     </div>
   {/if}
+
 </main>

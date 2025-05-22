@@ -51,6 +51,18 @@ export async function run(ctx, cfg = {}) {
     });
   });
 
+  extra.forEach((item) => {
+    const line = item && typeof item === 'object' && item.line ? item.line : 1;
+    const label =
+      item.content ?? item.url ?? item.slug ?? JSON.stringify(item);
+    ctx.diagnostics.push({
+      line,
+      severity: level,                
+      message: `Compare found extra: ${label}`
+    });
+  });
+
+
 
   const summary = {
     [scope]: {

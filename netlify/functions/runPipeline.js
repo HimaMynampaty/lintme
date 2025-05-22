@@ -5,7 +5,6 @@ export async function handler(event) {
     const { yamlText, markdown } = JSON.parse(event.body);
     const ctx = await runPipeline(yamlText, markdown);
 
-    // Add operator awareness (optional)
     let lastOperator = null;
     const parsed = parseRules(yamlText);
     if (!parsed.error) {
