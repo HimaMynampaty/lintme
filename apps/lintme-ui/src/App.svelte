@@ -455,12 +455,9 @@
         </optgroup>
       </select>
      <!-- new code -->
-      <div class="operator-panel-wrapper max-h-80 overflow-y-auto bg-gray-50
-                  p-4 rounded border">
+      <div class="bg-gray-50 p-4 rounded border relative">
         <OperatorTriggerPanel {rulesEditor} />
       </div>
-
-
 
       <div class="editor-container" bind:this={rulesEditorContainer}></div>
     </div>
