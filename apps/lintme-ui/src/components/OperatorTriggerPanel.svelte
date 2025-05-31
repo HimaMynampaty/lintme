@@ -1,91 +1,109 @@
 <script>
+  import { onDestroy } from 'svelte';
+  import { pipeline }   from '../stores/pipeline.js';
+  import { generateYAML } from '../utils/yaml.js';
+
   import OperatorPalette from './OperatorPalette.svelte';
+  import PipelineEditor  from '../editor/PipelineEditor.svelte';
 
+  // Monaco editor instance comes in from <App.svelte>
+  export let rulesEditor;
+
+  /* local ui state -------------------------------------------------------- */
   let showPalette = false;
+  function togglePalette() { showPalette = !showPalette; }
 
-  function togglePalette() {
-    showPalette = !showPalette;
-  }
+  /* add an operator to the pipeline -------------------------------------- */
+  function addOperator(opName) {
+    const id = crypto.randomUUID();             // modern browsers support this
 
-  function closePalette() {
+    pipeline.update(steps => {
+      switch (opName) {
+        case 'isPresent':
+          return [...steps, { id, operator: 'isPresent', target: 'alt' }];
+
+        case 'compare':
+          return [...steps, { id, operator: 'compare', baseline: '', against: '' }];
+
+        case 'regexMatch':
+          return [...steps, { id, operator: 'regexMatch', pattern: '' }];
+
+        case 'sage':
+          return [...steps, { id, operator: 'sage' }];
+
+        default:
+          return [...steps, { id, operator: opName }];
+      }
+    });
+
     showPalette = false;
   }
+
+  /* keep YAML text in sync with the visual pipeline ---------------------- */
+  const unsub = pipeline.subscribe(steps => {
+    if (rulesEditor) {
+      const yaml = generateYAML('my-rule', '', steps);
+      rulesEditor.setValue(yaml);
+    }
+  });
+  onDestroy(unsub);
 </script>
 
 <div class="operator-panel">
-  <button on:click={togglePalette} class="add-operator-btn">➕</button>
+  <button class="add-operator-btn" on:click={togglePalette}>➕</button>
 
   {#if showPalette}
     <div class="palette-popup">
-      <div class="popup-header">
-        <span class="title">Search Operators</span>
-        <button class="close-btn" on:click={closePalette}>×</button>
-      </div>
-      <OperatorPalette />
+      <OperatorPalette
+        on:select={(e) => addOperator(e.detail)}
+        on:close={() => (showPalette = false)}
+      />
     </div>
   {/if}
 
+<div class="steps">
+  <PipelineEditor />
+</div>
 </div>
 
 <style>
-  .operator-panel {
-    margin-bottom: 12px;
-    padding: 16px;
-    background-color: #fafafa;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  }
+/* ──────────── panel container ──────────── */
+.operator-panel{
+  background:#f9fafb;
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  padding:1rem;
+  display:flex;
+  flex-direction:column;
+  gap:.75rem;
+}
 
-  .add-operator-btn {
-    width: 32px;
-    height: 32px;
-    font-size: 18px;
-    font-weight: bold;
-    padding: 0;
-    border-radius: 50%;
-    border: 1px solid #ccc;
-    background-color: white;
-    color: #333;
-    cursor: pointer;
-  }
+/* ──────────── “add” button ──────────── */
+.add-operator-btn{
+  width:34px;height:34px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;font-weight:600;
+  color:white;background:#6366f1;
+  border:none;border-radius:9999px;cursor:pointer;
+  transition:background .15s;
+}
+.add-operator-btn:hover{background:#4f46e5;}
 
-  .add-operator-btn:hover {
-    background-color: #f0f0f0;
-  }
+/* ──────────── palette pop‑up ──────────── */
+.palette-popup{
+  position:relative;
+  background:white;
+  border:1px solid #e5e7eb;
+  border-radius:10px;
+  padding:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.08);
+}
 
-  .palette-popup {
-    position: relative;
-    border-radius: 8px;
-    padding: 12px;
-    margin-top: 10px;
-    background-color: white;
-    border: 1px solid #ccc;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  }
-
-  .popup-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-  }
-
-  .popup-header .title {
-    font-weight: bold;
-    font-size: 14px;
-  }
-
-  .close-btn {
-    background: none;
-    border: none;
-    font-size: 18px;
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
-  }
-
-  .close-btn:hover {
-    color: #c53030;
-  }
+/* ──────────── list of step cards ──────────── */
+.steps{
+  display:flex;
+  flex-direction:column;
+  gap:.75rem;
+}
 </style>
+
