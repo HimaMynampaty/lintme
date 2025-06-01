@@ -1,5 +1,6 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onDestroy, tick } from 'svelte';
+
   import FilterOperator     from './FilterOperator.svelte';
   import CountOperator      from './CountOperator.svelte';
   import ThresholdOperator  from './ThresholdOperator.svelte';
@@ -7,8 +8,8 @@
   import FixLLMOperator     from './FixLLMOperator.svelte';
   import IsPresentOperator  from './IsPresentOperator.svelte';
   import RegexMatchOperator from './RegexMatchOperator.svelte';
-  import SageOperator from './SageOperator.svelte';
-  import CompareOperator from './CompareOperator.svelte';
+  import SageOperator       from './SageOperator.svelte';
+  import CompareOperator    from './CompareOperator.svelte';
 
   export let step;
   export let index;
@@ -17,66 +18,96 @@
   const dispatch = createEventDispatcher();
   const changed  = () => dispatch('update', step);
   const remove   = () => dispatch('remove');
+
+  let showPopup = false;
+  let popupRef;
+
+  async function togglePopup() {
+    showPopup = !showPopup;
+    await tick();
+    if (showPopup) {
+      document.addEventListener('click', handleClickOutside);
+    } else {
+      document.removeEventListener('click', handleClickOutside);
+    }
+  }
+
+  function handleClickOutside(event) {
+    if (
+      popupRef &&
+      !popupRef.contains(event.target) &&
+      !event.target.closest(`[data-step="step-${step.id}"]`)
+    ) {
+      showPopup = false;
+      document.removeEventListener('click', handleClickOutside);
+    }
+  }
+
+  onDestroy(() => {
+    document.removeEventListener('click', handleClickOutside);
+  });
 </script>
 
-<div class="step-card">
-<div class="relative bg-white border rounded p-3 shadow-sm space-y-3 group">
+<div class="relative inline-block group">
   <button
-    title="Remove step"
-    class="absolute top-2 right-2 text-gray-400 hover:text-red-600
-           transition opacity-0 group-hover:opacity-100"
-    on:click={remove}
+    type="button"
+    class="w-full text-left border border-gray-300 bg-white px-4 py-2 rounded-md shadow-sm text-sm text-indigo-700 flex items-center gap-2 hover:shadow-md transition"
+    on:click={togglePopup}
+    data-step={`step-${step.id}`}
+    aria-haspopup="dialog"
+    aria-expanded={showPopup}
+  >
+    <span>Step {index}: {step.operator}</span>
+    <span class="sr-only">Edit {step.operator}</span>
+  </button>
+
+  <button
+    class="absolute -top-2 -right-2 bg-white text-gray-400 hover:text-red-500 border border-gray-200 rounded-full w-6 h-6 text-xs flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+    on:click|stopPropagation={remove}
     aria-label="Remove step"
+    title="Remove"
   >
     ✖
   </button>
 
-  <h3 class="text-sm font-bold text-indigo-700">
-    Step {index}: {step.operator}
-  </h3>
+  {#if showPopup}
+    <div
+      class="absolute top-12 left-0 z-20 w-72 p-4 bg-white border border-gray-200 rounded-lg shadow-xl"
+      bind:this={popupRef}
+    >
+      <div class="flex justify-between items-center mb-2">
+        <h4 class="text-sm font-semibold text-gray-700">
+          {step.operator} configurations
+        </h4>
+        <button
+          class="text-gray-400 hover:text-red-500 text-sm"
+          on:click|stopPropagation={remove}
+          title="Delete step"
+          aria-label="Delete step"
+        >
+          ✖
+        </button>
+      </div>
 
-  {#if step.operator === 'filter'}
-    <FilterOperator        bind:data={step} on:input={changed} />
-  {:else if step.operator === 'count'}
-    <CountOperator         bind:data={step} {storeIndex} on:input={changed} />
-  {:else if step.operator === 'threshold'}
-    <ThresholdOperator     bind:data={step} {storeIndex} on:input={changed} />
-  {:else if step.operator === 'fixUsingLintMeCode'}
-    <FixManualOperator     bind:data={step} on:input={changed} />
-  {:else if step.operator === 'fixUsingLLM'}
-    <FixLLMOperator        bind:data={step} on:input={changed} />
-  {:else if step.operator === 'isPresent'}
-    <IsPresentOperator bind:data={step} {storeIndex} on:input={changed} />
-  {:else if step.operator === 'regexMatch'}
-    <RegexMatchOperator bind:data={step} {storeIndex} on:input={changed} />
-  {:else if step.operator === 'sage'}
-    <SageOperator bind:data={step}/>
-  {:else if step.operator === 'compare'}
-    <CompareOperator bind:data={step} {storeIndex} on:input={changed}/>  
+      {#if step.operator === 'filter'}
+        <FilterOperator bind:data={step} on:input={changed} />
+      {:else if step.operator === 'count'}
+        <CountOperator bind:data={step} {storeIndex} on:input={changed} />
+      {:else if step.operator === 'threshold'}
+        <ThresholdOperator bind:data={step} {storeIndex} on:input={changed} />
+      {:else if step.operator === 'fixUsingLintMeCode'}
+        <FixManualOperator bind:data={step} on:input={changed} />
+      {:else if step.operator === 'fixUsingLLM'}
+        <FixLLMOperator bind:data={step} on:input={changed} />
+      {:else if step.operator === 'isPresent'}
+        <IsPresentOperator bind:data={step} {storeIndex} on:input={changed} />
+      {:else if step.operator === 'regexMatch'}
+        <RegexMatchOperator bind:data={step} {storeIndex} on:input={changed} />
+      {:else if step.operator === 'sage'}
+        <SageOperator bind:data={step} />
+      {:else if step.operator === 'compare'}
+        <CompareOperator bind:data={step} {storeIndex} on:input={changed} />
+      {/if}
+    </div>
   {/if}
 </div>
-</div>  
-
-<style>
-.step-card{
-  background:white;
-  border:1px solid #e5e7eb;
-  border-radius:8px;
-  padding:1rem;
-  box-shadow:0 1px 2px rgba(0,0,0,.04);
-}
-
-.step-card h3{
-  margin:0 0 .5rem;
-  font-size:1rem;
-  font-weight:600;
-  color:#1e293b;               /* slate‑800 */
-}
-
-.delete-btn{
-  position:absolute;top:.6rem;right:.6rem;
-  border:none;background:none;font-size:18px;
-  color:#9ca3af;cursor:pointer;
-}
-.delete-btn:hover{color:#ef4444;}
-</style>

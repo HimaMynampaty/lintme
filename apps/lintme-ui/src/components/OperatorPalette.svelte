@@ -20,16 +20,12 @@
     dispatch('select', op);
   }
 
-  $: filtered = search.trim()
-    ? availableOperators
-        .filter(op => op.label.toLowerCase().includes(search.toLowerCase()))
-        .sort((a, b) => a.label.localeCompare(b.label))
-    : availableOperators
-        .sort((a, b) => a.label.localeCompare(b.label))
-        .slice(0, 3);
+  $: filtered = availableOperators
+    .filter(op => op.label.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => a.label.localeCompare(b.label));
 </script>
 
-<div class="w-64 max-h-80 overflow-auto p-3 space-y-2 bg-white border border-gray-300 rounded-md shadow-lg">
+<div class="w-64 p-3 space-y-2 bg-white border border-gray-300 rounded-md shadow-lg">
   <label for="searchOperators" class="sr-only">Search Operators</label>
   <input
     id="searchOperators"
@@ -39,14 +35,16 @@
   />
 
   {#if !search}
-    <p class="text-xs text-gray-500">Showing top 3 operators, search for more</p>
+    <p class="text-xs text-gray-500">Scroll to view all operators</p>
   {/if}
 
-  {#each filtered as op}
-    <button class="op-btn" on:click={() => choose(op.name)}>
-      ➕ {op.label}
-    </button>
-  {/each}
+  <div class="max-h-40 overflow-y-auto space-y-2">
+    {#each filtered as op}
+      <button class="op-btn" on:click={() => choose(op.name)}>
+        ➕ {op.label}
+      </button>
+    {/each}
+  </div>
 
   <button
     class="w-full mt-2 text-xs text-center text-gray-500 hover:text-gray-700"
