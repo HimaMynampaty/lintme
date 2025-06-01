@@ -33,6 +33,7 @@
     "retext-repeated-words": "^5.0.0",
     "retext-simplify": "^8.0.0",
     "retext-spell": "^6.1.0",
+    "sharp": "^0.34.2",
     "talisman": "^1.1.4",
     "unified": "^11.0.5"
   }
