@@ -34,12 +34,12 @@ h1 {
 .card {
   padding: 2em;
 }
-#app {
-  max-width: 1480px;  
-  margin: 0 auto;     
-  text-align: left;
-}
 
+ #app {
+   width: 100%;
+   margin: 0;
+   text-align: left;
+ }
 
 button {
   border-radius: 8px;

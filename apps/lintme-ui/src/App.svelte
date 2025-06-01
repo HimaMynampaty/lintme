@@ -3,9 +3,6 @@
   import * as monaco from 'monaco-editor';
   import { saveRule, allRules, loadRule, deleteRule } from './lib/rules-db';
   import OperatorTriggerPanel from './components/OperatorTriggerPanel.svelte';
-  import { pipeline } from './stores/pipeline.js';
-
-
   const params = new URLSearchParams(window.location.search);
   let rulesYaml = decodeURIComponent(params.get("rule") || "");
 
@@ -326,92 +323,104 @@
 </script>
 
 <style>
-  main {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    font-family: Arial, sans-serif;
-  }
 
-  .header-container {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 10px 20px;
-    background: white;
-    border-bottom: 1px solid #ccc;
-    position: fixed;
-    width: 100vw;
-    z-index: 10;
-  }
+:root {
+  --header-h: 56px;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;        
+  font-family: Arial, sans-serif;
+  overflow: hidden;     
+}
+
+.header-container {
+  height: var(--header-h);
+  flex-shrink: 0;         
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 20px;
+  background: #fff;
+  border-bottom: 1px solid #ccc;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #005a9e;
+}
+
+button {
+  padding: 10px 16px;
+  font-size: 14px;
+  background: #005a9e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s;
+}
+button:hover { background: #004b8a; }
+
+.container {
+  flex: 1 1 auto;
+  display: flex;
+  gap: 10px;
+  padding: 10px 0; 
+  box-sizing: border-box;
+  overflow: hidden;
+  width: 100%;      
+  max-width: 100vw; 
+}
+
+.file-upload,
+.diff-editor-container {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;     
+  max-width: 100%; 
+}
+
+.editor-container,
+.diff-editor-container {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: auto;
+  width: 100%;
+}
 
 
+select {
+  margin-bottom: 10px;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: #f0f4f8;
+}
+
+.diff-editor-container { display: none; }
+.diff-editor-container.show { display: flex; }
 
 
-  h2 {
-    font-size: 1.5rem;
-    color: #005a9e;
-    margin: 0;
-  }
+.output {
+  flex-shrink: 0;         
+  height: 200px;
+  width: 100%;
+  background: #f0f4f8;
+  border-top: 2px solid #ccc;
+  padding: 10px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
 
-  button {
-    padding: 10px 16px;
-    font-size: 14px;
-    background: #005a9e;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-  button:hover {
-    background: #004b8a;
-  }
 
-  .container {
-    display: flex;
-    gap: 10px;
-    flex: 1;
-    padding: 70px 10px 10px 10px;
-  }
-
-  .editor-container {
-    flex: 1;
-    overflow: auto;
-  }
-
-  .file-upload {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-
-  select {
-    margin-bottom: 10px;
-    padding: 10px;
-    font-size: 16px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    background-color: #f0f4f8;
-  }
-
-  .output {
-    width: 100%;
-    min-height: 200px;
-    background: #f0f4f8;
-    padding: 10px;
-    white-space: pre-wrap;
-    overflow: auto;
-    border-top: 2px solid #ccc;
-  }
-
-  .diff-editor-container {
-    flex: 1;
-    display: none;
-    overflow: auto;
-  }
-  .diff-editor-container.show {
-    display: block;
-  }
 </style>
 
 <main>
