@@ -6,7 +6,6 @@ export function generateYAML(name = '', description = '', steps = []) {
     .map(step => {
       const out = { operator: step.operator };
 
-      /* 🔹 Only the FILTER step serializes target / scopes / word */
       if (step.operator === 'filter') {
         if ('target' in step)           out.target     = step.target;
         if (Array.isArray(step.scopes)) out.scopes     = step.scopes;
@@ -16,10 +15,14 @@ export function generateYAML(name = '', description = '', steps = []) {
       if (step.operator === 'regexMatch') {
         if ('pattern' in step)          out.pattern    = step.pattern;
       }
-      /* 🔹 Common optional props for all operators */
+      if ('target' in step && step.target !== '')
+        out.target = step.target;        
+
       if ('scope' in step && step.operator !== 'isPresent')
         out.scope = step.scope;
-      if ('level' in step)             out.level      = step.level;
+
+      if ('level' in step && step.level !== 'warning')
+        out.level = step.level;       
       if ('conditions' in step)        out.conditions = step.conditions;
       if (step.operator === 'compare') {
         if ('baseline' in step) out.baseline = step.baseline;

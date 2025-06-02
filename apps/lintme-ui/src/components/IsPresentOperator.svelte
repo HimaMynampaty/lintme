@@ -6,27 +6,40 @@
   export let storeIndex = 0;
 
   const dispatch = createEventDispatcher();
-  const changed  = () => dispatch('input');
+  const changed = () => dispatch('input');
 
-  const fields   = ['alt', 'emoji', 'newline'];
-
-  /* does a filter exist above us? — still keep that warning */
   let hasFilter = false;
+  let filteredTarget = '';
+  let suggestions = [];
+
+  const knownFields = {
+    image: ['alt', 'title', 'url'],
+    link: ['title', 'url'],
+    code: ['lang'],
+    listItem: ['checked'],
+    paragraph: ['content'],
+    heading: ['depth'],
+  };
+
   $: {
     hasFilter = false;
+    filteredTarget = '';
+    suggestions = [];
+
     for (let i = storeIndex - 1; i >= 0; i--) {
-      if ($pipeline[i]?.operator === 'filter') {
+      const op = $pipeline[i];
+      if (op?.operator === 'filter') {
         hasFilter = true;
+        filteredTarget = op?.target ?? '';
+        suggestions = knownFields[filteredTarget] ?? [];
         break;
       }
     }
   }
 
-  /* set defaults once */
   onMount(async () => {
     data.operator ??= 'isPresent';
-    data.target   ??= 'alt';
-    data.level    ??= 'warning';
+    data.target ??= '';
     await tick();
     dispatch('input');
   });
@@ -34,15 +47,22 @@
 
 <div class="space-y-4">
   <div>
-    <label class="text-sm font-medium text-gray-700" for="present-field">Field</label>
-    <select id="present-field"
-            class="w-full border rounded px-3 py-2 text-sm"
-            bind:value={data.target}
-            on:change={changed}>
-      {#each fields as f}
-        <option value={f}>{f}</option>
-      {/each}
-    </select>
+    <label class="text-sm font-medium text-gray-700" for="present-field">
+      Field to check presence of
+    </label>
+    <input
+      id="present-field"
+      type="text"
+      class="w-full border rounded px-3 py-2 text-sm"
+      bind:value={data.target}
+      placeholder={suggestions.length > 0 ? `e.g. ${suggestions.join(', ')}` : 'e.g. alt, title, demo'}
+      on:input={changed}
+    />
+    {#if suggestions.length > 0}
+      <p class="text-xs text-gray-500 mt-1">
+        Common fields for <code>{filteredTarget}</code>: <strong>{suggestions.join(', ')}</strong>
+      </p>
+    {/if}
   </div>
 
   {#if !hasFilter}
