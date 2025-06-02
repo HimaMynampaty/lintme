@@ -6,5 +6,6 @@ export const OPERATORS = {
   'isPresent':   () => import('@himamynampaty/operator-ispresent').then(m => m.run),
   'regexMatch': () => import('@himamynampaty/operator-regexmatch').then(m => m.run),
   'sage':        () => import('@himamynampaty/operator-sage').then(m => m.run),
-  'compare': () => import('@himamynampaty/operator-compare').then(m => m.run)
+  'compare': () => import('@himamynampaty/operator-compare').then(m => m.run),
+  'length': () => import('@himamynampaty/operator-length').then(m => m.run),
 };

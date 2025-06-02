@@ -37,6 +37,6 @@ $: {
 
 {#if !hasFilter}
   <p class="text-sm text-red-500">
-    ⚠ Add a <code>filter</code> step before this one.
+    ⚠ Add any step like <code>filter</code> before this one.
   </p>
 {/if}

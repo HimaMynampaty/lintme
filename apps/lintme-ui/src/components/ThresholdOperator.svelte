@@ -5,33 +5,35 @@
   export let data;
   export let storeIndex;
 
-  const dispatch     = createEventDispatcher();
-  const types        = ['lessthan','greaterthan','greaterthanequalto',
-                        'lessthanequalto','equal','equalto'];
+  const dispatch = createEventDispatcher();
+  const types = [
+    'lessthan', 'greaterthan', 'greaterthanequalto',
+    'lessthanequalto', 'equal', 'equalto'
+  ];
 
-  let countScopes  = [];
-  let countTarget  = '';
+  let availableScopes = [];
+  let availableTarget = '';
 
   $: {
-    countScopes = [];
-    countTarget = '';
+    availableScopes = [];
+    availableTarget = '';
 
     for (let i = storeIndex - 1; i >= 0; i--) {
-      const prev = $pipeline[i];
-      if (prev?.operator === 'count') {
-        countScopes = prev.scopes ?? [];
-        countTarget = prev.target ?? '';
+      const step = $pipeline[i];
+      if (step?.scopes?.length && step.target) {
+        availableScopes = [...step.scopes];
+        availableTarget = step.target;
         break;
       }
     }
 
-    // inject inherited props silently
-    if (countTarget && !data.target) {
-      data.target = countTarget;
+    if (availableTarget && !data.target) {
+      data.target = availableTarget;
       dispatch('input');
     }
+
     data.conditions ||= {};
-    for (const s of countScopes) {
+    for (const s of availableScopes) {
       data.conditions[s] ??= { type: 'lessthan', value: '' };
     }
   }
@@ -40,13 +42,13 @@
 </script>
 
 <div class="space-y-4">
-  {#if countScopes.length === 0}
+  {#if storeIndex === 0}
     <p class="text-sm text-red-500">
-      ⚠ Add a <code>count</code> step with scope before this threshold.
+      ⚠ The <code>threshold</code> operator must come after another step.
     </p>
   {/if}
 
-  {#each countScopes as s}
+  {#each availableScopes as s}
     <div class="border-t pt-4">
       <h4 class="text-sm font-semibold text-indigo-700 mb-2 capitalize">
         {s === 'endoffile' ? 'End of File' : s} Threshold

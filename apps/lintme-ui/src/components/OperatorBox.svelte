@@ -10,6 +10,7 @@
   import RegexMatchOperator from './RegexMatchOperator.svelte';
   import SageOperator       from './SageOperator.svelte';
   import CompareOperator    from './CompareOperator.svelte';
+  import LengthOperator from './LengthOperator.svelte';
 
   export let step;
   export let index;
@@ -107,6 +108,8 @@
         <SageOperator bind:data={step} />
       {:else if step.operator === 'compare'}
         <CompareOperator bind:data={step} {storeIndex} on:input={changed} />
+      {:else if step.operator === 'length'}  
+        <LengthOperator bind:data={step} {storeIndex} on:input={changed} />  
       {/if}
     </div>
   {/if}

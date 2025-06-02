@@ -7,6 +7,7 @@
   const availableOperators = [
     { name: 'filter', label: 'filter' },
     { name: 'count', label: 'count' },
+    { name: 'length', label: 'length' },
     { name: 'threshold', label: 'threshold' },
     { name: 'fixUsingLintMeCode', label: 'fixUsingLintMeCode' },
     { name: 'fixUsingLLM', label: 'fixUsingLLM' },

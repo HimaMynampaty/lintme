@@ -2,7 +2,7 @@ export function run(ctx, cfg = {}) {
   if (!ctx.filtered) {
     ctx.diagnostics.push({
       line: 1, severity: 'error',
-      message: 'count operator needs filter to run first'
+      message: 'count operator needs any other operator like filter to run first'
     });
     return ctx;
   }

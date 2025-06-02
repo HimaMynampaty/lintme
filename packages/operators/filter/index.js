@@ -24,7 +24,7 @@ export function run(ctx, cfg = {}) {
     visit(ctx.ast, n => {
       if (n.type === target) {
         found = true;
-        return EXIT;            // stop scanning early
+        return EXIT;           
       }
     });
 

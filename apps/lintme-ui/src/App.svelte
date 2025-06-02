@@ -171,7 +171,16 @@
 
         result += `  ${scope}:\n`;
         for (const [line, matches] of entries) {
-          result += `    - Line ${line}: ${Array.isArray(matches) ? matches.join(', ') : matches}\n`;
+          if (Array.isArray(matches)) {
+            const labels = matches.map(m =>
+              typeof m === 'string'
+                ? (m === '\n' ? 'newline character' : m)          // regex hits
+                : m.content ?? m.value ?? m.type ?? '[node]');   // mdast nodes
+
+            result += `    - Line ${line}: ${labels.join(', ')}\n`;
+          } else {
+            result += `    - Line ${line}: ${matches}\n`;
+          }          
         }
       } else if (typeof value === 'number') {
         result += `  ${scope}: ${value}\n`;
