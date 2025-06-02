@@ -11,6 +11,7 @@
   import SageOperator       from './SageOperator.svelte';
   import CompareOperator    from './CompareOperator.svelte';
   import LengthOperator from './LengthOperator.svelte';
+  import SearchOperator from './SearchOperator.svelte';
 
   export let step;
   export let index;
@@ -110,6 +111,8 @@
         <CompareOperator bind:data={step} {storeIndex} on:input={changed} />
       {:else if step.operator === 'length'}  
         <LengthOperator bind:data={step} {storeIndex} on:input={changed} />  
+      {:else if step.operator === 'search'}
+        <SearchOperator bind:data={step} {storeIndex} on:input={changed} />
       {/if}
     </div>
   {/if}

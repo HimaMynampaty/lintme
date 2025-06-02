@@ -2,41 +2,38 @@
   import { createEventDispatcher } from 'svelte';
   import { pipeline } from '../stores/pipeline.js';
 
-  export let data;        
-  export let storeIndex;  
+  export let data;
+  export let storeIndex;
 
-  const dispatch  = createEventDispatcher();
-  let   hasFilter = false;
+  const dispatch = createEventDispatcher();
+  let hasPriorStepOutput = false;
 
-$: {
-  let prevTarget = data.target;
-  let prevScopes = JSON.stringify(data.scopes);
+  $: {
+    let prevTarget = data.target;
+    let prevScopes = JSON.stringify(data.scopes);
 
-  let found = false;
-  for (let i = storeIndex - 1; i >= 0 && !found; i--) {
-    const step = $pipeline[i];
-    if (step?.operator === 'filter') {
-      found = true;
+    let found = false;
+    for (let i = storeIndex - 1; i >= 0 && !found; i--) {
+      const step = $pipeline[i];
+      if (step?.operator) {
+        found = true;
 
-      const newTarget = step.target ?? '';
-      const newScopes = step.scopes ? [...step.scopes] : [];
-
-      if (newTarget !== prevTarget ||
-          JSON.stringify(newScopes) !== prevScopes) {
-
-        data.target = newTarget;
-        data.scopes = newScopes;
+        if (step.target && step.target !== prevTarget) {
+          data.target = step.target;
+        }
+        if (step.scopes && JSON.stringify(step.scopes) !== prevScopes) {
+          data.scopes = [...step.scopes];
+        }
         dispatch('input');
       }
     }
-  }
-  hasFilter = found;
-}
 
+    hasPriorStepOutput = found;
+  }
 </script>
 
-{#if !hasFilter}
+{#if !hasPriorStepOutput}
   <p class="text-sm text-red-500">
-    ⚠ Add any step like <code>filter</code> before this one.
+    ⚠ Add a step before this one so it has data to work with.
   </p>
 {/if}

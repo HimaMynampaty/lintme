@@ -5,35 +5,32 @@
   export let data;
   export let storeIndex;
 
-  const dispatch = createEventDispatcher();
-  const types = [
-    'lessthan', 'greaterthan', 'greaterthanequalto',
-    'lessthanequalto', 'equal', 'equalto'
-  ];
+  const dispatch     = createEventDispatcher();
+  const types        = ['lessthan','greaterthan','greaterthanequalto',
+                        'lessthanequalto','equal','equalto'];
 
-  let availableScopes = [];
-  let availableTarget = '';
+  let countScopes  = [];
+  let countTarget  = '';
 
   $: {
-    availableScopes = [];
-    availableTarget = '';
+    countScopes = [];
+    countTarget = '';
 
     for (let i = storeIndex - 1; i >= 0; i--) {
-      const step = $pipeline[i];
-      if (step?.scopes?.length && step.target) {
-        availableScopes = [...step.scopes];
-        availableTarget = step.target;
+      const prev = $pipeline[i];
+      if (prev?.operator === 'count') {
+        countScopes = prev.scopes ?? [];
+        countTarget = prev.target ?? '';
         break;
       }
     }
 
-    if (availableTarget && !data.target) {
-      data.target = availableTarget;
+    if (countTarget && !data.target) {
+      data.target = countTarget;
       dispatch('input');
     }
-
     data.conditions ||= {};
-    for (const s of availableScopes) {
+    for (const s of countScopes) {
       data.conditions[s] ??= { type: 'lessthan', value: '' };
     }
   }
@@ -42,13 +39,13 @@
 </script>
 
 <div class="space-y-4">
-  {#if storeIndex === 0}
+  {#if countScopes.length === 0}
     <p class="text-sm text-red-500">
-      ⚠ The <code>threshold</code> operator must come after another step.
+      ⚠ Add a <code>count</code> step with scope before this threshold.
     </p>
   {/if}
 
-  {#each availableScopes as s}
+  {#each countScopes as s}
     <div class="border-t pt-4">
       <h4 class="text-sm font-semibold text-indigo-700 mb-2 capitalize">
         {s === 'endoffile' ? 'End of File' : s} Threshold

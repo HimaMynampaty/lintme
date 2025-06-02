@@ -5,16 +5,17 @@
   let search = '';
 
   const availableOperators = [
-    { name: 'filter', label: 'filter' },
+    { name: 'compare', label: 'compare' },
     { name: 'count', label: 'count' },
-    { name: 'length', label: 'length' },
-    { name: 'threshold', label: 'threshold' },
+    { name: 'filter', label: 'filter' },
     { name: 'fixUsingLintMeCode', label: 'fixUsingLintMeCode' },
     { name: 'fixUsingLLM', label: 'fixUsingLLM' },
     { name: 'isPresent', label: 'isPresent' },
+    { name: 'length', label: 'length' },
     { name: 'regexMatch', label: 'regexMatch' },
     { name: 'sage', label: 'sage' },
-    { name: 'compare', label: 'compare' }
+    { name: 'search', label: 'search' },       
+    { name: 'threshold', label: 'threshold' }
   ];
 
   function choose(op) {

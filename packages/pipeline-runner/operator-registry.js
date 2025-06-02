@@ -8,4 +8,5 @@ export const OPERATORS = {
   'sage':        () => import('@himamynampaty/operator-sage').then(m => m.run),
   'compare': () => import('@himamynampaty/operator-compare').then(m => m.run),
   'length': () => import('@himamynampaty/operator-length').then(m => m.run),
+  'search': () => import('@himamynampaty/operator-search').then(m => m.run),
 };

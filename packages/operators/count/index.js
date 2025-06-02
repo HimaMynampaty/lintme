@@ -1,8 +1,9 @@
 export function run(ctx, cfg = {}) {
   if (!ctx.filtered) {
     ctx.diagnostics.push({
-      line: 1, severity: 'error',
-      message: 'count operator needs any other operator like filter to run first'
+      line: 1,
+      severity: 'error',
+      message: 'count operator needs any other operator like filter or search to run first'
     });
     return ctx;
   }
@@ -11,7 +12,9 @@ export function run(ctx, cfg = {}) {
   const summary = { document: 0, endoffile: 0, line: {}, paragraph: [] };
 
   const counters = {
-    document: () => { summary.document = data.document.length; },
+    document: () => {
+      summary.document = data.document.length;
+    },
 
     paragraph: () => {
       summary.paragraph = data.paragraph.map(p => ({
@@ -28,15 +31,18 @@ export function run(ctx, cfg = {}) {
       });
     },
 
-    endoffile: () => { summary.endoffile = data.endoffile.length; }
+    endoffile: () => {
+      summary.endoffile = data.endoffile.length;
+    }
   };
 
   for (const s of scopes) counters[s]?.();
 
   ctx.counted = { target, scopes, data: summary };
 
-  ctx.counts ??= {};
-  ctx.counts[target] = Object.fromEntries(
+  // ✅ FIX: write under ctx.count (not ctx.counts)
+  ctx.count ??= {};
+  ctx.count[target] = Object.fromEntries(
     Object.entries(summary).filter(([k]) => scopes.includes(k))
   );
 

@@ -1,8 +1,8 @@
 export function run(ctx, cfg = {}) {
   let { target, conditions = {}, level = 'warning' } = cfg;
 
-  if (!target && ctx.counts) {
-    const keys = Object.keys(ctx.counts);
+  if (!target && ctx.count) {
+    const keys = Object.keys(ctx.count);
     if (keys.length === 1) target = keys[0];
   }
 
@@ -11,22 +11,25 @@ export function run(ctx, cfg = {}) {
     return ctx;
   }
 
-  const counts = ctx.counts?.[target];
+  const counts = ctx.count?.[target];         
   if (!counts) {
-    pushErr(ctx, `No counts found for "${target}". Ensure a prior step (like 'count' or 'length') ran first.`);
+    pushErr(
+      ctx,
+      `No counts found for "${target}". Ensure a prior step (like 'count' or 'length') ran first.`
+    );
     return ctx;
   }
 
   const adapters = {
-    document: () => [{ line: 1, actual: counts.document ?? 0 }],
+    document : () => [{ line: 1, actual: counts.document  ?? 0 }],
     endoffile: () => [{ line: 1, actual: counts.endoffile ?? 0 }],
-    line: () => Object.entries(counts.line ?? {}).map(
-      ([ln, c]) => ({ line: +ln, actual: c })
-    ),
+    line     : () => Object.entries(counts.line ?? {}).map(
+                      ([ln, c]) => ({ line: +ln, actual: c })
+                    ),
     paragraph: () => (counts.paragraph ?? []).map(p => ({
-      line: p.line,
-      actual: p.count ?? p.length ?? 0  
-    }))
+                      line  : p.line,
+                      actual: p.count ?? p.length ?? 0
+                    }))
   };
 
   for (const [scope, rule] of Object.entries(conditions)) {
@@ -39,7 +42,7 @@ export function run(ctx, cfg = {}) {
         ctx.diagnostics.push({
           line,
           severity: level,
-          message: formatMsg(scope, line, actual, target, type, value)
+          message : formatMsg(scope, line, actual, target, type, value)
         });
       }
     }
