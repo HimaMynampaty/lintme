@@ -1,39 +1,31 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import { pipeline } from '../stores/pipeline.js';
 
-  export let data;
-  export let storeIndex;
+  export let data;       
+  export let storeIndex;  
 
   const dispatch = createEventDispatcher();
-  let hasPriorStepOutput = false;
 
-  $: {
-    let prevTarget = data.target;
-    let prevScopes = JSON.stringify(data.scopes);
-
-    let found = false;
-    for (let i = storeIndex - 1; i >= 0 && !found; i--) {
-      const step = $pipeline[i];
-      if (step?.operator) {
-        found = true;
-
-        if (step.target && step.target !== prevTarget) {
-          data.target = step.target;
-        }
-        if (step.scopes && JSON.stringify(step.scopes) !== prevScopes) {
-          data.scopes = [...step.scopes];
-        }
-        dispatch('input');
+  function hydrate () {
+    for (let i = storeIndex - 1; i >= 0; i--) {
+      const prev = $pipeline[i];
+      if (prev?.target && prev?.scopes?.length) {
+        data.target  ??= prev.target;
+        data.scopes  ??= [...prev.scopes];
+        dispatch('input');                    
+        return true;
       }
     }
-
-    hasPriorStepOutput = found;
+    return false;
   }
+
+  onMount(hydrate);
+  $: hasUpstream = hydrate();
 </script>
 
-{#if !hasPriorStepOutput}
-  <p class="text-sm text-red-500">
-    ⚠ Add a step before this one so it has data to work with.
-  </p>
+{#if $$slots.default}
+  <slot />                                   
+{:else if !hasUpstream}
+  <p class="text-sm text-red-500 my-1">⚠ Needs a step before it.</p>
 {/if}

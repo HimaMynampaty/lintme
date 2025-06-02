@@ -10,8 +10,8 @@
   import RegexMatchOperator from './RegexMatchOperator.svelte';
   import SageOperator       from './SageOperator.svelte';
   import CompareOperator    from './CompareOperator.svelte';
-  import LengthOperator from './LengthOperator.svelte';
-  import SearchOperator from './SearchOperator.svelte';
+  import LengthOperator     from './LengthOperator.svelte';
+  import SearchOperator     from './SearchOperator.svelte';
 
   export let step;
   export let index;
@@ -51,6 +51,10 @@
 </script>
 
 <div class="relative inline-block group">
+  {#if step.operator === 'count'}
+    <CountOperator bind:data={step} {storeIndex} />
+  {/if}
+
   <button
     type="button"
     class="w-full text-left border border-gray-300 bg-white px-4 py-2 rounded-md shadow-sm text-sm text-indigo-700 flex items-center gap-2 hover:shadow-md transition"
@@ -91,29 +95,33 @@
         </button>
       </div>
 
-      {#if step.operator === 'filter'}
-        <FilterOperator bind:data={step} on:input={changed} />
-      {:else if step.operator === 'count'}
-        <CountOperator bind:data={step} {storeIndex} on:input={changed} />
-      {:else if step.operator === 'threshold'}
-        <ThresholdOperator bind:data={step} {storeIndex} on:input={changed} />
-      {:else if step.operator === 'fixUsingLintMeCode'}
-        <FixManualOperator bind:data={step} on:input={changed} />
-      {:else if step.operator === 'fixUsingLLM'}
-        <FixLLMOperator bind:data={step} on:input={changed} />
-      {:else if step.operator === 'isPresent'}
-        <IsPresentOperator bind:data={step} {storeIndex} on:input={changed} />
-      {:else if step.operator === 'regexMatch'}
-        <RegexMatchOperator bind:data={step} {storeIndex} on:input={changed} />
-      {:else if step.operator === 'sage'}
-        <SageOperator bind:data={step} />
-      {:else if step.operator === 'compare'}
-        <CompareOperator bind:data={step} {storeIndex} on:input={changed} />
-      {:else if step.operator === 'length'}  
-        <LengthOperator bind:data={step} {storeIndex} on:input={changed} />  
-      {:else if step.operator === 'search'}
-        <SearchOperator bind:data={step} {storeIndex} on:input={changed} />
-      {/if}
+      {#key step.id}
+        {#if step.operator === 'filter'}
+          <FilterOperator bind:data={step} on:input={changed} />
+        {:else if step.operator === 'count'}
+          <CountOperator bind:data={step} {storeIndex} on:input={changed}>
+            <span slot="default" />
+          </CountOperator>
+        {:else if step.operator === 'threshold'}
+          <ThresholdOperator bind:data={step} {storeIndex} on:input={changed} />
+        {:else if step.operator === 'fixUsingLintMeCode'}
+          <FixManualOperator bind:data={step} on:input={changed} />
+        {:else if step.operator === 'fixUsingLLM'}
+          <FixLLMOperator bind:data={step} on:input={changed} />
+        {:else if step.operator === 'isPresent'}
+          <IsPresentOperator bind:data={step} {storeIndex} on:input={changed} />
+        {:else if step.operator === 'regexMatch'}
+          <RegexMatchOperator bind:data={step} {storeIndex} on:input={changed} />
+        {:else if step.operator === 'sage'}
+          <SageOperator bind:data={step} />
+        {:else if step.operator === 'compare'}
+          <CompareOperator bind:data={step} {storeIndex} on:input={changed} />
+        {:else if step.operator === 'length'}  
+          <LengthOperator bind:data={step} {storeIndex} on:input={changed} />
+        {:else if step.operator === 'search'}
+          <SearchOperator bind:data={step} {storeIndex} on:input={changed} />
+        {/if}
+      {/key}
     </div>
   {/if}
 </div>

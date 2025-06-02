@@ -21,15 +21,16 @@ export function run(ctx, cfg = {}) {
   }
 
   const adapters = {
-    document : () => [{ line: 1, actual: counts.document  ?? 0 }],
+    document : () => [{ line: 1, actual: counts.document ?? 0 }],
     endoffile: () => [{ line: 1, actual: counts.endoffile ?? 0 }],
-    line     : () => Object.entries(counts.line ?? {}).map(
-                      ([ln, c]) => ({ line: +ln, actual: c })
-                    ),
+    previousstepoutput: () => [{ line: 1, actual: counts.previousstepoutput ?? 0 }],
+    line : () => Object.entries(counts.line ?? {}).map(
+      ([ln, c]) => ({ line: +ln, actual: c })
+    ),
     paragraph: () => (counts.paragraph ?? []).map(p => ({
-                      line  : p.line,
-                      actual: p.count ?? p.length ?? 0
-                    }))
+      line  : p.line,
+      actual: p.count ?? p.length ?? 0
+    }))
   };
 
   for (const [scope, rule] of Object.entries(conditions)) {

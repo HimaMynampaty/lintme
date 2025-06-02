@@ -5,19 +5,23 @@
   export let data;
   export let storeIndex;
 
-  const dispatch     = createEventDispatcher();
-  const types        = ['lessthan','greaterthan','greaterthanequalto',
-                        'lessthanequalto','equal','equalto'];
+  const dispatch = createEventDispatcher();
+  const types = [
+    'lessthan', 'greaterthan', 'greaterthanequalto',
+    'lessthanequalto', 'equal', 'equalto'
+  ];
 
-  let countScopes  = [];
-  let countTarget  = '';
+  let countScopes = [];
+  let countTarget = '';
 
   $: {
+    const pipelineSteps = $pipeline; 
+
     countScopes = [];
     countTarget = '';
 
     for (let i = storeIndex - 1; i >= 0; i--) {
-      const prev = $pipeline[i];
+      const prev = pipelineSteps[i];
       if (prev?.operator === 'count') {
         countScopes = prev.scopes ?? [];
         countTarget = prev.target ?? '';
@@ -29,6 +33,7 @@
       data.target = countTarget;
       dispatch('input');
     }
+
     data.conditions ||= {};
     for (const s of countScopes) {
       data.conditions[s] ??= { type: 'lessthan', value: '' };
@@ -61,7 +66,7 @@
             on:change={onFieldChange}
           >
             {#each types as t}
-              <option value="{t}">{t}</option>
+              <option value={t}>{t}</option>
             {/each}
           </select>
         </div>
