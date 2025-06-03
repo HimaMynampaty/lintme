@@ -24,9 +24,15 @@ export function generateYAML(name = '', description = '', steps = []) {
         if ('pattern' in step) out.pattern = step.pattern;
       }
 
-      if (step.operator === 'fixUsingLintMeCode' || step.operator === 'fixUsingLLM') {
+      if (step.operator === 'fixUsingLintMeCode') {
         if ('template' in step) out.template = step.template;
       }
+
+      if (step.operator === 'fixUsingLLM') {
+        if ('prompt' in step) out.prompt = step.prompt;
+        if ('model' in step) out.model = step.model;
+      }
+
 
       if (step.operator === 'compare') {
         if ('baseline' in step) out.baseline = step.baseline;

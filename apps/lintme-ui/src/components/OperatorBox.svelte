@@ -5,7 +5,7 @@
   import CountOperator      from './CountOperator.svelte';
   import ThresholdOperator  from './ThresholdOperator.svelte';
   import FixManualOperator  from './FixManualOperator.svelte';
-  import FixLLMOperator     from './FixLLMOperator.svelte';
+  import FixUsingLLMOperator     from './FixUsingLLMOperator.svelte';
   import IsPresentOperator  from './IsPresentOperator.svelte';
   import RegexMatchOperator from './RegexMatchOperator.svelte';
   import SageOperator       from './SageOperator.svelte';
@@ -107,7 +107,7 @@
         {:else if step.operator === 'fixUsingLintMeCode'}
           <FixManualOperator bind:data={step} on:input={changed} />
         {:else if step.operator === 'fixUsingLLM'}
-          <FixLLMOperator bind:data={step} on:input={changed} />
+          <FixUsingLLMOperator bind:data={step} on:input={changed} />
         {:else if step.operator === 'isPresent'}
           <IsPresentOperator bind:data={step} {storeIndex} on:input={changed} />
         {:else if step.operator === 'regexMatch'}

@@ -1,6 +1,6 @@
 export function run(ctx, cfg = {}) {
   let { target, conditions = {}, level = 'warning' } = cfg;
-
+  const allViolations = {}; 
   if (!target && ctx.count) {
     const keys = Object.keys(ctx.count);
     if (keys.length === 1) target = keys[0];
@@ -37,7 +37,7 @@ export function run(ctx, cfg = {}) {
     const rows = adapters[scope]?.() ?? [];
     const { type, value } = rule;
     if (value == null) continue;
-
+    const violations = []; 
     for (const { line, actual } of rows) {
       if (!compare(actual, type, value)) {
         ctx.diagnostics.push({
@@ -45,11 +45,23 @@ export function run(ctx, cfg = {}) {
           severity: level,
           message : formatMsg(scope, line, actual, target, type, value)
         });
+       violations.push({       
+          line,
+          actual,
+          scope,
+          expected: { type, value },
+          message: formatMsg(scope, line, actual, target, type, value)
+        });
+
       }
+    }
+       if (violations.length) {
+      allViolations[scope] ??= [];
+      allViolations[scope].push(...violations);
     }
   }
 
-  return { target, data: {} };
+  return { target, data: { violations: allViolations } };
 }
 
 

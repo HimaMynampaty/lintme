@@ -3,9 +3,9 @@ import { OPERATORS } from './operator-registry.js';
 
 /**
  *
- * @param {string} yamlText   – the rule YAML block
- * @param {string} markdown   – raw README markdown
- * @returns {Promise<object>} – final ctx (includes ctx.ast, diagnostics etc.)
+ * @param {string} yamlText  
+ * @param {string} markdown   
+ * @returns {Promise<object>} 
  */
 export async function runPipeline(yamlText, markdown) {
   const parsed = parseRules(yamlText);
@@ -13,8 +13,14 @@ export async function runPipeline(yamlText, markdown) {
 
   const { pipeline = [] } = parsed;
   /** @type {object} */
-  const ctx = { markdown, diagnostics: [] };
-
+    const ctx = {
+      markdown,
+      diagnostics: [],
+      rule       : parsed.rule || 'Unnamed Rule',
+      description: parsed.description || '',
+      pipeline   : pipeline,
+      ruleYaml   : yamlText                
+    };
   const generateAST = await OPERATORS['generateAST']();
   await generateAST(ctx);
 

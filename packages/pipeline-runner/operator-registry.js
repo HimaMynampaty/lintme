@@ -9,4 +9,5 @@ export const OPERATORS = {
   'compare': () => import('@himamynampaty/operator-compare').then(m => m.run),
   'length': () => import('@himamynampaty/operator-length').then(m => m.run),
   'search': () => import('@himamynampaty/operator-search').then(m => m.run),
+  'fixUsingLLM': () => import('@himamynampaty/operator-fixusingllm').then(m => m.run),
 };

@@ -220,7 +220,9 @@
     diagnostics   = ctx.diagnostics || [];
     fixedMarkdown = ctx.fixedMarkdown || originalText;
 
-    const judgmentOperators = new Set(['threshold', 'isPresent', 'compare']);
+
+
+    const judgmentOperators = new Set(['threshold', 'isPresent', 'compare', 'fixUsingLLM']);
 
     if (diagnostics.length > 0) {
       const errorCount = diagnostics.filter(d => d.severity === 'error').length;
@@ -279,6 +281,14 @@
             : monaco.MarkerSeverity.Info
       }))
     );
+
+    const errorCount = diagnostics.filter(d => d.severity === 'error').length;
+    const warningCount = diagnostics.filter(d => d.severity === 'warning').length;
+    const lintFailed = errorCount > 0 || warningCount > 0;
+
+    if (lintFailed && ctx.fixedMarkdown && ctx.fixedMarkdown !== originalText) {
+      lintResults += '\n\n Click "Show Diff View" to review the suggested fixes, "Apply Fixes to Editor" to accept the fix.';
+    }
 
     if (showDiff) {
       updateDiffModels();
