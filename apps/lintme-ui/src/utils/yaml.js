@@ -2,7 +2,7 @@ import yaml from 'js-yaml';
 
 export function generateYAML(name = '', description = '', steps = []) {
   const NEEDS_TARGET = new Set([
-    'filter',
+    'extract',
     'regexMatch',
     'isPresent',
     'compare',
@@ -14,10 +14,9 @@ export function generateYAML(name = '', description = '', steps = []) {
     .map(step => {
       const out = { operator: step.operator };
 
-      if (step.operator === 'filter') {
+      if (step.operator === 'extract') {
         if ('target' in step) out.target = step.target;
         if (Array.isArray(step.scopes)) out.scopes = step.scopes;
-        if ('word' in step) out.word = step.word;
       }
 
       if (step.operator === 'regexMatch') {

@@ -8,9 +8,9 @@ const escapeRE = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const toRegExp = t => BUILTIN_RX[t] || new RegExp(escapeRE(t), 'gi');
 
 export function run(ctx, cfg = {}) {
-  if (!ctx.ast) return pushErr(ctx, 'filter operator needs generateAST to run first');
+  if (!ctx.ast) return pushErr(ctx, 'extract operator needs generateAST to run first');
   const { target, scopes = ['document'] } = cfg;
-  if (!target) return pushErr(ctx, 'filter operator missing "target"');
+  if (!target) return pushErr(ctx, 'extract operator missing "target"');
 
   const md = ctx.markdown ?? '';
   const isRegex = target in BUILTIN_RX || /^[./].*[./]$/.test(target);
@@ -33,7 +33,7 @@ export function run(ctx, cfg = {}) {
         line: 1,
         severity: 'warning',
         message:
-          `filter: no “${target}” nodes found. ` +
+          `extract: no “${target}” nodes found. ` +
          `Either this markdown doesn’t contain that node type ` +
           `or “${target}” isn’t a valid mdast node type.`
       });
@@ -208,7 +208,7 @@ export function run(ctx, cfg = {}) {
   };
 
   for (const s of scopes) handlers[s]?.();
-  ctx.filtered = { target, scopes, data: result };
+  ctx.extracted = { target, scopes, data: result };
   return { target, scopes, data: result };   
 }
 

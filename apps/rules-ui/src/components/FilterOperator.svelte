@@ -19,26 +19,26 @@
   let openSuggestions   = false;
   let showScopeMenu     = false;
   let filtered          = targets;           
-  let activeIndex       = -1;              
+  let extracted       = -1;              
 
   $: {
     const q = (data.target || '').toLowerCase();
     filtered = q ? targets.filter(t => t.includes(q)) : targets;
-    if (filtered.length === 0) activeIndex = -1;
-    else if (activeIndex >= filtered.length) activeIndex = 0;
+    if (filtered.length === 0) extracted = -1;
+    else if (extracted >= filtered.length) extracted = 0;
   }
 
   function chooseTarget(t) {
     data.target = t;
     openSuggestions = false;
-    activeIndex = filtered.indexOf(t);
+    extracted = filtered.indexOf(t);
     dispatch('input');
   }
 
   function onTargetInput(e) {
     data.target = e.target.value;
     openSuggestions = true;
-    activeIndex = -1;
+    extracted = -1;
     dispatch('input');
   }
 
@@ -47,15 +47,15 @@
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      activeIndex = (activeIndex + 1 + filtered.length) % filtered.length;
+      extracted = (extracted + 1 + filtered.length) % filtered.length;
     }
     if (e.key === 'ArrowUp') {
       e.preventDefault();
-      activeIndex = (activeIndex - 1 + filtered.length) % filtered.length;
+      extracted = (extracted - 1 + filtered.length) % filtered.length;
     }
-    if (e.key === 'Enter' && activeIndex !== -1) {
+    if (e.key === 'Enter' && extracted !== -1) {
       e.preventDefault();
-      chooseTarget(filtered[activeIndex]);
+      chooseTarget(filtered[extracted]);
     }
   }
 
@@ -92,7 +92,7 @@
         aria-autocomplete="list"
         aria-expanded={openSuggestions}
         aria-controls="target-listbox"
-        aria-activedescendant={activeIndex !== -1 ? `opt-${activeIndex}` : undefined}
+        aria-activedescendant={extracted !== -1 ? `opt-${extracted}` : undefined}
         on:input={onTargetInput}
         on:focus={() => (openSuggestions = true)}
         on:keydown={onTargetKey}
@@ -122,7 +122,7 @@
               id={`opt-${i}`}
               aria-selected={data.target === t}
               class="cursor-pointer px-3 py-1 hover:bg-gray-100
-                    {i === activeIndex ? 'bg-gray-100' : ''}"
+                    {i === extracted ? 'bg-gray-100' : ''}"
               tabindex="-1"
               on:click={() => chooseTarget(t)}
               on:keydown={(e) => {

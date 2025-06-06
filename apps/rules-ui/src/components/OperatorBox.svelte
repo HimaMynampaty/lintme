@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import FilterOperator     from './FilterOperator.svelte';
+  import ExtractOperator     from './ExtractOperator.svelte';
   import CountOperator      from './CountOperator.svelte';
   import ThresholdOperator  from './ThresholdOperator.svelte';
   import FixManualOperator  from './FixManualOperator.svelte';
@@ -34,8 +34,8 @@
     Step {index}: {step.operator}
   </h3>
 
-  {#if step.operator === 'filter'}
-    <FilterOperator        bind:data={step} on:input={changed} />
+  {#if step.operator === 'extract'}
+    <ExtractOperator        bind:data={step} on:input={changed} />
   {:else if step.operator === 'count'}
     <CountOperator         bind:data={step} {storeIndex} on:input={changed} />
   {:else if step.operator === 'threshold'}

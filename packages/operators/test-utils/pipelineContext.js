@@ -2,7 +2,7 @@ export function createCtx(markdown = '') {
   return {
     markdown,
     ast: undefined,
-    filtered: undefined,
+    extracted: undefined,
     counts: undefined,
     diagnostics: [],
   };

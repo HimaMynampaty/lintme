@@ -1,13 +1,13 @@
 export function run(ctx, cfg = {}) {
-  if (!ctx.filtered) {
+  if (!ctx.extracted) {
     ctx.diagnostics.push({
       line: 1, severity: 'error',
-      message: 'count operator needs a previous step (filter/search/etc.)'
+      message: 'count operator needs a previous step (extract/search/etc.)'
     });
     return ctx;
   }
 
-  const { target, scopes, data } = ctx.filtered;
+  const { target, scopes, data } = ctx.extracted;
   const summary = {};                 
 
   for (const s of scopes) {

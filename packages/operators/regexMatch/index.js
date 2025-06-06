@@ -1,14 +1,14 @@
 export function run(ctx, cfg = {}) {
-  if (!ctx.filtered) {
+  if (!ctx.extracted) {
     ctx.diagnostics.push({
       line: 1,
       severity: 'error',
-      message: 'regexMatch operator needs filter to run first'
+      message: 'regexMatch operator needs extract to run first'
     });
     return ctx;
   }
 
-  console.log(ctx.filtered);
+  console.log(ctx.extracted);
 
   const pattern = cfg.pattern;
   if (!pattern) {
@@ -46,7 +46,7 @@ export function run(ctx, cfg = {}) {
   };
 
 
-  const { scopes = [], data } = ctx.filtered;
+  const { scopes = [], data } = ctx.extracted;
   let failures = 0;
 
   const testEntry = (entry, line = 1) => {

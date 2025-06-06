@@ -1,21 +1,21 @@
 import { toString } from 'mdast-util-to-string';
 
 export async function run(ctx, cfg = {}) {
-  if (!ctx.filtered) {
+  if (!ctx.extracted) {
     ctx.diagnostics.push({
       line: 1,
       severity: 'error',
-      message: 'sage operator needs a previous filter step'
+      message: 'sage operator needs a previous extract step'
     });
     return {};
   }
 
-  const { target, scopes = ['document'], data } = ctx.filtered;
+  const { target, scopes = ['document'], data } = ctx.extracted;
   if (target !== 'heading') {
     ctx.diagnostics.push({
       line: 1,
       severity: 'warning',
-      message: 'sage should be run after a heading filter'
+      message: 'sage should be run after a heading extract'
     });
   }
 

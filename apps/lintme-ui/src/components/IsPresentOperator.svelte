@@ -8,8 +8,8 @@
   const dispatch = createEventDispatcher();
   const changed = () => dispatch('input');
 
-  let hasFilter = false;
-  let filteredTarget = '';
+  let hasExtract = false;
+  let extractedTarget = '';
   let suggestions = [];
 
   const knownFields = {
@@ -22,16 +22,16 @@
   };
 
   $: {
-    hasFilter = false;
-    filteredTarget = '';
+    hasExtract = false;
+    extractedTarget = '';
     suggestions = [];
 
     for (let i = storeIndex - 1; i >= 0; i--) {
       const op = $pipeline[i];
-      if (op?.operator === 'filter') {
-        hasFilter = true;
-        filteredTarget = op?.target ?? '';
-        suggestions = knownFields[filteredTarget] ?? [];
+      if (op?.operator === 'extract') {
+        hasExtract = true;
+        extractedTarget = op?.target ?? '';
+        suggestions = knownFields[extractedTarget] ?? [];
         break;
       }
     }
@@ -60,14 +60,14 @@
     />
     {#if suggestions.length > 0}
       <p class="text-xs text-gray-500 mt-1">
-        Common fields for <code>{filteredTarget}</code>: <strong>{suggestions.join(', ')}</strong>
+        Common fields for <code>{extractedTarget}</code>: <strong>{suggestions.join(', ')}</strong>
       </p>
     {/if}
   </div>
 
-  {#if !hasFilter}
+  {#if !hasExtract}
     <p class="text-sm text-red-500">
-      ⚠ Add a <code>filter</code> step before this <code>isPresent</code> step.
+      ⚠ Add a <code>extract</code> step before this <code>isPresent</code> step.
     </p>
   {/if}
 </div>

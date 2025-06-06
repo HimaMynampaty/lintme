@@ -1,16 +1,16 @@
 import { toString } from 'mdast-util-to-string';
 
 export function run(ctx, cfg = {}) {
-  if (!ctx.filtered) {
+  if (!ctx.extracted) {
     ctx.diagnostics.push({
       line: 1,
       severity: 'error',
-      message: 'length operator needs any other operator like filter to run first'
+      message: 'length operator needs any other operator like extract to run first'
     });
     return ctx;
   }
 
-  const { target, scopes, data } = ctx.filtered;
+  const { target, scopes, data } = ctx.extracted;
   const summary = { document: 0, endoffile: 0, line: {}, paragraph: [] };
 
   const textLength = txt => (txt ? txt.length : 0);
@@ -53,7 +53,7 @@ export function run(ctx, cfg = {}) {
 
   ctx.counts ??= {};
   ctx.counts['length'] = Object.fromEntries(
-    Object.entries(summary).filter(([k]) => scopes.includes(k))
+    Object.entries(summary).extract(([k]) => scopes.includes(k))
   );
 
   return { target: 'length', scopes, data: summary };

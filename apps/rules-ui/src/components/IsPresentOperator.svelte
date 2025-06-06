@@ -10,13 +10,13 @@
 
   const fields   = ['alt', 'emoji', 'newline'];
 
-  /* does a filter exist above us? — still keep that warning */
-  let hasFilter = false;
+  /* does a extract exist above us? — still keep that warning */
+  let hasExtract = false;
   $: {
-    hasFilter = false;
+    hasExtract = false;
     for (let i = storeIndex - 1; i >= 0; i--) {
-      if ($pipeline[i]?.operator === 'filter') {
-        hasFilter = true;
+      if ($pipeline[i]?.operator === 'extract') {
+        hasExtract = true;
         break;
       }
     }
@@ -45,9 +45,9 @@
     </select>
   </div>
 
-  {#if !hasFilter}
+  {#if !hasExtract}
     <p class="text-sm text-red-500">
-      ⚠ Add a <code>filter</code> step before this <code>isPresent</code> step.
+      ⚠ Add a <code>extract</code> step before this <code>isPresent</code> step.
     </p>
   {/if}
 </div>
