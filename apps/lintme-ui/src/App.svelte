@@ -31,6 +31,27 @@
   let ruleList = [];
   let combinedRuleOptions = [];
   let showPalette = false;
+let outputDiv;
+let startY;
+let startHeight;
+
+function startResize(e) {
+  startY = e.clientY;
+  startHeight = outputDiv.getBoundingClientRect().height;
+
+  window.addEventListener('mousemove', resizeOutput);
+  window.addEventListener('mouseup', stopResize);
+}
+
+function resizeOutput(e) {
+  const dy = e.clientY - startY;
+  outputDiv.style.height = `${startHeight - dy}px`;
+}
+
+function stopResize() {
+  window.removeEventListener('mousemove', resizeOutput);
+  window.removeEventListener('mouseup', stopResize);
+}
 
   $: combinedRuleOptions = [
     ...ruleList.map(r => ({
@@ -445,6 +466,15 @@ select {
   overflow: auto;
   white-space: pre-wrap;
 }
+.resizer {
+  height: 6px;
+  background: #ccc;
+  cursor: row-resize;
+  width: 100%;
+}
+.resizer:hover {
+  background: #999;
+}
 
 
 </style>
@@ -514,7 +544,8 @@ select {
       bind:this={diffEditorContainer}
     ></div>
   </div> 
-  <div class="output">
+  <div class="resizer" on:mousedown={startResize}></div>
+  <div class="output" bind:this={outputDiv}>
     {#if lintResults}
       <pre>{lintResults}</pre>
     {:else}
