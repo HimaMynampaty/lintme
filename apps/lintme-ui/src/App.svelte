@@ -52,7 +52,8 @@
       value: rulesYaml,
       language: 'yaml',
       automaticLayout: true,
-      minimap: { enabled: false }
+      minimap: { enabled: false },
+      fixedOverflowWidgets: true
     });
     rulesEditor.onDidChangeModelContent(() => {
       rulesYaml = rulesEditor.getValue();
@@ -62,7 +63,8 @@
       value: markdownText,
       language: 'markdown',
       automaticLayout: true,
-      minimap: { enabled: false }
+      minimap: { enabled: false },
+      fixedOverflowWidgets: true
     });
     markdownEditor.onDidChangeModelContent(() => {
       markdownText = markdownEditor.getValue();
@@ -70,7 +72,8 @@
     diffEditor = monaco.editor.createDiffEditor(diffEditorContainer, {
       readOnly: true,
       automaticLayout: true,
-      minimap: { enabled: false }
+      minimap: { enabled: false },
+      fixedOverflowWidgets: true
     });
 
     fetchFiles("rules");
@@ -117,7 +120,7 @@
 
 
   function formatOperatorOutput(key, data, scopes = Object.keys(data)) {
-    let result = `\n${key.toUpperCase()}:\n`;
+    let result = ``;
 
     for (const scope of scopes) {
       const value = data[scope];
@@ -134,8 +137,15 @@
           const label = item === '\n' ? 'newline character' : item;
           result += `    - ${label}\n`;
         } else if (item.line && item.matches) {
-          result += `    - Line ${item.line}: ${item.matches.join(', ')}\n`;
-        } else if (item.line && item.count !== undefined) {
+          const entries = item.matches.map(m => {
+            if (typeof m === 'string') return m;
+            if (typeof m === 'object') {
+              return m.content ?? m.value ?? m.type ?? JSON.stringify(m);
+            }
+            return String(m);
+          });
+          result += `    - Line ${item.line}: ${entries.join(', ')}\n`;
+         } else if (item.line && item.count !== undefined) {
           result += `    - Line ${item.line}: ${item.count} match(es)\n`;
          } else if (item.content) {          
            result += `    - Line ${item.line}: ${item.content}\n`;
@@ -247,14 +257,11 @@
 
       if (!isJudging) {
         if (ctx.pipelineResults && ctx.pipelineResults.length) {
-          lintResults += '\n\nInternal analysis:\n';
 
           ctx.pipelineResults.forEach(({ name, data }, idx) => {
-            const header  = `${name.toUpperCase()} ${idx + 1}`;
             const payload = data.data ?? data;             
             const scopes  = data.scopes ?? Object.keys(payload);
-
-            lintResults  += `\n${header}:\n`;
+            lintResults += `\nOutput from ${name.toUpperCase()} operator (step ${idx + 1}):\n`;
             lintResults  += formatOperatorOutput(name, payload, scopes);
           });
         }
@@ -410,7 +417,7 @@ button:hover { background: #004b8a; }
 .diff-editor-container {
   flex: 1 1 0;
   min-width: 0;
-  overflow: auto;
+  overflow: visible;
   width: 100%;
 }
 

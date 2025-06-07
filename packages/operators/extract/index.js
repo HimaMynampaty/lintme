@@ -9,8 +9,9 @@ const toRegExp = t => BUILTIN_RX[t] || new RegExp(escapeRE(t), 'gi');
 
 export function run(ctx, cfg = {}) {
   if (!ctx.ast) return pushErr(ctx, 'extract operator needs generateAST to run first');
-  const { target, scopes = ['document'] } = cfg;
+  const { target, scopes } = cfg;
   if (!target) return pushErr(ctx, 'extract operator missing "target"');
+  if (!scopes || scopes.length === 0) return pushErr(ctx, 'extract operator missing "scopes"');
 
   const md = ctx.markdown ?? '';
   const isRegex = target in BUILTIN_RX || /^[./].*[./]$/.test(target);
@@ -72,14 +73,26 @@ export function run(ctx, cfg = {}) {
   const matchText = txt => isRegex ? [...txt.matchAll(re)].map(m => m[0]) : [];
 
   const serializeNode = n => {
-    if (n.type === 'link') {
-      const label = toString(n);
-      const title = n.title ? ` "${n.title}"` : '';
-      return `[${label}](${n.url}${title})`;
+    if (ctx.markdown && n.position?.start && n.position?.end) {
+      const lines = ctx.markdown.split('\n');
+      const { start, end } = n.position;
+
+      if (start.line === end.line) {
+        return lines[start.line - 1].slice(start.column - 1, end.column - 1);
+      }
+
+      const snippet = [lines[start.line - 1].slice(start.column - 1)];
+      for (let i = start.line; i < end.line - 1; i++) {
+        snippet.push(lines[i]);
+      }
+      snippet.push(lines[end.line - 1].slice(0, end.column - 1));
+      return snippet.join('\n');
     }
+
     if (typeof n.value === 'string') return n.value;
     return toString(n);
   };
+
 
   const malformed = checkLinkFormatting(md);
   const result = { document: [], paragraph: [], line: {}, endoffile: [] };
@@ -87,8 +100,15 @@ export function run(ctx, cfg = {}) {
   const handlers = {
     document() {
       if (isRegex) {
-        result.document = matchText(md);
-      } else {
+        visit(ctx.ast, 'text', n => {
+          const hits = matchText(n.value);
+          const ln = n.position?.start?.line;
+          for (const h of hits) {
+            result.document.push({ content: h, line: ln });
+          }
+        });
+      }
+      else {
         visit(ctx.ast, n => {
           if (matchNode(n)) {
             result.document.push({
@@ -118,12 +138,15 @@ export function run(ctx, cfg = {}) {
           ? matchText(toString(p))
           : collectMatches(p, matchNode);
 
-        const decorated = matches.map(m => ({
-          ...m,
-          content: serializeNode(m),
-        }));
+        if (matches.length > 0) {
+          const decorated = matches.map(m =>
+            typeof m === 'string'
+              ? { content: m }
+              : { ...m, content: serializeNode(m) }
+          );
 
-        result.paragraph.push({ line: p.position?.start?.line ?? 1, matches: decorated });
+          result.paragraph.push({ line: p.position?.start?.line ?? 1, matches: decorated });
+        }
 
         if (target === 'internallink' || target === 'externallink') {
           const start = p.position?.start?.line ?? 1;
@@ -144,11 +167,13 @@ export function run(ctx, cfg = {}) {
     line() {
       if (isRegex) {
         visit(ctx.ast, 'text', n => {
-          const hits = matchText(n.value);
-          if (hits.length) {
-            const ln = n.position?.start?.line;
-            (result.line[ln] ??= []).push(...hits);
-          }
+        const hits = matchText(n.value);
+        if (hits.length) {
+          const ln = n.position?.start?.line;
+          (result.line[ln] ??= []).push(
+            ...hits.map(h => ({ content: h }))    
+          );
+        }
         });
       } else {
         visit(ctx.ast, n => {
@@ -174,37 +199,41 @@ export function run(ctx, cfg = {}) {
     },
 
     endoffile() {
-      if (isRegex) {
-        let last = null;
-        for (const m of md.matchAll(re)) last = m;
-        if (last && last.index + last[0].length === md.length) {
-          result.endoffile.push(last[0]);
-        }
-      } else {
-        const endLine = md.split('\n').length;
-        visit(ctx.ast, n => {
-          if (n.position?.start?.line === endLine && matchNode(n)) {
-            result.endoffile.push({
-              ...n,
-              line: endLine,
-              content: serializeNode(n),
-            });
-          }
-        });
+    if (isRegex) {
+      let last = null;
+      for (const m of md.matchAll(re)) last = m;
 
-        if (target === 'internallink' || target === 'externallink') {
-          malformed.forEach(iss => {
-            if (iss.line !== endLine) return;
-            const urlMatch = iss.content.match(/\(([^()\s]*)/);
-            const url = urlMatch?.[1] ?? '';
-            const internal = isInternal(url);
-            if ((target === 'internallink' && internal) || (target === 'externallink' && !internal)) {
-              result.endoffile.push({ type: 'malformedlink', url, ...iss });
-            }
+      if (last && last.index + last[0].length === md.length) {
+        const preMatch = md.slice(0, last.index);
+        const line = preMatch.split('\n').length;
+
+        result.endoffile.push({ content: last[0], line });
+      }
+    } else {
+      const endLine = md.split('\n').length;
+      visit(ctx.ast, n => {
+        if (n.position?.start?.line === endLine && matchNode(n)) {
+          result.endoffile.push({
+            ...n,
+            line: endLine,
+            content: serializeNode(n),
           });
         }
+      });
+
+      if (target === 'internallink' || target === 'externallink') {
+        malformed.forEach(iss => {
+          if (iss.line !== endLine) return;
+          const urlMatch = iss.content.match(/\(([^()\s]*)/);
+          const url = urlMatch?.[1] ?? '';
+          const internal = isInternal(url);
+          if ((target === 'internallink' && internal) || (target === 'externallink' && !internal)) {
+            result.endoffile.push({ type: 'malformedlink', url, ...iss });
+          }
+        });
       }
     }
+  }
   };
 
   for (const s of scopes) handlers[s]?.();

@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { operatorDescriptions } from '../lib/operatorMetadata.js';
   const dispatch = createEventDispatcher();
 
   let search = '';
@@ -42,10 +43,15 @@
 
   <div class="max-h-40 overflow-y-auto space-y-2">
     {#each filtered as op}
-      <button class="op-btn" on:click={() => choose(op.name)}>
+      <button
+        class="op-btn"
+        on:click={() => choose(op.name)}
+        title={operatorDescriptions[op.name] ?? ''}
+      >
         ➕ {op.label}
       </button>
     {/each}
+
   </div>
 
   <button

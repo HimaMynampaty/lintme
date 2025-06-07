@@ -7,11 +7,11 @@
 
   const targets = [
     'emoji','newline','image','internallink','externallink',
-    'blockquote','break','code','definition','delete','emphasis',
+    'blockquote','thematicBreak','code','definition','delete','emphasis',
     'footnote','footnoteDefinition','footnoteReference',
     'heading','html','imageReference','inlineCode','link','linkReference',
     'list','listItem','paragraph','root','strong','table','tableCell',
-    'tableRow','text','thematicBreak','toml','yaml'
+    'tableRow','text','toml','yaml'
   ].sort();
 
   const scopes = ['line','paragraph','document','endoffile'];
@@ -71,8 +71,12 @@
   const scopeToggleId = 'scopes-'  + Math.random().toString(36).slice(2);
 
   function handleOutside(e) {
-    if (!e.target.closest('.combo'))      openSuggestions = false;
-    if (!e.target.closest('.scope-box'))  showScopeMenu   = false;
+    if (!e.target.closest('.combo') && !e.target.closest('#target-listbox')) {
+      openSuggestions = false;
+    }
+    if (!e.target.closest('.scope-box')) {
+      showScopeMenu = false;
+    }
   }
   window.addEventListener('click', handleOutside);
   onDestroy(() => window.removeEventListener('click', handleOutside));
@@ -80,7 +84,7 @@
 
 <div class="space-y-4">
   <div>
-    <label for={targetId} class="text-sm font-medium">Target</label>
+    <label for={targetId} class="text-sm font-medium" title="Select the Markdown node type you want to extract (e.g. heading, link)">Target</label>
 
     <div class="relative combo">
       <input
@@ -143,7 +147,7 @@
   </div>
 
   <div class="relative scope-box">
-    <label for={scopeToggleId} class="text-sm font-medium block mb-1">Scopes</label>
+    <label for={scopeToggleId} class="text-sm font-medium block mb-1" title="Choose where to extract from: line, paragraph, document, or end of file">Scopes</label>
 
     <button
       id={scopeToggleId}
