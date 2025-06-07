@@ -13,7 +13,7 @@
   let fixedMarkdown = "";
   let diagnostics      = [];  
   let highlightedMarkdown = ""; 
-  
+  let topPane;
   let showDiff = false;
 
   let rulesFiles = [];
@@ -31,27 +31,30 @@
   let ruleList = [];
   let combinedRuleOptions = [];
   let showPalette = false;
-let outputDiv;
-let startY;
-let startHeight;
+  let startY;
+  let startHeight;
+  let outputEditorContainer;
+  let outputEditor;
 
 function startResize(e) {
-  startY = e.clientY;
-  startHeight = outputDiv.getBoundingClientRect().height;
-
+  startY      = e.clientY;
+  startHeight = outputEditorContainer.getBoundingClientRect().height;
   window.addEventListener('mousemove', resizeOutput);
-  window.addEventListener('mouseup', stopResize);
+  window.addEventListener('mouseup',  stopResize);
 }
 
 function resizeOutput(e) {
-  const dy = e.clientY - startY;
-  outputDiv.style.height = `${startHeight - dy}px`;
+  const dy        = e.clientY - startY;
+  const newHeight = Math.max(120, startHeight - dy);      // drag up ⇒ bigger
+  outputEditorContainer.style.flexBasis = `${newHeight}px`;
+  outputEditor?.layout();                                 // relayout Monaco
 }
 
 function stopResize() {
   window.removeEventListener('mousemove', resizeOutput);
-  window.removeEventListener('mouseup', stopResize);
+  window.removeEventListener('mouseup',  stopResize);
 }
+
 
   $: combinedRuleOptions = [
     ...ruleList.map(r => ({
@@ -65,6 +68,11 @@ function stopResize() {
       type: 'yaml'
     }))
   ];
+
+  $: if (outputEditor && lintResults !== outputEditor.getValue()) {
+    outputEditor.setValue(lintResults || 'No lint results to display yet.');
+  }
+
 
   let selectedCombinedRule = '';
 
@@ -96,6 +104,18 @@ function stopResize() {
       minimap: { enabled: false },
       fixedOverflowWidgets: true
     });
+
+    outputEditor = monaco.editor.create(outputEditorContainer, {
+    value: lintResults || 'No lint results to display yet.',
+    language: 'plaintext',
+    readOnly: true,
+    automaticLayout: true,
+    minimap: { enabled: false },
+    fontSize: rulesEditor?.getOption(monaco.editor.EditorOption.fontSize) || 14,
+    wordWrap: 'on',
+    scrollBeyondLastLine: false
+  });
+
 
     fetchFiles("rules");
     fetchFiles("readme");
@@ -455,17 +475,6 @@ select {
 .diff-editor-container { display: none; }
 .diff-editor-container.show { display: flex; }
 
-
-.output {
-  flex-shrink: 0;         
-  height: 200px;
-  width: 100%;
-  background: #f0f4f8;
-  border-top: 2px solid #ccc;
-  padding: 10px;
-  overflow: auto;
-  white-space: pre-wrap;
-}
 .resizer {
   height: 6px;
   background: #ccc;
@@ -475,6 +484,35 @@ select {
 .resizer:hover {
   background: #999;
 }
+
+.resizable-pane {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.top-pane {
+  flex-grow: 1;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.bottom-pane {
+  flex: 0 0 260px; /* default height, same as height: 260px but resizable */
+  min-height: 120px;
+  max-height: 85vh;
+  background: #1e1e1e;
+  border-top: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+
 
 
 </style>
@@ -504,54 +542,51 @@ select {
     </button>
   </div>
 
-  <div class="container">
-    <div class="file-upload">
-      <select on:change={handleCombinedRuleSelection} bind:value={selectedCombinedRule}>
-        <option value="">Select Rule</option>
-        <optgroup label="Saved Rules">
-          {#each ruleList as r}
-            <option value={r.id}>{r.name}</option>
-          {/each}
-        </optgroup>
-        <optgroup label="YAML Files">
-          {#each rulesFiles as file}
-            <option value={file}>{file}</option>
-          {/each}
-        </optgroup>
-      </select>
-     <!-- new code -->
-      <div class="bg-gray-50 p-4 rounded border relative">
-        <OperatorTriggerPanel {rulesEditor} />
+<div class="resizable-pane">
+  <div class="top-pane" bind:this={topPane}>
+    <div class="container">
+      <div class="file-upload">
+        <select on:change={handleCombinedRuleSelection} bind:value={selectedCombinedRule}>
+          <option value="">Select Rule</option>
+          <optgroup label="Saved Rules">
+            {#each ruleList as r}
+              <option value={r.id}>{r.name}</option>
+            {/each}
+          </optgroup>
+          <optgroup label="YAML Files">
+            {#each rulesFiles as file}
+              <option value={file}>{file}</option>
+            {/each}
+          </optgroup>
+        </select>
+        <div class="bg-gray-50 p-4 rounded border relative">
+          <OperatorTriggerPanel {rulesEditor} />
+        </div>
+        <div class="editor-container" bind:this={rulesEditorContainer}></div>
       </div>
 
-      <div class="editor-container" bind:this={rulesEditorContainer}></div>
+      <div class="file-upload" style="display: {showDiff ? 'none' : 'flex'}">
+        <select on:change={(e) => loadFileContent('readme', e)}>
+          <option value="">Select README</option>
+          {#each readmeFiles as file}
+            <option value={file}>{file}</option>
+          {/each}
+        </select>
+        <div class="editor-container" bind:this={markdownEditorContainer}></div>
+      </div>
+
+      <div class="diff-editor-container" class:show={showDiff} bind:this={diffEditorContainer}></div>
     </div>
-
-
-    <div class="file-upload" style="display: {showDiff ? 'none' : 'flex'}">
-      <select on:change={(e) => loadFileContent('readme', e)}>
-        <option value="">Select README</option>
-        {#each readmeFiles as file}
-          <option value={file}>{file}</option>
-        {/each}
-      </select>
-      <div class="editor-container" bind:this={markdownEditorContainer}></div>
-    </div>
-
-    <div
-      class="diff-editor-container"
-      class:show={showDiff}
-      bind:this={diffEditorContainer}
-    ></div>
-  </div> 
-  <div class="resizer" on:mousedown={startResize}></div>
-  <div class="output" bind:this={outputDiv}>
-    {#if lintResults}
-      <pre>{lintResults}</pre>
-    {:else}
-      <p>No lint results to display yet.</p>
-    {/if}
   </div>
+
+  <!-- resizable drag bar -->
+  <div class="resizer" on:mousedown={startResize}></div>
+
+  <!-- output view -->
+<div class="bottom-pane" bind:this={outputEditorContainer}></div>
+</div>
+
+
 
   {#if highlightedMarkdown}
     <div class="lint-preview" bind:this={markdownPreviewDiv}>
