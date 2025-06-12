@@ -1,5 +1,6 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
+  import { get } from 'svelte/store';
   import { pipeline } from '../stores/pipeline.js';
 
   export let data;
@@ -8,35 +9,30 @@
   const dispatch = createEventDispatcher();
   let hasExtract = false;
 
-  $: {
-    let prevTarget = data.target;
-    let prevScopes = JSON.stringify(data.scopes);
+  primeWithExtract(get(pipeline));   
 
-    let found = false;
-    for (let i = storeIndex - 1; i >= 0 && !found; i--) {
-      const step = $pipeline[i];
-      if (step?.operator === 'extract') {
-        found = true;
+  onMount(() => primeWithExtract(get(pipeline))); 
+  $: hasExtract = primeWithExtract($pipeline);    
 
-        const newTarget = step.target ?? '';
-        const newScopes = step.scopes ? [...step.scopes] : [];
+  function primeWithExtract(steps) {
+    for (let i = storeIndex - 1; i >= 0; i--) {
+      const prev = steps[i];
+      if (prev?.operator === 'extract') {
+        hasExtract = true;
 
-        if (newTarget !== prevTarget ||
-            JSON.stringify(newScopes) !== prevScopes) {
+        if (!data.target)   data.target = prev.target ?? '';
+        if (!data.scopes || data.scopes.length === 0)
+          data.scopes = [...(prev.scopes ?? [])];
 
-          data.target = newTarget;
-          data.scopes = newScopes;
-          dispatch('input');
-        }
+        dispatch('input');
+
+        return true;
       }
     }
-
-    hasExtract = found;
+    return false;
   }
 </script>
 
 {#if !hasExtract}
-  <p class="text-sm text-red-500">
-    ⚠ Add any step like <code>extract</code> before this one.
-  </p>
+  <p class="text-sm text-red-500">⚠ Add any step like <code>extract</code> before this one.</p>
 {/if}

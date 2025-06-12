@@ -5,8 +5,7 @@ export function generateYAML(name = '', description = '', steps = []) {
     'extract',
     'regexMatch',
     'isPresent',
-    'compare',
-    'length'
+    'compare'
   ]);
 
   const pipeline = steps

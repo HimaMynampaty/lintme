@@ -6,6 +6,7 @@
   const params = new URLSearchParams(window.location.search);
   let rulesYaml = decodeURIComponent(params.get("rule") || "");
 
+  const sharedFontSize = 14;
   let markdownText = "";
   let originalText = "";
 
@@ -82,7 +83,8 @@ function stopResize() {
       language: 'yaml',
       automaticLayout: true,
       minimap: { enabled: false },
-      fixedOverflowWidgets: true
+      fixedOverflowWidgets: true,
+      fontSize: sharedFontSize
     });
     rulesEditor.onDidChangeModelContent(() => {
       rulesYaml = rulesEditor.getValue();
@@ -93,7 +95,8 @@ function stopResize() {
       language: 'markdown',
       automaticLayout: true,
       minimap: { enabled: false },
-      fixedOverflowWidgets: true
+      fixedOverflowWidgets: true,
+      fontSize: sharedFontSize
     });
     markdownEditor.onDidChangeModelContent(() => {
       markdownText = markdownEditor.getValue();
@@ -102,19 +105,20 @@ function stopResize() {
       readOnly: true,
       automaticLayout: true,
       minimap: { enabled: false },
-      fixedOverflowWidgets: true
+      fixedOverflowWidgets: true,
+      fontSize: sharedFontSize
     });
 
     outputEditor = monaco.editor.create(outputEditorContainer, {
-    value: lintResults || 'No lint results to display yet.',
-    language: 'plaintext',
-    readOnly: true,
-    automaticLayout: true,
-    minimap: { enabled: false },
-    fontSize: rulesEditor?.getOption(monaco.editor.EditorOption.fontSize) || 14,
-    wordWrap: 'on',
-    scrollBeyondLastLine: false
-  });
+      value: lintResults || 'No lint results to display yet.',
+      language: 'plaintext',
+      readOnly: true,
+      automaticLayout: true,
+      minimap: { enabled: false },
+      fontSize: sharedFontSize,
+      wordWrap: 'on',
+      scrollBeyondLastLine: false
+    });
 
 
     fetchFiles("rules");

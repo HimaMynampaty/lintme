@@ -8,7 +8,7 @@
   const targets = [
     'emoji','newline','image','internallink','externallink',
     'blockquote','thematicBreak','code','definition','delete','emphasis',
-    'footnote','footnoteDefinition','footnoteReference',
+    'footnoteDefinition','footnoteReference',
     'heading','html','imageReference','inlineCode','link','linkReference',
     'list','listItem','paragraph','root','strong','table','tableCell',
     'tableRow','text','toml','yaml'

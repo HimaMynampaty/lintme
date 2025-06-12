@@ -55,10 +55,18 @@ ${ctx.markdown}
 \`\`\`
 
 ## Instructions:
+Use the rule definition and diagnostics above to identify and fix issues in the Markdown.
+
+Apply the rule's intent exactly as described in the YAML.
+
+You MUST base your fixes only on the rule and its configuration — do NOT invent new rules.
+
+Additionally:
 ${prompt}
 
 ## Required Output:
-You MUST append the fixed Markdown version **below** this line and nothing else:
+You MUST append only the fixed Markdown version **below** this line and nothing else:
+
 
 ---FIXED MARKDOWN BELOW---
 

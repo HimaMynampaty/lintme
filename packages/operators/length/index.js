@@ -52,9 +52,14 @@ export function run(ctx, cfg = {}) {
   ctx.lengths = { target, scopes, data: summary };
 
   ctx.counts ??= {};
-  ctx.counts['length'] = Object.fromEntries(
-    Object.entries(summary).extract(([k]) => scopes.includes(k))
+  ctx.counts[target] = Object.fromEntries(
+    Object.entries(summary).filter(([k]) => scopes.includes(k))
   );
 
-  return { target: 'length', scopes, data: summary };
+  ctx.count = ctx.counts;
+  ctx.previous = { target, scopes };
+
+  return { target, scopes, data: summary };
+
+  
 }

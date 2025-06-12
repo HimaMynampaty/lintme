@@ -15,16 +15,17 @@
   let countTarget = '';
 
   $: {
-    const pipelineSteps = $pipeline; 
+    const steps = $pipeline;
 
     countScopes = [];
     countTarget = '';
 
     for (let i = storeIndex - 1; i >= 0; i--) {
-      const prev = pipelineSteps[i];
-      if (prev?.operator === 'count') {
-        countScopes = prev.scopes ?? [];
-        countTarget = prev.target ?? '';
+      const prev = steps[i];
+
+      if (prev?.scopes?.length && prev.target) {
+        countScopes = [...prev.scopes];
+        countTarget = prev.target;
         break;
       }
     }
@@ -46,7 +47,7 @@
 <div class="space-y-4">
   {#if countScopes.length === 0}
     <p class="text-sm text-red-500">
-      ⚠ Add a <code>count</code> step with scope before this threshold.
+      ⚠ Add a <code>count</code> or <code>length</code> step with scope before this threshold.
     </p>
   {/if}
 

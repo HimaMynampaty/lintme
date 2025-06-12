@@ -1,4 +1,4 @@
-import { visit,EXIT } from 'unist-util-visit';
+import { visit, EXIT } from 'unist-util-visit';
 import { toString } from 'mdast-util-to-string';
 
 const EMOJI_REGEX = /:[\w+-]+:|[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{FE0F}\u{1F1E6}-\u{1F1FF}]/gu;
@@ -20,12 +20,12 @@ export function run(ctx, cfg = {}) {
   const isExternal = url => /^https?:\/\//i.test(url);
   const isInternal = url => !isExternal(url);
 
-    if (!isRegex && !['internallink', 'externallink'].includes(target)) {
+  if (!isRegex && !['internallink', 'externallink'].includes(target)) {
     let found = false;
     visit(ctx.ast, n => {
       if (n.type === target) {
         found = true;
-        return EXIT;           
+        return EXIT;
       }
     });
 
@@ -35,7 +35,7 @@ export function run(ctx, cfg = {}) {
         severity: 'warning',
         message:
           `extract: no “${target}” nodes found. ` +
-         `Either this markdown doesn’t contain that node type ` +
+          `Either this markdown doesn’t contain that node type ` +
           `or “${target}” isn’t a valid mdast node type.`
       });
     }
@@ -63,14 +63,48 @@ export function run(ctx, cfg = {}) {
   };
 
   const matchNode = n => {
-    if (target === 'internallink')
-      return n.type === 'link' && isInternal(n.url || '');
-    if (target === 'externallink')
-      return n.type === 'link' && isExternal(n.url || '');
-    return !isRegex && n.type === target;
+    if (isRegex) return false;
+
+    if (target === 'link') {
+      if (n.type !== 'link') return false;
+
+      const child = n.children?.[0];
+      if (
+        n.title == null &&
+        child?.type === 'text' &&
+        n.url === child.value
+      ) {
+        return false; 
+      }
+      return true;
+    }
+
+    if (target === 'internallink' || target === 'externallink') {
+      if (n.type !== 'link') return false;
+
+      if (
+        n.title == null &&
+        n.children?.length === 1 &&
+        n.children[0].type === 'text' &&
+        n.url === n.children[0].value
+      ) {
+        return false;
+      }
+
+      return target === 'internallink'
+        ? isInternal(n.url || '')
+        : isExternal(n.url || '');
+    }
+
+    return n.type === target;
   };
 
-  const matchText = txt => isRegex ? [...txt.matchAll(re)].map(m => m[0]) : [];
+  const matchText = txt =>
+    isRegex
+      ? [...txt.matchAll(re)]
+          .map(m => m[0])
+          .filter(s => !/^https?:\/\/\S+$/i.test(s))
+      : [];
 
   const serializeNode = n => {
     if (ctx.markdown && n.position?.start && n.position?.end) {
@@ -93,7 +127,6 @@ export function run(ctx, cfg = {}) {
     return toString(n);
   };
 
-
   const malformed = checkLinkFormatting(md);
   const result = { document: [], paragraph: [], line: {}, endoffile: [] };
 
@@ -107,20 +140,28 @@ export function run(ctx, cfg = {}) {
             result.document.push({ content: h, line: ln });
           }
         });
-      }
-      else {
+      } else {
         visit(ctx.ast, n => {
-          if (matchNode(n)) {
-            result.document.push({
-              ...n,
-              line: n.position?.start?.line ?? 1,
-              content: serializeNode(n),
-            });
-          }
+          if (!matchNode(n)) return;
+
+          if (
+            n.type === 'link' &&
+            n.title == null &&
+            n.children?.length === 1 &&
+            n.children[0].type === 'text' &&
+            n.url === n.children[0].value
+          ) return;
+
+          result.document.push({
+            ...n,
+            line: n.position?.start?.line ?? 1,
+            content: serializeNode(n),
+          });
         });
 
         if (target === 'internallink' || target === 'externallink') {
           malformed.forEach(iss => {
+            if (iss.line === undefined) return;
             const urlMatch = iss.content.match(/\(([^()\s]*)/);
             const url = urlMatch?.[1] ?? '';
             const internal = isInternal(url);
@@ -134,32 +175,37 @@ export function run(ctx, cfg = {}) {
 
     paragraph() {
       visit(ctx.ast, 'paragraph', p => {
+        const decorated = [];
+
         const matches = isRegex
           ? matchText(toString(p))
           : collectMatches(p, matchNode);
 
-        if (matches.length > 0) {
-          const decorated = matches.map(m =>
-            typeof m === 'string'
-              ? { content: m }
-              : { ...m, content: serializeNode(m) }
+        if (matches.length) {
+          decorated.push(
+            ...matches.map(m =>
+              typeof m === 'string'
+                ? { content: m }
+                : { ...m, content: serializeNode(m) }
+            )
           );
-
-          result.paragraph.push({ line: p.position?.start?.line ?? 1, matches: decorated });
         }
 
         if (target === 'internallink' || target === 'externallink') {
-          const start = p.position?.start?.line ?? 1;
-          const end = p.position?.end?.line ?? start;
+          const { line: start } = p.position.start;
+          const { line: end } = p.position.end;
+
           malformed.forEach(iss => {
             if (iss.line < start || iss.line > end) return;
-            const urlMatch = iss.content.match(/\(([^()\s]*)/);
-            const url = urlMatch?.[1] ?? '';
-            const internal = isInternal(url);
-            if ((target === 'internallink' && internal) || (target === 'externallink' && !internal)) {
-              decorated.push({ type: 'malformedlink', url, ...iss });
-            }
+
+            const url = (iss.content.match(/\(([^()\s]*)/) || [])[1] ?? '';
+            const same = target === 'internallink' ? isInternal(url) : isExternal(url);
+            if (same) decorated.push({ type: 'malformedlink', url, ...iss });
           });
+        }
+
+        if (decorated.length) {
+          result.paragraph.push({ line: p.position.start.line, matches: decorated });
         }
       });
     },
@@ -167,17 +213,26 @@ export function run(ctx, cfg = {}) {
     line() {
       if (isRegex) {
         visit(ctx.ast, 'text', n => {
-        const hits = matchText(n.value);
-        if (hits.length) {
-          const ln = n.position?.start?.line;
-          (result.line[ln] ??= []).push(
-            ...hits.map(h => ({ content: h }))    
-          );
-        }
+          const hits = matchText(n.value);
+          if (hits.length) {
+            const ln = n.position?.start?.line;
+            (result.line[ln] ??= []).push(
+              ...hits.map(h => ({ content: h }))
+            );
+          }
         });
       } else {
         visit(ctx.ast, n => {
           if (!matchNode(n)) return;
+
+          if (
+            n.type === 'link' &&
+            n.title == null &&
+            n.children?.length === 1 &&
+            n.children[0].type === 'text' &&
+            n.url === n.children[0].value
+          ) return;
+
           const ln = n.position?.start?.line;
           (result.line[ln] ??= []).push({
             ...n,
@@ -191,7 +246,9 @@ export function run(ctx, cfg = {}) {
             const url = urlMatch?.[1] ?? '';
             const internal = isInternal(url);
             if ((target === 'internallink' && internal) || (target === 'externallink' && !internal)) {
-              (result.line[iss.line] ??= []).push({ type: 'malformedlink', url, ...iss });
+              if (iss.line !== undefined) {
+                (result.line[iss.line] ??= []).push({ type: 'malformedlink', url, ...iss });
+              }
             }
           });
         }
@@ -199,46 +256,66 @@ export function run(ctx, cfg = {}) {
     },
 
     endoffile() {
-    if (isRegex) {
-      let last = null;
-      for (const m of md.matchAll(re)) last = m;
+      if (isRegex) {
+        let last = null;
+        for (const m of md.matchAll(re)) last = m;
 
-      if (last && last.index + last[0].length === md.length) {
-        const preMatch = md.slice(0, last.index);
-        const line = preMatch.split('\n').length;
+        if (last && last.index + last[0].length === md.length) {
+          const preMatch = md.slice(0, last.index);
+          const line = preMatch.split('\n').length;
 
-        result.endoffile.push({ content: last[0], line });
-      }
-    } else {
-      const endLine = md.split('\n').length;
-      visit(ctx.ast, n => {
-        if (n.position?.start?.line === endLine && matchNode(n)) {
-          result.endoffile.push({
-            ...n,
-            line: endLine,
-            content: serializeNode(n),
-          });
+          result.endoffile.push({ content: last[0], line });
         }
-      });
-
-      if (target === 'internallink' || target === 'externallink') {
-        malformed.forEach(iss => {
-          if (iss.line !== endLine) return;
-          const urlMatch = iss.content.match(/\(([^()\s]*)/);
-          const url = urlMatch?.[1] ?? '';
-          const internal = isInternal(url);
-          if ((target === 'internallink' && internal) || (target === 'externallink' && !internal)) {
-            result.endoffile.push({ type: 'malformedlink', url, ...iss });
+      } else {
+        const endLine = md.split('\n').length;
+        visit(ctx.ast, n => {
+          if (n.position?.start?.line === endLine && matchNode(n)) {
+            result.endoffile.push({
+              ...n,
+              line: endLine,
+              content: serializeNode(n),
+            });
           }
         });
+
+        if (target === 'internallink' || target === 'externallink') {
+          malformed.forEach(iss => {
+            if (iss.line !== endLine) return;
+            const urlMatch = iss.content.match(/\(([^()\s]*)/);
+            const url = urlMatch?.[1] ?? '';
+            const internal = isInternal(url);
+            if ((target === 'internallink' && internal) || (target === 'externallink' && !internal)) {
+              result.endoffile.push({ type: 'malformedlink', url, ...iss });
+            }
+          });
+        }
       }
     }
-  }
   };
+
+  for (const scope of ['document', 'paragraph']) {
+    const seen = new Set();
+    result[scope] = result[scope].filter(item => {
+      const key = `${item.line}|${item.content}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  const lineSeen = new Set();
+  for (const [ln, entries] of Object.entries(result.line)) {
+    result.line[ln] = entries.filter(e => {
+      const key = `${ln}|${e.content}`;
+      if (lineSeen.has(key)) return false;
+      lineSeen.add(key);
+      return true;
+    });
+  }
 
   for (const s of scopes) handlers[s]?.();
   ctx.extracted = { target, scopes, data: result };
-  return { target, scopes, data: result };   
+  return { target, scopes, data: result };
 }
 
 function collectMatches(parent, predicate) {

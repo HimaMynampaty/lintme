@@ -1,4 +1,6 @@
 import { fromMarkdown } from 'mdast-util-from-markdown';
+import { gfm } from 'micromark-extension-gfm';
+import { gfmFromMarkdown } from 'mdast-util-gfm';
 
 /**
  * @typedef {import('mdast').Root} Root
@@ -13,7 +15,11 @@ import { fromMarkdown } from 'mdast-util-from-markdown';
  */
 export function run(ctx, config = {}) {
   /** @type {Root} */
-  const ast = fromMarkdown(ctx.markdown);
+  const ast = fromMarkdown(ctx.markdown, {
+    extensions: [gfm()],
+    mdastExtensions: [gfmFromMarkdown()]
+  });
+
   ctx.ast = ast;
   return ctx;
 }

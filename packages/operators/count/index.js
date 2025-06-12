@@ -32,6 +32,7 @@ export function run(ctx, cfg = {}) {
 
   ctx.count ??= {};
   ctx.count[target] = summary;   
+  ctx.previous = { target, scopes };
 
   return { target, scopes, data: summary };
 }
