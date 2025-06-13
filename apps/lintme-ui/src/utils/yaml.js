@@ -19,8 +19,10 @@ export function generateYAML(name = '', description = '', steps = []) {
       }
 
       if (step.operator === 'regexMatch') {
-        if ('pattern' in step) out.pattern = step.pattern;
+        if (Array.isArray(step.patterns)) out.patterns = step.patterns;
+        else if ('pattern' in step) out.pattern = step.pattern;
       }
+
 
       if (step.operator === 'fixUsingLintMeCode') {
         if ('template' in step) out.template = step.template;

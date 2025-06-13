@@ -2,7 +2,8 @@ import { visit, EXIT } from 'unist-util-visit';
 import { toString } from 'mdast-util-to-string';
 
 const EMOJI_REGEX = /:[\w+-]+:|[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{FE0F}\u{1F1E6}-\u{1F1FF}]/gu;
-const BUILTIN_RX = { emoji: EMOJI_REGEX, newline: /\n/g };
+const DATE_REGEX  = /\b(?:\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}|\d{4}[\/-]\d{1,2}[\/-]\d{1,2})\b/g;
+const BUILTIN_RX = { emoji: EMOJI_REGEX, newline: /\n/g,  date: DATE_REGEX };
 
 const escapeRE = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const toRegExp = t => BUILTIN_RX[t] || new RegExp(escapeRE(t), 'gi');

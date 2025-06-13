@@ -11,7 +11,7 @@
     'footnoteDefinition','footnoteReference',
     'heading','html','imageReference','inlineCode','link','linkReference',
     'list','listItem','paragraph','root','strong','table','tableCell',
-    'tableRow','text','toml','yaml'
+    'tableRow','text','toml','yaml','date'
   ].sort();
 
   const scopes = ['line','paragraph','document','endoffile'];
