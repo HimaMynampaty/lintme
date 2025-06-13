@@ -1,7 +1,8 @@
 <script>
   import { createEventDispatcher, onDestroy, tick } from 'svelte';
+  import { operatorDescriptions } from '../lib/operatorMetadata.js';
 
-  import FilterOperator     from './FilterOperator.svelte';
+  import ExtractOperator     from './ExtractOperator.svelte';
   import CountOperator      from './CountOperator.svelte';
   import ThresholdOperator  from './ThresholdOperator.svelte';
   import FixManualOperator  from './FixManualOperator.svelte';
@@ -28,25 +29,25 @@
     showPopup = !showPopup;
     await tick();
     if (showPopup) {
-      document.addEventListener('click', handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside);
     } else {
       document.removeEventListener('click', handleClickOutside);
     }
   }
 
   function handleClickOutside(event) {
-    if (
-      popupRef &&
-      !popupRef.contains(event.target) &&
-      !event.target.closest(`[data-step="step-${step.id}"]`)
-    ) {
+    const clickedInsidePopup = popupRef?.contains(event.target);
+    const clickedButton = event.target.closest(`[data-step="step-${step.id}"]`);
+
+    if (!clickedInsidePopup && !clickedButton) {
       showPopup = false;
-      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     }
   }
 
+
   onDestroy(() => {
-    document.removeEventListener('click', handleClickOutside);
+    document.removeEventListener('mousedown', handleClickOutside);
   });
 </script>
 
@@ -62,16 +63,18 @@
     data-step={`step-${step.id}`}
     aria-haspopup="dialog"
     aria-expanded={showPopup}
+    title={operatorDescriptions[step.operator] ?? ''}
   >
     <span>Step {index}: {step.operator}</span>
     <span class="sr-only">Edit {step.operator}</span>
   </button>
 
+
   <button
     class="absolute -top-2 -right-2 bg-white text-gray-400 hover:text-red-500 border border-gray-200 rounded-full w-6 h-6 text-xs flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
     on:click|stopPropagation={remove}
     aria-label="Remove step"
-    title="Remove"
+    title="Delete step"
   >
     ✖
   </button>
@@ -96,8 +99,8 @@
       </div>
 
       {#key step.id}
-        {#if step.operator === 'filter'}
-          <FilterOperator bind:data={step} on:input={changed} />
+        {#if step.operator === 'extract'}
+          <ExtractOperator bind:data={step} on:input={changed} />
         {:else if step.operator === 'count'}
           <CountOperator bind:data={step} {storeIndex} on:input={changed}>
             <span slot="default" />

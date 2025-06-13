@@ -1,6 +1,6 @@
 export const OPERATORS = {
   'generateAST': () => import('@himamynampaty/operator-generate-ast').then(m => m.run),
-  'filter':      () => import('@himamynampaty/operator-filter').then(m => m.run),
+  'extract':      () => import('@himamynampaty/operator-extract').then(m => m.run),
   'count':       () => import('@himamynampaty/operator-count').then(m => m.run),
   'threshold':   () => import('@himamynampaty/operator-threshold').then(m => m.run),
   'isPresent':   () => import('@himamynampaty/operator-ispresent').then(m => m.run),

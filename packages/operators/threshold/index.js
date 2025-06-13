@@ -1,9 +1,8 @@
 export function run(ctx, cfg = {}) {
   let { target, conditions = {}, level = 'warning' } = cfg;
   const allViolations = {}; 
-  if (!target && ctx.count) {
-    const keys = Object.keys(ctx.count);
-    if (keys.length === 1) target = keys[0];
+  if (!target && ctx.previous) {
+    target = ctx.previous.target;
   }
 
   if (!target) {
@@ -11,7 +10,7 @@ export function run(ctx, cfg = {}) {
     return ctx;
   }
 
-  const counts = ctx.count?.[target];         
+  const counts = ctx.count?.[target];
   if (!counts) {
     pushErr(
       ctx,
@@ -21,14 +20,14 @@ export function run(ctx, cfg = {}) {
   }
 
   const adapters = {
-    document : () => [{ line: 1, actual: counts.document ?? 0 }],
+    document: () => [{ line: 1, actual: counts.document ?? 0 }],
     endoffile: () => [{ line: 1, actual: counts.endoffile ?? 0 }],
     previousstepoutput: () => [{ line: 1, actual: counts.previousstepoutput ?? 0 }],
-    line : () => Object.entries(counts.line ?? {}).map(
+    line: () => Object.entries(counts.line ?? {}).map(
       ([ln, c]) => ({ line: +ln, actual: c })
     ),
     paragraph: () => (counts.paragraph ?? []).map(p => ({
-      line  : p.line,
+      line: p.line,
       actual: p.count ?? p.length ?? 0
     }))
   };
@@ -37,25 +36,21 @@ export function run(ctx, cfg = {}) {
     const rows = adapters[scope]?.() ?? [];
     const { type, value } = rule;
     if (value == null) continue;
-    const violations = []; 
+    const violations = [];
     for (const { line, actual } of rows) {
       if (!compare(actual, type, value)) {
-        ctx.diagnostics.push({
-          line,
-          severity: level,
-          message : formatMsg(scope, line, actual, target, type, value)
-        });
-       violations.push({       
+        const message = formatMsg(scope, line, actual, target, type, value, ctx);
+        ctx.diagnostics.push({ line, severity: level, message });
+        violations.push({
           line,
           actual,
           scope,
           expected: { type, value },
-          message: formatMsg(scope, line, actual, target, type, value)
+          message
         });
-
       }
     }
-       if (violations.length) {
+    if (violations.length) {
       allViolations[scope] ??= [];
       allViolations[scope].push(...violations);
     }
@@ -64,42 +59,66 @@ export function run(ctx, cfg = {}) {
   return { target, data: { violations: allViolations } };
 }
 
-
-
 function compare(actual, type, expected) {
   const ops = {
-    '<'  : (a,b) => a <  b,
-    '<=' : (a,b) => a <= b,
-    '>'  : (a,b) => a >  b,
-    '>=' : (a,b) => a >= b,
-    '='  : (a,b) => a === b,
-    '==' : (a,b) => a === b         
+    '<': (a, b) => a < b,
+    '<=': (a, b) => a <= b,
+    '>': (a, b) => a > b,
+    '>=': (a, b) => a >= b,
+    '=': (a, b) => a === b,
+    '==': (a, b) => a === b
   };
 
   const alias = {
-    lessthan              : '<',
-    greaterthan           : '>',
-    lessthanequal         : '<=',
-    lessthanequalto       : '<=',   
-    greaterthanequal      : '>=',
-    greaterthanequalto    : '>=',   
-    equal                 : '=',
-    equalto               : '='
+    lessthan: '<',
+    greaterthan: '>',
+    lessthanequal: '<=',
+    lessthanequalto: '<=',
+    greaterthanequal: '>=',
+    greaterthanequalto: '>=',
+    equal: '=',
+    equalto: '='
   };
 
   const key = String(type).toLowerCase().trim();
-  const sym = ops[key]            
-           || ops[alias[key]];   
-
+  const sym = ops[key] || ops[alias[key]];
   return sym ? sym(actual, expected) : true;
 }
 
-function formatMsg(scope, line, n, tgt, type, val) {
-  const where = scope === 'document' ? 'Document'
-            : scope === 'endoffile' ? 'End of file'
-            : scope === 'line'      ? `Line ${line}`
-            :                        `Paragraph at line ${line}`;
-  return `${where} has ${n} × "${tgt}" → threshold (${type} ${val}) violated`;
+function formatMsg(scope, line, actual, target, type, val, ctx) {
+  const label =
+    scope === 'document' ? 'Document' :
+    scope === 'endoffile' ? 'End of file' :
+    scope === 'line' ? `Line ${line}` :
+    `Paragraph starting on line ${line}`;
+
+  const comparison = {
+    '<': 'less than',
+    '<=': 'less than or equal to',
+    '>': 'greater than',
+    '>=': 'greater than or equal to',
+    '=': 'equal to',
+    '==': 'equal to'
+  };
+
+  const alias = {
+    lessthan: '<',
+    lessthanequal: '<=',
+    lessthanequalto: '<=',
+    greaterthan: '>',
+    greaterthanequal: '>=',
+    greaterthanequalto: '>=',
+    equal: '=',
+    equalto: '='
+  };
+
+  const op = comparison[alias[type] ?? type] ?? type;
+
+  const isLength = !!(ctx.lengths?.data?.[scope]);
+
+  const unit = isLength ? 'characters' : (target.endsWith('s') ? target : `${target}s`);
+
+  return `${label} has ${actual} ${unit}; must be ${op} ${val}.`;
 }
 
 function pushErr(ctx, msg) {

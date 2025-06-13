@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
 import { createCtx } from '../../test-utils/pipelineContext.js';
 import { run as generateAST } from '../../generate-ast/index.js';
-import { run as filter } from '../../filter/index.js';
+import { run as extract } from '../../extract/index.js';
 import { run as count } from '../index.js';
 
 test('newline counts per line and EOF', () => {
@@ -9,7 +9,7 @@ test('newline counts per line and EOF', () => {
   const ctx = createCtx(md);
 
   generateAST(ctx);
-  filter(ctx, { target: 'newline', scopes: ['line', 'endoffile'] });
+  extract(ctx, { target: 'newline', scopes: ['line', 'endoffile'] });
   count(ctx, {});
 
   expect(ctx.counts.newline.line[1]).toBe(0);

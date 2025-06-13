@@ -1,6 +1,7 @@
 # Project Title
 
 This is a sample README that includes multiple code blocks using different formatting styles in Markdown.
+To install, run `npm install express` in your terminal.
 
 ## JavaScript Example (Triple Backticks)
 
@@ -70,3 +71,4 @@ A simple HTML snippet:
         print(f"Hello, {name}!")
     
     greet("World")
+

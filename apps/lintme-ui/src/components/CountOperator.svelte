@@ -1,31 +1,64 @@
 <script>
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { createEventDispatcher } from 'svelte';
   import { pipeline } from '../stores/pipeline.js';
 
-  export let data;       
-  export let storeIndex;  
+  export let data;
+  export let storeIndex;
 
   const dispatch = createEventDispatcher();
 
-  function hydrate () {
-    for (let i = storeIndex - 1; i >= 0; i--) {
-      const prev = $pipeline[i];
-      if (prev?.target && prev?.scopes?.length) {
-        data.target  ??= prev.target;
-        data.scopes  ??= [...prev.scopes];
-        dispatch('input');                    
-        return true;
-      }
+  let hasStep = false;
+  let isValidSource = false;
+
+  function maybeHydrate(prev) {
+    let changed = false;
+
+    if (prev.target && !data.target) {
+      data.target = prev.target;
+      changed = true;
     }
-    return false;
+    if (Array.isArray(prev.scopes) && prev.scopes.length &&
+        (!data.scopes || !data.scopes.length)) {
+      data.scopes = [...prev.scopes];
+      changed = true;
+    }
+    if (changed) dispatch('input');
   }
 
-  onMount(hydrate);
-  $: hasUpstream = hydrate();
+  $: {
+    hasStep = false;
+    isValidSource = false;
+
+    const steps = $pipeline;
+
+    for (let i = storeIndex - 1; i >= 0; i--) {
+      const prev = steps[i];
+      if (!prev) continue;
+
+      if (prev.operator === 'extract' || prev.target) {
+        hasStep = true;
+
+        if (prev.target &&
+            Array.isArray(prev.scopes) &&
+            prev.scopes.length > 0) {
+          isValidSource = true;
+          maybeHydrate(prev);
+        }
+        break;
+      }
+    }
+  }
 </script>
 
 {#if $$slots.default}
-  <slot />                                   
-{:else if !hasUpstream}
-  <p class="text-sm text-red-500 my-1">⚠ Needs a step before it.</p>
+  <slot />
+{:else if !hasStep}
+  <p class="text-sm text-red-500 my-1 max-w-xs break-words">
+    ⚠ This step requires a previous (like extract) step but none exists.
+  </p>
+{:else if !isValidSource}
+  <p class="text-sm text-red-500 my-1 max-w-xs break-words">
+    ⚠ The upstream <code>exract</code> step is missing a <code>target</code>
+    or non-empty <code>scopes</code>.
+  </p>
 {/if}

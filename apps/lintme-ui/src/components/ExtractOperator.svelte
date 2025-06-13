@@ -7,31 +7,31 @@
 
   const targets = [
     'emoji','newline','image','internallink','externallink',
-    'blockquote','break','code','definition','delete','emphasis',
-    'footnote','footnoteDefinition','footnoteReference',
+    'blockquote','thematicBreak','code','definition','delete','emphasis',
+    'footnoteDefinition','footnoteReference',
     'heading','html','imageReference','inlineCode','link','linkReference',
     'list','listItem','paragraph','root','strong','table','tableCell',
-    'tableRow','text','thematicBreak','toml','yaml'
+    'tableRow','text','toml','yaml','date'
   ].sort();
 
   const scopes = ['line','paragraph','document','endoffile'];
 
   let openSuggestions   = false;
   let showScopeMenu     = false;
-  let filtered          = targets;           
+  let extract          = targets;           
   let activeIndex       = -1;              
 
   $: {
     const q = (data.target || '').toLowerCase();
-    filtered = q ? targets.filter(t => t.includes(q)) : targets;
-    if (filtered.length === 0) activeIndex = -1;
-    else if (activeIndex >= filtered.length) activeIndex = 0;
+    extract = q ? targets.filter(t => t.includes(q)) : targets;
+    if (extract.length === 0) activeIndex = -1;
+    else if (activeIndex >= extract.length) activeIndex = 0;
   }
 
   function chooseTarget(t) {
     data.target = t;
     openSuggestions = false;
-    activeIndex = filtered.indexOf(t);
+    activeIndex = extract.indexOf(t);
     dispatch('input');
   }
 
@@ -43,19 +43,19 @@
   }
 
   function onTargetKey(e) {
-    if (!openSuggestions || filtered.length === 0) return;
+    if (!openSuggestions || extract.length === 0) return;
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      activeIndex = (activeIndex + 1 + filtered.length) % filtered.length;
+      activeIndex = (activeIndex + 1 + extract.length) % extract.length;
     }
     if (e.key === 'ArrowUp') {
       e.preventDefault();
-      activeIndex = (activeIndex - 1 + filtered.length) % filtered.length;
+      activeIndex = (activeIndex - 1 + extract.length) % extract.length;
     }
     if (e.key === 'Enter' && activeIndex !== -1) {
       e.preventDefault();
-      chooseTarget(filtered[activeIndex]);
+      chooseTarget(extract[activeIndex]);
     }
   }
 
@@ -71,8 +71,12 @@
   const scopeToggleId = 'scopes-'  + Math.random().toString(36).slice(2);
 
   function handleOutside(e) {
-    if (!e.target.closest('.combo'))      openSuggestions = false;
-    if (!e.target.closest('.scope-box'))  showScopeMenu   = false;
+    if (!e.target.closest('.combo') && !e.target.closest('#target-listbox')) {
+      openSuggestions = false;
+    }
+    if (!e.target.closest('.scope-box')) {
+      showScopeMenu = false;
+    }
   }
   window.addEventListener('click', handleOutside);
   onDestroy(() => window.removeEventListener('click', handleOutside));
@@ -80,7 +84,7 @@
 
 <div class="space-y-4">
   <div>
-    <label for={targetId} class="text-sm font-medium">Target</label>
+    <label for={targetId} class="text-sm font-medium" title="Select the Markdown node type you want to extract (e.g. heading, link)">Target</label>
 
     <div class="relative combo">
       <input
@@ -105,7 +109,7 @@
           class="absolute z-10 mt-1 w-full bg-white border rounded shadow
                  text-sm max-h-40 overflow-y-auto"
         >
-          {#if filtered.length === 0}
+          {#if extract.length === 0}
             <li
               role="option"
               id="opt-empty"
@@ -116,7 +120,7 @@
               No match
             </li>
           {:else}
-          {#each filtered as t, i}
+          {#each extract as t, i}
             <li
               role="option"
               id={`opt-${i}`}
@@ -143,7 +147,7 @@
   </div>
 
   <div class="relative scope-box">
-    <label for={scopeToggleId} class="text-sm font-medium block mb-1">Scopes</label>
+    <label for={scopeToggleId} class="text-sm font-medium block mb-1" title="Choose where to extract from: line, paragraph, document, or end of file">Scopes</label>
 
     <button
       id={scopeToggleId}

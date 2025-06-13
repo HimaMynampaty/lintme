@@ -6,6 +6,7 @@
   const params = new URLSearchParams(window.location.search);
   let rulesYaml = decodeURIComponent(params.get("rule") || "");
 
+  const sharedFontSize = 14;
   let markdownText = "";
   let originalText = "";
 
@@ -13,7 +14,7 @@
   let fixedMarkdown = "";
   let diagnostics      = [];  
   let highlightedMarkdown = ""; 
-  
+  let topPane;
   let showDiff = false;
 
   let rulesFiles = [];
@@ -31,6 +32,31 @@
   let ruleList = [];
   let combinedRuleOptions = [];
   let showPalette = false;
+  let startY;
+  let startHeight;
+  let outputEditorContainer;
+  let outputEditor;
+  let showOutput = false;
+
+function startResize(e) {
+  startY      = e.clientY;
+  startHeight = outputEditorContainer.getBoundingClientRect().height;
+  window.addEventListener('mousemove', resizeOutput);
+  window.addEventListener('mouseup',  stopResize);
+}
+
+function resizeOutput(e) {
+  const dy        = e.clientY - startY;
+  const newHeight = Math.max(120, startHeight - dy);      // drag up ⇒ bigger
+  outputEditorContainer.style.flexBasis = `${newHeight}px`;
+  outputEditor?.layout();                                 // relayout Monaco
+}
+
+function stopResize() {
+  window.removeEventListener('mousemove', resizeOutput);
+  window.removeEventListener('mouseup',  stopResize);
+}
+
 
   $: combinedRuleOptions = [
     ...ruleList.map(r => ({
@@ -45,6 +71,11 @@
     }))
   ];
 
+  $: if (outputEditor && lintResults !== outputEditor.getValue()) {
+    outputEditor.setValue(lintResults || 'No lint results to display yet.');
+  }
+
+
   let selectedCombinedRule = '';
 
   onMount(async () => {
@@ -52,17 +83,18 @@
       value: rulesYaml,
       language: 'yaml',
       automaticLayout: true,
-      minimap: { enabled: false }
-    });
-    rulesEditor.onDidChangeModelContent(() => {
-      rulesYaml = rulesEditor.getValue();
+      minimap: { enabled: false },
+      fixedOverflowWidgets: true,
+      fontSize: sharedFontSize
     });
 
     markdownEditor = monaco.editor.create(markdownEditorContainer, {
       value: markdownText,
       language: 'markdown',
       automaticLayout: true,
-      minimap: { enabled: false }
+      minimap: { enabled: false },
+      fixedOverflowWidgets: true,
+      fontSize: sharedFontSize
     });
     markdownEditor.onDidChangeModelContent(() => {
       markdownText = markdownEditor.getValue();
@@ -70,8 +102,22 @@
     diffEditor = monaco.editor.createDiffEditor(diffEditorContainer, {
       readOnly: true,
       automaticLayout: true,
-      minimap: { enabled: false }
+      minimap: { enabled: false },
+      fixedOverflowWidgets: true,
+      fontSize: sharedFontSize
     });
+
+    outputEditor = monaco.editor.create(outputEditorContainer, {
+      value: lintResults || 'No lint results to display yet.',
+      language: 'plaintext',
+      readOnly: true,
+      automaticLayout: true,
+      minimap: { enabled: false },
+      fontSize: sharedFontSize,
+      wordWrap: 'on',
+      scrollBeyondLastLine: false
+    });
+
 
     fetchFiles("rules");
     fetchFiles("readme");
@@ -117,7 +163,7 @@
 
 
   function formatOperatorOutput(key, data, scopes = Object.keys(data)) {
-    let result = `\n${key.toUpperCase()}:\n`;
+    let result = ``;
 
     for (const scope of scopes) {
       const value = data[scope];
@@ -134,8 +180,15 @@
           const label = item === '\n' ? 'newline character' : item;
           result += `    - ${label}\n`;
         } else if (item.line && item.matches) {
-          result += `    - Line ${item.line}: ${item.matches.join(', ')}\n`;
-        } else if (item.line && item.count !== undefined) {
+          const entries = item.matches.map(m => {
+            if (typeof m === 'string') return m;
+            if (typeof m === 'object') {
+              return m.content ?? m.value ?? m.type ?? JSON.stringify(m);
+            }
+            return String(m);
+          });
+          result += `    - Line ${item.line}: ${entries.join(', ')}\n`;
+         } else if (item.line && item.count !== undefined) {
           result += `    - Line ${item.line}: ${item.count} match(es)\n`;
          } else if (item.content) {          
            result += `    - Line ${item.line}: ${item.content}\n`;
@@ -193,12 +246,16 @@
 
 
   async function runLinter() {
-    if (!rulesYaml || !markdownText) {
+    showOutput = true; 
+    const ruleContent = rulesEditor?.getValue()?.trim();
+    const markdownContent = markdownEditor?.getValue()?.trim();
+
+    if (!ruleContent || !markdownContent) {
       alert("Please enter both rules.yaml and README content!");
       return;
     }
 
-    originalText = markdownEditor.getValue();
+    originalText = markdownContent;
 
     const response = await fetch('/.netlify/functions/runPipeline', {
       method: 'POST',
@@ -206,8 +263,8 @@
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        yamlText: rulesEditor.getValue(),
-        markdown: originalText,
+        yamlText: ruleContent,
+        markdown: markdownContent,
       }),
     });
 
@@ -247,14 +304,11 @@
 
       if (!isJudging) {
         if (ctx.pipelineResults && ctx.pipelineResults.length) {
-          lintResults += '\n\nInternal analysis:\n';
 
           ctx.pipelineResults.forEach(({ name, data }, idx) => {
-            const header  = `${name.toUpperCase()} ${idx + 1}`;
             const payload = data.data ?? data;             
             const scopes  = data.scopes ?? Object.keys(payload);
-
-            lintResults  += `\n${header}:\n`;
+            lintResults += `\nOutput from ${name.toUpperCase()} operator (step ${idx + 1}):\n`;
             lintResults  += formatOperatorOutput(name, payload, scopes);
           });
         }
@@ -301,6 +355,19 @@
       updateDiffModels();
     }
   }
+
+  function setDefaultHeight(node, visible) {
+    const apply = v => {
+      if (v) {                     
+        node.style.flexBasis = '260px';  
+        outputEditor?.layout();     
+      }
+    };
+
+    apply(visible);       
+    return { update: apply }; 
+  }
+
 
   function applyFixesToEditor() {
     markdownEditor.setValue(fixedMarkdown);
@@ -410,7 +477,7 @@ button:hover { background: #004b8a; }
 .diff-editor-container {
   flex: 1 1 0;
   min-width: 0;
-  overflow: auto;
+  overflow: visible;
   width: 100%;
 }
 
@@ -427,18 +494,41 @@ select {
 .diff-editor-container { display: none; }
 .diff-editor-container.show { display: flex; }
 
-
-.output {
-  flex-shrink: 0;         
-  height: 200px;
+.resizer {
+  height: 6px;
+  background: #ccc;
+  cursor: row-resize;
   width: 100%;
-  background: #f0f4f8;
-  border-top: 2px solid #ccc;
-  padding: 10px;
-  overflow: auto;
-  white-space: pre-wrap;
+}
+.resizer:hover {
+  background: #999;
 }
 
+.resizable-pane {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.top-pane {
+  flex-grow: 1;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+
+.bottom-pane {
+  min-height: 0;
+  max-height: 85vh;
+  background: #1e1e1e;
+  border-top: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
 
 </style>
 
@@ -467,53 +557,55 @@ select {
     </button>
   </div>
 
-  <div class="container">
-    <div class="file-upload">
-      <select on:change={handleCombinedRuleSelection} bind:value={selectedCombinedRule}>
-        <option value="">Select Rule</option>
-        <optgroup label="Saved Rules">
-          {#each ruleList as r}
-            <option value={r.id}>{r.name}</option>
-          {/each}
-        </optgroup>
-        <optgroup label="YAML Files">
-          {#each rulesFiles as file}
-            <option value={file}>{file}</option>
-          {/each}
-        </optgroup>
-      </select>
-     <!-- new code -->
-      <div class="bg-gray-50 p-4 rounded border relative">
-        <OperatorTriggerPanel {rulesEditor} />
+<div class="resizable-pane">
+  <div class="top-pane" bind:this={topPane}>
+    <div class="container">
+      <div class="file-upload">
+        <select on:change={handleCombinedRuleSelection} bind:value={selectedCombinedRule}>
+          <option value="">Select Rule</option>
+          <optgroup label="Saved Rules">
+            {#each ruleList as r}
+              <option value={r.id}>{r.name}</option>
+            {/each}
+          </optgroup>
+          <optgroup label="YAML Files">
+            {#each rulesFiles as file}
+              <option value={file}>{file}</option>
+            {/each}
+          </optgroup>
+        </select>
+        <div class="bg-gray-50 p-4 rounded border relative">
+          <OperatorTriggerPanel bind:rulesEditor />
+        </div>
+        <div class="editor-container" bind:this={rulesEditorContainer}></div>
       </div>
 
-      <div class="editor-container" bind:this={rulesEditorContainer}></div>
+      <div class="file-upload" style="display: {showDiff ? 'none' : 'flex'}">
+        <select on:change={(e) => loadFileContent('readme', e)}>
+          <option value="">Select README</option>
+          {#each readmeFiles as file}
+            <option value={file}>{file}</option>
+          {/each}
+        </select>
+        <div class="editor-container" bind:this={markdownEditorContainer}></div>
+      </div>
+
+      <div class="diff-editor-container" class:show={showDiff} bind:this={diffEditorContainer}></div>
     </div>
-
-
-    <div class="file-upload" style="display: {showDiff ? 'none' : 'flex'}">
-      <select on:change={(e) => loadFileContent('readme', e)}>
-        <option value="">Select README</option>
-        {#each readmeFiles as file}
-          <option value={file}>{file}</option>
-        {/each}
-      </select>
-      <div class="editor-container" bind:this={markdownEditorContainer}></div>
-    </div>
-
-    <div
-      class="diff-editor-container"
-      class:show={showDiff}
-      bind:this={diffEditorContainer}
-    ></div>
-  </div> 
-  <div class="output">
-    {#if lintResults}
-      <pre>{lintResults}</pre>
-    {:else}
-      <p>No lint results to display yet.</p>
-    {/if}
   </div>
+
+  <div class="resizer" on:mousedown={startResize}></div>
+
+  <div
+    class="bottom-pane"
+    use:setDefaultHeight={showOutput}
+    class:hidden={!showOutput}
+    bind:this={outputEditorContainer}
+  />
+
+</div>
+
+
 
   {#if highlightedMarkdown}
     <div class="lint-preview" bind:this={markdownPreviewDiv}>

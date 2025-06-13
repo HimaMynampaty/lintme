@@ -1,13 +1,13 @@
 export function run(ctx, cfg = {}) {
   const target = cfg.target?.trim();          
   const level  = cfg.level ?? 'warning';
-  const scope  = ctx.filtered?.scopes?.[0] ?? 'document';
+  const scope  = ctx.extracted?.scopes?.[0] ?? 'document';
 
-  if (!ctx.filtered) {
+  if (!ctx.extracted) {
     ctx.diagnostics.push({
       line: 1,
       severity: 'error',
-      message: 'isPresent operator needs a filter step first'
+      message: 'isPresent operator needs a extract step first'
     });
     return ctx;
   }
@@ -21,8 +21,8 @@ export function run(ctx, cfg = {}) {
     return ctx;
   }
 
-  const data = ctx.filtered.data ?? {};
-  const label = ctx.filtered.target ?? 'node';
+  const data = ctx.extracted.data ?? {};
+  const label = ctx.extracted.target ?? 'node';
 
   const push = (line, msg) =>
     ctx.diagnostics.push({ line, severity: level, message: msg });

@@ -6,7 +6,7 @@
   export let storeIndex;  
 
   const dispatch  = createEventDispatcher();
-  let   hasFilter = false;
+  let   hasExtract = false;
 
 $: {
   let prevTarget = data.target;
@@ -15,7 +15,7 @@ $: {
   let found = false;
   for (let i = storeIndex - 1; i >= 0 && !found; i--) {
     const step = $pipeline[i];
-    if (step?.operator === 'filter') {
+    if (step?.operator === 'extract') {
       found = true;
 
       const newTarget = step.target ?? '';
@@ -30,13 +30,13 @@ $: {
       }
     }
   }
-  hasFilter = found;
+  hasExtract = found;
 }
 
 </script>
 
-{#if !hasFilter}
+{#if !hasExtract}
   <p class="text-sm text-red-500">
-    ⚠ Add a <code>filter</code> step before this one.
+    ⚠ Add a <code>extract</code> step before this one.
   </p>
 {/if}

@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
 import { createCtx } from '../../test-utils/pipelineContext.js';
 import { run as generateAST } from '../../generate-ast/index.js';
-import { run as filter } from '../../filter/index.js';
+import { run as extract } from '../../extract/index.js';
 import { run as count } from '../../count/index.js';
 import { run as threshold } from '../index.js';
 
@@ -10,7 +10,7 @@ test('flags >2 emoji per line', () => {
   const ctx = createCtx(md);
 
   generateAST(ctx);
-  filter(ctx, { target: 'emoji', scopes: ['line'] });
+  extract(ctx, { target: 'emoji', scopes: ['line'] });
   count(ctx, {});
   threshold(ctx, {
     target: 'emoji',

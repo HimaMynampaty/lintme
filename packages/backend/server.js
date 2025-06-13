@@ -64,8 +64,8 @@ function getFilesFromDirectory(directoryPath) {
 app.get("/api/files", (req, res) => {
     const { type } = req.query;
 
-    const rulesPath = "C:\\Users\\Hima\\Documents\\Utah-edu-sem2\\papers\\LintMe\\lintme\\examples\\rules";
-    const readmePath = "C:\\Users\\Hima\\Documents\\Utah-edu-sem2\\papers\\LintMe\\lintme\\examples\\readMe";
+    const rulesPath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\rules";
+    const readmePath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\readMe";
 
     const directoryPath = type === "rules" ? rulesPath : readmePath;
     const files = getFilesFromDirectory(directoryPath);
@@ -77,8 +77,8 @@ app.get("/api/files", (req, res) => {
 app.get("/api/file-content", (req, res) => {
     const { type, fileName } = req.query;
 
-    const rulesPath = "C:\\Users\\Hima\\Documents\\Utah-edu-sem2\\papers\\LintMe\\lintme\\examples\\rules";
-    const readmePath = "C:\\Users\\Hima\\Documents\\Utah-edu-sem2\\papers\\LintMe\\lintme\\examples\\readMe";
+    const rulesPath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\rules";
+    const readmePath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\readMe";
 
     const directoryPath = type === "rules" ? rulesPath : readmePath;
     const filePath = path.join(directoryPath, fileName);

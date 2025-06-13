@@ -10,7 +10,7 @@ export function run(ctx, cfg = {}) {
   }
 
   const scopeName =
-    cfg.scope === 'previousstepoutput' && ctx.filtered
+    cfg.scope === 'previousstepoutput' && ctx.extracted
       ? 'previousstepoutput'
       : 'document';
 
@@ -24,7 +24,7 @@ export function run(ctx, cfg = {}) {
     });
 
   } else {
-    const prev = ctx.filtered.data ?? {};
+    const prev = ctx.extracted.data ?? {};
 
     const walk = node => {
       if (!node) return;
@@ -48,7 +48,7 @@ export function run(ctx, cfg = {}) {
     Object.values(prev).forEach(walk);
   }
 
-  ctx.filtered = {
+  ctx.extracted = {
     target : query,            
     scopes : [scopeName],
     data   : result

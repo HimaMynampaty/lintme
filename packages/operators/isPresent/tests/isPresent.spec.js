@@ -4,23 +4,23 @@ import { run } from '../index.js';
 function createCtx(overrides = {}) {
   return {
     diagnostics: [],
-    filtered: null,
+    extracted: null,
     markdown: '',
     ...overrides
   };
 }
 
 describe('isPresent operator', () => {
-  test('errors if no filter present', () => {
+  test('errors if no extract present', () => {
     const ctx = createCtx();
     run(ctx, { target: 'alt' });
 
     expect(ctx.diagnostics).toHaveLength(1);
-    expect(ctx.diagnostics[0].message).toMatch(/filter step/i);
+    expect(ctx.diagnostics[0].message).toMatch(/extract step/i);
   });
 
   test('errors if no target given', () => {
-    const ctx = createCtx({ filtered: { data: {} } });
+    const ctx = createCtx({ extracted: { data: {} } });
     run(ctx, {});
 
     expect(ctx.diagnostics).toHaveLength(1);
@@ -29,7 +29,7 @@ describe('isPresent operator', () => {
 
   test('passes when alt is present on all images (document scope)', () => {
     const ctx = createCtx({
-      filtered: {
+      extracted: {
         target: 'image',
         data: {
           document: [
@@ -46,7 +46,7 @@ describe('isPresent operator', () => {
 
   test('flags missing alt on image nodes (document scope)', () => {
     const ctx = createCtx({
-      filtered: {
+      extracted: {
         target: 'image',
         data: {
           document: [
@@ -64,7 +64,7 @@ describe('isPresent operator', () => {
 
   test('flags empty emoji match array (document scope)', () => {
     const ctx = createCtx({
-      filtered: {
+      extracted: {
         target: 'emoji',
         data: { document: [] }
       }
@@ -77,7 +77,7 @@ describe('isPresent operator', () => {
 
   test('flags paragraph-level missing matches', () => {
     const ctx = createCtx({
-      filtered: {
+      extracted: {
         target: 'emoji',
         data: {
           paragraph: [
@@ -96,7 +96,7 @@ describe('isPresent operator', () => {
   test('flags line-level emoji absence', () => {
     const ctx = createCtx({
         markdown: 'hi\nhello 😀\nthird\n',
-        filtered: {
+        extracted: {
         target: 'emoji',
         data: {
             line: {
@@ -118,7 +118,7 @@ describe('isPresent operator', () => {
   test('flags missing newline at EOF', () => {
     const ctx = createCtx({
       markdown: 'hi',
-      filtered: {
+      extracted: {
         target: 'newline',
         data: {
           endoffile: []
@@ -133,7 +133,7 @@ describe('isPresent operator', () => {
 
   test('passes when match array has data', () => {
     const ctx = createCtx({
-      filtered: {
+      extracted: {
         target: 'emoji',
         data: {
           document: ['😀']
