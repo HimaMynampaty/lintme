@@ -36,6 +36,7 @@
   let startHeight;
   let outputEditorContainer;
   let outputEditor;
+  let showOutput = false;
 
 function startResize(e) {
   startY      = e.clientY;
@@ -245,6 +246,7 @@ function stopResize() {
 
 
   async function runLinter() {
+    showOutput = true; 
     const ruleContent = rulesEditor?.getValue()?.trim();
     const markdownContent = markdownEditor?.getValue()?.trim();
 
@@ -353,6 +355,19 @@ function stopResize() {
       updateDiffModels();
     }
   }
+
+  function setDefaultHeight(node, visible) {
+    const apply = v => {
+      if (v) {                     
+        node.style.flexBasis = '260px';  
+        outputEditor?.layout();     
+      }
+    };
+
+    apply(visible);       
+    return { update: apply }; 
+  }
+
 
   function applyFixesToEditor() {
     markdownEditor.setValue(fixedMarkdown);
@@ -502,12 +517,11 @@ select {
   min-height: 100px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .bottom-pane {
-  flex: 0 0 260px; /* default height, same as height: 260px but resizable */
-  min-height: 120px;
+  min-height: 0;
   max-height: 85vh;
   background: #1e1e1e;
   border-top: 1px solid #333;
@@ -515,9 +529,6 @@ select {
   flex-direction: column;
   position: relative;
 }
-
-
-
 
 </style>
 
@@ -583,11 +594,15 @@ select {
     </div>
   </div>
 
-  <!-- resizable drag bar -->
   <div class="resizer" on:mousedown={startResize}></div>
 
-  <!-- output view -->
-<div class="bottom-pane" bind:this={outputEditorContainer}></div>
+  <div
+    class="bottom-pane"
+    use:setDefaultHeight={showOutput}
+    class:hidden={!showOutput}
+    bind:this={outputEditorContainer}
+  />
+
 </div>
 
 
