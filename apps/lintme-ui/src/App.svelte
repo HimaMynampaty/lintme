@@ -245,12 +245,15 @@ function stopResize() {
 
 
   async function runLinter() {
-    if (!rulesYaml || !markdownText) {
+    const ruleContent = rulesEditor?.getValue()?.trim();
+    const markdownContent = markdownEditor?.getValue()?.trim();
+
+    if (!ruleContent || !markdownContent) {
       alert("Please enter both rules.yaml and README content!");
       return;
     }
 
-    originalText = markdownEditor.getValue();
+    originalText = markdownContent;
 
     const response = await fetch('/.netlify/functions/runPipeline', {
       method: 'POST',
@@ -258,8 +261,8 @@ function stopResize() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        yamlText: rulesEditor.getValue(),
-        markdown: originalText,
+        yamlText: ruleContent,
+        markdown: markdownContent,
       }),
     });
 

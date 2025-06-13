@@ -53,11 +53,11 @@
 {#if $$slots.default}
   <slot />
 {:else if !hasStep}
-  <p class="text-sm text-red-500 my-1">
+  <p class="text-sm text-red-500 my-1 max-w-xs break-words">
     ⚠ This step requires a previous (like extract) step but none exists.
   </p>
 {:else if !isValidSource}
-  <p class="text-sm text-red-500 my-1">
+  <p class="text-sm text-red-500 my-1 max-w-xs break-words">
     ⚠ The upstream <code>exract</code> step is missing a <code>target</code>
     or non-empty <code>scopes</code>.
   </p>

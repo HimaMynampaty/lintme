@@ -43,7 +43,7 @@
     pipeline.update(steps => {
       switch (opName) {
         case 'isPresent':
-          return [...steps, { id, operator: 'isPresent', target: 'alt' }];
+          return [...steps, { id, operator: 'isPresent'}];
         case 'compare':
           return [...steps, { id, operator: 'compare', baseline: '', against: '' }];
         case 'regexMatch':

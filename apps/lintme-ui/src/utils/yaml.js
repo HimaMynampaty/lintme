@@ -15,7 +15,7 @@ export function parseYAML(text = '') {
       case 'compare':
         return { id, operator: 'compare', baseline: raw.baseline ?? '', against: raw.against ?? '' };
       case 'isPresent':
-        return { id, operator: 'isPresent', target: raw.target ?? 'alt' };
+        return { id, operator: 'isPresent', target: raw.target ?? '' };
       case 'sage':
       case 'count':
       case 'length':
