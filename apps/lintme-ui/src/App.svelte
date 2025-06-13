@@ -86,9 +86,6 @@ function stopResize() {
       fixedOverflowWidgets: true,
       fontSize: sharedFontSize
     });
-    rulesEditor.onDidChangeModelContent(() => {
-      rulesYaml = rulesEditor.getValue();
-    });
 
     markdownEditor = monaco.editor.create(markdownEditorContainer, {
       value: markdownText,
@@ -564,7 +561,7 @@ select {
           </optgroup>
         </select>
         <div class="bg-gray-50 p-4 rounded border relative">
-          <OperatorTriggerPanel {rulesEditor} />
+          <OperatorTriggerPanel bind:rulesEditor />
         </div>
         <div class="editor-container" bind:this={rulesEditorContainer}></div>
       </div>

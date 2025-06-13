@@ -1,7 +1,7 @@
 <script>
   import { onDestroy, tick, onMount } from 'svelte';
-  import { pipeline } from '../stores/pipeline.js';
-  import { generateYAML } from '../utils/yaml.js';
+  import { pipeline, INTERNAL_AST_STEP } from '../stores/pipeline.js';
+  import { generateYAML, parseYAML, withIds } from '../utils/yaml.js';
 
   import OperatorPalette from './OperatorPalette.svelte';
   import PipelineEditor from '../editor/PipelineEditor.svelte';
@@ -11,9 +11,12 @@
   let showPalette = false;
   let paletteRef;
 
+  let syncingFromPipeline = false;
+  let syncingFromEditor = false;
+  let disposer = null;
+
   async function togglePalette() {
     showPalette = !showPalette;
-
     await tick();
 
     if (showPalette) {
@@ -56,11 +59,13 @@
     document.removeEventListener('click', handleClickOutside);
   }
 
-  const unsub = pipeline.subscribe(steps => {
-    if (rulesEditor) {
-      const yaml = generateYAML('my-rule', '', steps);
-      rulesEditor.setValue(yaml);
-    }
+  const unsub = pipeline.subscribe((steps) => {
+    if (!rulesEditor || syncingFromEditor) return;
+
+    syncingFromPipeline = true;
+    const yaml = generateYAML('my-rule', '', steps);
+    rulesEditor.setValue(yaml);
+    syncingFromPipeline = false;
   });
 
   function handleKeyboardShortcut(e) {
@@ -83,12 +88,35 @@
     window.addEventListener('keydown', handleKeyboardShortcut);
   });
 
+  $: if (rulesEditor && typeof rulesEditor.onDidChangeModelContent === 'function') {
+    disposer?.dispose?.();
+
+    const handleYamlChange = () => {
+      if (syncingFromPipeline) return;
+
+      try {
+        const nextSteps = withIds(parseYAML(rulesEditor.getValue()));
+        syncingFromEditor = true;
+        pipeline.set([INTERNAL_AST_STEP, ...nextSteps]);
+      } catch (err) {
+        console.warn('Failed to parse YAML → pipeline', err);
+      } finally {
+        syncingFromEditor = false;
+      }
+    };
+
+    disposer = rulesEditor.onDidChangeModelContent(handleYamlChange);
+  }
+
   onDestroy(() => {
     document.removeEventListener('click', handleClickOutside);
     window.removeEventListener('keydown', handleKeyboardShortcut);
-    unsub();
+    unsub?.();
+    disposer?.dispose?.();
   });
 </script>
+
+
 
 <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
   <div class="flex gap-2">
@@ -106,7 +134,6 @@
           class="absolute top-12 left-0 z-20 w-64 animate-fade-in"
           bind:this={paletteRef}
         >
-          <!-- Arrow -->
           <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-white"></div>
 
           <OperatorPalette

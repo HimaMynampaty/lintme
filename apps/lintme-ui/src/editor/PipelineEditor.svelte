@@ -4,7 +4,7 @@
   import OperatorBox from '../components/OperatorBox.svelte';
 
   function handleReorder(e) {
-    pipeline.set([{ operator: 'generateAST' }, ...e.detail.items]);
+    pipeline.set([{ id: 'internal-generate-ast', operator: 'generateAST' }, ...e.detail.items]);
   }
 
   function handleUpdate(storeIndex, newStep) {
@@ -19,6 +19,7 @@
     pipeline.update(arr => arr.filter((_, i) => i !== storeIndex));
   }
 </script>
+
 
 <div
   use:dndzone={{ items: $pipeline.slice(1), flipDurationMs: 150 }}
