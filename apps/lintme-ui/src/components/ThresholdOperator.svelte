@@ -22,10 +22,16 @@
 
     for (let i = storeIndex - 1; i >= 0; i--) {
       const prev = steps[i];
+      if (!prev) continue;
 
-      if (prev?.scopes?.length && prev.target) {
-        countScopes = [...prev.scopes];
+      if (prev.target) {
         countTarget = prev.target;
+
+        if (Array.isArray(prev.scopes) && prev.scopes.length) {
+          countScopes = [...prev.scopes];
+        } else {
+          countScopes = ['document'];
+        }
         break;
       }
     }
@@ -34,7 +40,6 @@
       data.target = countTarget;
       dispatch('input');
     }
-
     data.conditions ||= {};
     for (const s of countScopes) {
       data.conditions[s] ??= { type: 'lessthan', value: '' };
@@ -47,7 +52,7 @@
 <div class="space-y-4">
   {#if countScopes.length === 0}
     <p class="text-sm text-red-500">
-      ⚠ Add a <code>count</code> or <code>length</code> step with scope before this threshold.
+      ⚠ Add a <code>count</code> or <code>length</code> step before this threshold.
     </p>
   {/if}
 
@@ -66,9 +71,7 @@
             class="w-full border rounded px-2 py-1 text-sm"
             on:change={onFieldChange}
           >
-            {#each types as t}
-              <option value={t}>{t}</option>
-            {/each}
+            {#each types as t}<option value={t}>{t}</option>{/each}
           </select>
         </div>
 

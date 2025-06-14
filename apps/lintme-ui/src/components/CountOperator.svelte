@@ -13,15 +13,20 @@
   function maybeHydrate(prev) {
     let changed = false;
 
-    if (prev.target && !data.target) {
-      data.target = prev.target;
+    const implicitTarget =
+      prev.target ?? (prev.operator === 'search' ? 'query' : undefined);
+
+    if (implicitTarget && !data.target) {
+      data.target = implicitTarget;        
       changed = true;
     }
+
     if (Array.isArray(prev.scopes) && prev.scopes.length &&
         (!data.scopes || !data.scopes.length)) {
       data.scopes = [...prev.scopes];
       changed = true;
     }
+
     if (changed) dispatch('input');
   }
 
@@ -35,15 +40,13 @@
       const prev = steps[i];
       if (!prev) continue;
 
-      if (prev.operator === 'extract' || prev.target) {
-        hasStep = true;
+      const hasImplicitTarget =
+        prev.target || (prev.operator === 'search');
 
-        if (prev.target &&
-            Array.isArray(prev.scopes) &&
-            prev.scopes.length > 0) {
-          isValidSource = true;
-          maybeHydrate(prev);
-        }
+      if (hasImplicitTarget) {
+        hasStep = true;
+        isValidSource = true;
+        maybeHydrate(prev);
         break;
       }
     }
@@ -54,11 +57,11 @@
   <slot />
 {:else if !hasStep}
   <p class="text-sm text-red-500 my-1 max-w-xs break-words">
-    ⚠ This step requires a previous (like extract) step but none exists.
+    ⚠ This step requires a previous step with a <code>target</code>,
+    like <code>extract</code> or <code>search</code>.
   </p>
 {:else if !isValidSource}
   <p class="text-sm text-red-500 my-1 max-w-xs break-words">
-    ⚠ The upstream <code>exract</code> step is missing a <code>target</code>
-    or non-empty <code>scopes</code>.
+    ⚠ The upstream step lacks the data needed to count.
   </p>
 {/if}

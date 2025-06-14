@@ -9,7 +9,6 @@
     { name: 'compare', label: 'compare' },
     { name: 'count', label: 'count' },
     { name: 'extract', label: 'extract' },
-    { name: 'fixUsingLintMeCode', label: 'fixUsingLintMeCode' },
     { name: 'fixUsingLLM', label: 'fixUsingLLM' },
     { name: 'isPresent', label: 'isPresent' },
     { name: 'length', label: 'length' },
