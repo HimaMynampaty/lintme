@@ -70,10 +70,12 @@ export function generateYAML(name = '', description = '', steps = []) {
       if (
         NEEDS_TARGET.has(step.operator) &&
         'target' in step &&
-        step.target !== ''
+        step.target !== '' &&
+        step._inferred !== true
       ) {
         out.target = step.target;
       }
+
 
       if ('scope' in step && step.operator !== 'isPresent') {
         out.scope = step.scope;

@@ -1,6 +1,20 @@
 export function run(ctx, cfg = {}) {
   let { target, conditions = {}, level = 'warning' } = cfg;
-  const allViolations = {}; 
+
+  if (!target) {
+    if (ctx.previous?.target) {
+      target = ctx.previous.target;
+    } else if (ctx.count && Object.keys(ctx.count).length === 1) {
+      target = Object.keys(ctx.count)[0];
+    }
+
+    if (target) {
+      cfg.target = target;
+      cfg._inferred = true;
+    }
+  }
+
+  const allViolations = {};
   if (!target && ctx.previous) {
     target = ctx.previous.target;
   }
@@ -32,32 +46,50 @@ export function run(ctx, cfg = {}) {
     }))
   };
 
-  for (const [scope, rule] of Object.entries(conditions)) {
-    const rows = adapters[scope]?.() ?? [];
+  const prevScopes = ctx.previous?.scopes ?? [];
+
+  for (const [scopeKey, rule] of Object.entries(conditions)) {
+    let effectiveScope = scopeKey;
+    let rows = adapters[effectiveScope]?.() ?? [];
+    const allZero = rows.every(r => (r.actual ?? 0) === 0);
+    if (allZero && prevScopes.length === 1) {
+      const altScope = prevScopes[0];
+      if (altScope !== effectiveScope && adapters[altScope]) {
+        const altRows = adapters[altScope]();
+        if (altRows.length > 0) {
+          effectiveScope = altScope;
+          rows = altRows;
+        }
+      }
+    }
+
     const { type, value } = rule;
     if (value == null) continue;
+
     const violations = [];
     for (const { line, actual } of rows) {
       if (!compare(actual, type, value)) {
-        const message = formatMsg(scope, line, actual, target, type, value, ctx);
+        const message = formatMsg(effectiveScope, line, actual, target, type, value, ctx);
         ctx.diagnostics.push({ line, severity: level, message });
         violations.push({
           line,
           actual,
-          scope,
+          scope: effectiveScope,
           expected: { type, value },
           message
         });
       }
     }
+
     if (violations.length) {
-      allViolations[scope] ??= [];
-      allViolations[scope].push(...violations);
+      allViolations[effectiveScope] ??= [];
+      allViolations[effectiveScope].push(...violations);
     }
   }
 
   return { target, data: { violations: allViolations } };
 }
+
 
 function compare(actual, type, expected) {
   const ops = {
@@ -90,7 +122,7 @@ function formatMsg(scope, line, actual, target, type, val, ctx) {
     scope === 'document' ? 'Document' :
     scope === 'endoffile' ? 'End of file' :
     scope === 'line' ? `Line ${line}` :
-    `Paragraph starting on line ${line}`;
+    `Defined scope`;
 
   const comparison = {
     '<': 'less than',

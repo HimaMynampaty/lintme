@@ -90,7 +90,7 @@ Do NOT include explanations, notes, or wrap the output in code blocks.
     ctx.diagnostics.push({
       line: 1,
       severity: 'warning',
-      message: 'fixUsingLLM: Marker not found. Fix could not be extracted.'
+      message: 'fixUsingLLM: Fix could not be extracted, please change the prompt'
     });
   }
 
