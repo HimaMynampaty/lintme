@@ -10,4 +10,5 @@ export const OPERATORS = {
   'length': () => import('@himamynampaty/operator-length').then(m => m.run),
   'search': () => import('@himamynampaty/operator-search').then(m => m.run),
   'fixUsingLLM': () => import('@himamynampaty/operator-fixusingllm').then(m => m.run),
+  'detectHateSpeech': () => import('@himamynampaty/operator-detecthatespeech').then(m => m.run),
 };

@@ -279,7 +279,7 @@ function stopResize() {
 
 
 
-    const judgmentOperators = new Set(['threshold', 'isPresent', 'compare', 'fixUsingLLM']);
+    const judgmentOperators = new Set(['threshold', 'isPresent', 'compare', 'fixUsingLLM', 'detectHateSpeech']);
 
     if (diagnostics.length > 0) {
       const errorCount = diagnostics.filter(d => d.severity === 'error').length;

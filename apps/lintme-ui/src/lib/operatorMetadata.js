@@ -9,4 +9,5 @@ export const operatorDescriptions = {
   sage: 'Run a custom Sage rule (Turn markdown headings into TOC links).',
   search: 'Search for specific words or phrases.',
   compare: 'Compare values from different steps.',
+  detectHateSpeech: 'Detect potentially hateful, biased, or offensive language using Retext.',
 };

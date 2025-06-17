@@ -12,6 +12,7 @@
   import CompareOperator    from './CompareOperator.svelte';
   import LengthOperator     from './LengthOperator.svelte';
   import SearchOperator     from './SearchOperator.svelte';
+  import DetectHateSpeechOperator     from './DetectHateSpeechOperator.svelte';
 
   export let step;
   export let index;
@@ -120,6 +121,8 @@
           <LengthOperator bind:data={step} {storeIndex} on:input={changed} />
         {:else if step.operator === 'search'}
           <SearchOperator bind:data={step} {storeIndex} on:input={changed} />
+        {:else if step.operator === 'detectHateSpeech'}
+          <DetectHateSpeechOperator bind:data={step} {storeIndex} on:input={changed} />
         {/if}
       {/key}
     </div>

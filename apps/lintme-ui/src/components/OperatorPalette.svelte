@@ -15,7 +15,8 @@
     { name: 'regexMatch', label: 'regexMatch' },
     { name: 'sage', label: 'sage' },
     { name: 'search', label: 'search' },       
-    { name: 'threshold', label: 'threshold' }
+    { name: 'threshold', label: 'threshold' },
+    { name: 'detectHateSpeech', label: 'detectHateSpeech' }
   ];
 
   function choose(op) {
