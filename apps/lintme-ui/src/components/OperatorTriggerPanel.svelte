@@ -50,8 +50,15 @@
           return [...steps, { id, operator: 'regexMatch', pattern: '' }];
         case 'sage':
           return [...steps, { id, operator: 'sage' }];
+        case 'detectHateSpeech':
+          return [...steps, {
+            id,
+            operator: 'detectHateSpeech',
+            scope: 'document',
+            scopes: ['document']
+          }];
         default:
-          return [...steps, { id, operator: opName }];
+          return [...steps, { id, operator: opName }];  
       }
     });
 

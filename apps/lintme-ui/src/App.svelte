@@ -279,7 +279,7 @@ function stopResize() {
 
 
 
-    const judgmentOperators = new Set(['threshold', 'isPresent', 'compare', 'fixUsingLLM']);
+    const judgmentOperators = new Set(['threshold', 'isPresent', 'compare', 'fixUsingLLM', 'detectHateSpeech']);
 
     if (diagnostics.length > 0) {
       const errorCount = diagnostics.filter(d => d.severity === 'error').length;
@@ -297,22 +297,22 @@ function stopResize() {
 
 
       const isJudging = judgmentOperators.has(ctx.lastOperator);
+      const fixedByLLM = ctx.fixedMarkdown && ctx.fixedMarkdown !== originalText;
+      if (isJudging && fixedByLLM) {
+        lintResults = `Fixes were suggested.\n\nClick "Show Diff View" to preview or "Apply Fixes to Editor".`;
+      } else if (isJudging) {
+        lintResults = `Lint successful! No issues found.`;
+      } else {
+        lintResults = `This rule does not produce actual lint results. It may be missing a judgment step like "threshold".`;
+      }
 
-      lintResults = isJudging
-        ? 'Lint successful! No issues found.'
-        : 'This rule does not produce actual lint results. It may be missing a judgment step like "threshold".';
-
-      if (!isJudging) {
-        if (ctx.pipelineResults && ctx.pipelineResults.length) {
-
-          ctx.pipelineResults.forEach(({ name, data }, idx) => {
-            const payload = data.data ?? data;             
-            const scopes  = data.scopes ?? Object.keys(payload);
-            lintResults += `\nOutput from ${name.toUpperCase()} operator (step ${idx + 1}):\n`;
-            lintResults  += formatOperatorOutput(name, payload, scopes);
-          });
-        }
-
+      if (!isJudging && ctx.pipelineResults && ctx.pipelineResults.length) {
+        ctx.pipelineResults.forEach(({ name, data }, idx) => {
+          const payload = data.data ?? data;
+          const scopes = data.scopes ?? Object.keys(payload);
+          lintResults += `\nOutput from ${name.toUpperCase()} operator (step ${idx + 1}):\n`;
+          lintResults += formatOperatorOutput(name, payload, scopes);
+        });
       }
     }
 

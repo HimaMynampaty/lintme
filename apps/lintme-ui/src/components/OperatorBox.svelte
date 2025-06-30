@@ -5,7 +5,6 @@
   import ExtractOperator     from './ExtractOperator.svelte';
   import CountOperator      from './CountOperator.svelte';
   import ThresholdOperator  from './ThresholdOperator.svelte';
-  import FixManualOperator  from './FixManualOperator.svelte';
   import FixUsingLLMOperator     from './FixUsingLLMOperator.svelte';
   import IsPresentOperator  from './IsPresentOperator.svelte';
   import RegexMatchOperator from './RegexMatchOperator.svelte';
@@ -13,6 +12,7 @@
   import CompareOperator    from './CompareOperator.svelte';
   import LengthOperator     from './LengthOperator.svelte';
   import SearchOperator     from './SearchOperator.svelte';
+  import DetectHateSpeechOperator     from './DetectHateSpeechOperator.svelte';
 
   export let step;
   export let index;
@@ -107,8 +107,6 @@
           </CountOperator>
         {:else if step.operator === 'threshold'}
           <ThresholdOperator bind:data={step} {storeIndex} on:input={changed} />
-        {:else if step.operator === 'fixUsingLintMeCode'}
-          <FixManualOperator bind:data={step} on:input={changed} />
         {:else if step.operator === 'fixUsingLLM'}
           <FixUsingLLMOperator bind:data={step} on:input={changed} />
         {:else if step.operator === 'isPresent'}
@@ -123,6 +121,8 @@
           <LengthOperator bind:data={step} {storeIndex} on:input={changed} />
         {:else if step.operator === 'search'}
           <SearchOperator bind:data={step} {storeIndex} on:input={changed} />
+        {:else if step.operator === 'detectHateSpeech'}
+          <DetectHateSpeechOperator bind:data={step} {storeIndex} on:input={changed} />
         {/if}
       {/key}
     </div>

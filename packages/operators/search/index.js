@@ -1,10 +1,24 @@
 export function run(ctx, cfg = {}) {
-  const query = (cfg.query ?? '').trim();
-  if (!query) {
+  const rawQuery = (cfg.query ?? '').trim();
+  if (!rawQuery) {
     ctx.diagnostics.push({
       line: 1,
       severity: 'error',
       message: 'search operator missing "query" string'
+    });
+    return ctx;
+  }
+
+  const queries = rawQuery
+    .split(',')
+    .map(q => q.trim())
+    .filter(q => q.length > 0);
+
+  if (queries.length === 0) {
+    ctx.diagnostics.push({
+      line: 1,
+      severity: 'error',
+      message: 'no valid search terms found'
     });
     return ctx;
   }
@@ -18,11 +32,13 @@ export function run(ctx, cfg = {}) {
   const add = (line, text) =>
     result[scopeName].push({ line, content: text.trim() });
 
+  const matchesQuery = text =>
+    queries.some(q => text.includes(q));
+
   if (scopeName === 'document') {
     (ctx.markdown ?? '').split('\n').forEach((l, i) => {
-      if (l.includes(query)) add(i + 1, l);
+      if (matchesQuery(l)) add(i + 1, l);
     });
-
   } else {
     const prev = ctx.extracted.data ?? {};
 
@@ -31,13 +47,13 @@ export function run(ctx, cfg = {}) {
       if (typeof node === 'string') return;
       if (Array.isArray(node)) return node.forEach(walk);
 
-      if (node.content && node.content.includes(query)) {
+      if (node.content && matchesQuery(node.content)) {
         add(node.line ?? node.position?.start?.line ?? 1, node.content);
-        return;                        
+        return;
       }
 
       const raw = node.value ?? node.raw ?? '';
-      if (typeof raw === 'string' && raw.includes(query)) {
+      if (typeof raw === 'string' && matchesQuery(raw)) {
         add(node.line ?? node.position?.start?.line ?? 1, raw);
       }
 
@@ -49,9 +65,9 @@ export function run(ctx, cfg = {}) {
   }
 
   ctx.extracted = {
-    target : query,            
+    target : queries.join(', '),
     scopes : [scopeName],
     data   : result
   };
-  return { query, scopes: [scopeName], data: result };
+  return { query: queries, scopes: [scopeName], data: result };
 }

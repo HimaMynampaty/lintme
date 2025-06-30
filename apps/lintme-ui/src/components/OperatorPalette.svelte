@@ -9,14 +9,14 @@
     { name: 'compare', label: 'compare' },
     { name: 'count', label: 'count' },
     { name: 'extract', label: 'extract' },
-    { name: 'fixUsingLintMeCode', label: 'fixUsingLintMeCode' },
     { name: 'fixUsingLLM', label: 'fixUsingLLM' },
     { name: 'isPresent', label: 'isPresent' },
     { name: 'length', label: 'length' },
     { name: 'regexMatch', label: 'regexMatch' },
     { name: 'sage', label: 'sage' },
     { name: 'search', label: 'search' },       
-    { name: 'threshold', label: 'threshold' }
+    { name: 'threshold', label: 'threshold' },
+    { name: 'detectHateSpeech', label: 'detectHateSpeech' }
   ];
 
   function choose(op) {
