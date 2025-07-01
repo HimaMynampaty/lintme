@@ -38,6 +38,10 @@
   let outputEditor;
   let showOutput = false;
 
+  let mode = 'runner'; // can be 'runner' or 'loader'
+  let selectedRuleIds = []; // for loader mode
+
+
 function startResize(e) {
   startY      = e.clientY;
   startHeight = outputEditorContainer.getBoundingClientRect().height;
@@ -373,6 +377,49 @@ function stopResize() {
     markdownEditor.setValue(fixedMarkdown);
   }
 
+  async function runMultipleRules() {
+  if (selectedRuleIds.length === 0) {
+    alert("Please select at least one rule");
+    return;
+  }
+
+  const markdownContent = markdownEditor?.getValue()?.trim();
+  if (!markdownContent) {
+    alert("Please load or write README content!");
+    return;
+  }
+
+  let combinedResults = "";
+  for (const ruleId of selectedRuleIds) {
+    const rec = await loadRule(ruleId);
+    if (!rec) continue;
+
+    const response = await fetch('/.netlify/functions/runPipeline', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        yamlText: rec.yaml,
+        markdown: markdownContent,
+      }),
+    });
+
+    const ctx = await response.json();
+    if (ctx.error) {
+      combinedResults += `Rule ${rec.name}: Error - ${ctx.error}\n\n`;
+    } else if (ctx.diagnostics && ctx.diagnostics.length) {
+      combinedResults += `Rule ${rec.name}:\n` + ctx.diagnostics.map(d =>
+        `${d.severity.toUpperCase()} [${d.line}]: ${d.message}`
+      ).join('\n') + '\n\n';
+    } else {
+      combinedResults += `Rule ${rec.name}: Passed.\n\n`;
+    }
+  }
+
+  lintResults = combinedResults;
+  showOutput = true;
+}
+
+
   async function fetchFiles(type) {
     try {
       const response = await fetch(`http://localhost:5000/api/files?type=${type}`);
@@ -471,6 +518,7 @@ button:hover { background: #004b8a; }
   flex-direction: column;
   width: 100%;     
   max-width: 100%; 
+  position: relative;
 }
 
 .editor-container,
@@ -530,6 +578,45 @@ select {
   position: relative;
 }
 
+.mode-toggle-bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  background: #f0f4f8;
+  border-right: 1px solid #ccc;
+  padding: 10px 0;
+  width: 40px; /* like a vertical toolbar */
+  flex-shrink: 0;
+}
+
+.mode-toggle-bar button {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  width: 100%;
+  background: #005a9e;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 0;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.mode-toggle-bar button:hover {
+  background: #004b8a;
+}
+
+.mode-toggle-bar button.active {
+  background: #004b8a;
+  font-weight: bold;
+}
+
+
+
+
 </style>
 
 <main>
@@ -560,7 +647,13 @@ select {
 <div class="resizable-pane">
   <div class="top-pane" bind:this={topPane}>
     <div class="container">
-      <div class="file-upload">
+      <div class="file-upload flex" style="flex-direction: row;">
+
+        <div class="mode-toggle-bar">
+          <button class:active={mode === 'runner'} on:click={() => mode = 'runner'}>Runner</button>
+          <button class:active={mode === 'loader'} on:click={() => mode = 'loader'}>Loader</button>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column;">
         <select on:change={handleCombinedRuleSelection} bind:value={selectedCombinedRule}>
           <option value="">Select Rule</option>
           <optgroup label="Saved Rules">
@@ -577,7 +670,33 @@ select {
         <div class="bg-gray-50 p-4 rounded border relative">
           <OperatorTriggerPanel bind:rulesEditor />
         </div>
-        <div class="editor-container" bind:this={rulesEditorContainer}></div>
+  
+{#if mode === 'runner'}
+  <div class="editor-container" bind:this={rulesEditorContainer}></div>
+{:else if mode === 'loader'}
+  <div class="bg-gray-50 p-4 rounded border flex flex-col gap-2 overflow-y-auto" style="max-height: 400px;">
+    <h3 class="font-semibold text-sm">Available Rules</h3>
+    {#each ruleList as rule}
+      <label class="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          bind:group={selectedRuleIds}
+          value={rule.id}
+        />
+        {rule.name}
+      </label>
+    {/each}
+    <button
+      class="mt-4 p-2 bg-blue-600 text-white rounded"
+      on:click={runMultipleRules}
+    >
+      Run Selected Rules
+    </button>
+  </div>
+{/if}
+
+
+      </div>
       </div>
 
       <div class="file-upload" style="display: {showDiff ? 'none' : 'flex'}">
