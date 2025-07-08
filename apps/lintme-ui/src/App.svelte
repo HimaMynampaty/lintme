@@ -1,10 +1,13 @@
 <script>
   import { onMount } from 'svelte';
   import * as monaco from 'monaco-editor';
-  import { saveRule, allRules, loadRule, deleteRule } from './lib/rules-db';
   import OperatorTriggerPanel from './components/OperatorTriggerPanel.svelte';
   const params = new URLSearchParams(window.location.search);
   let rulesYaml = decodeURIComponent(params.get("rule") || "");
+  import { collection, addDoc, getDocs, deleteDoc, getDoc, doc } from "firebase/firestore";
+  import { db } from "./lib/firebase.js";
+  import { pipeline } from './stores/pipeline.js';
+
 
   const sharedFontSize = 14;
   let markdownText = "";
@@ -38,12 +41,65 @@
   let outputEditor;
   let showOutput = false;
 
-function startResize(e) {
-  startY      = e.clientY;
-  startHeight = outputEditorContainer.getBoundingClientRect().height;
-  window.addEventListener('mousemove', resizeOutput);
-  window.addEventListener('mouseup',  stopResize);
+  let mode = 'runner'; 
+  let selectedRuleIds = []; 
+  let expandedCategories = new Set();
+let categorySelection = {};  // { structure: false, ... }
+
+const categoriesMeta = [
+  {
+    name: "structure",
+    label: "Structure",
+    description: "Ensures proper document layout, sectioning, and organization."
+  },
+  {
+    name: "style",
+    label: "Style",
+    description: "Checks grammar, spelling, tone, and consistent writing style."
+  },
+  {
+    name: "content",
+    label: "Content",
+    description: "Ensures content completeness, best practices, and clarity."
+  },
+  {
+    name: "sensitive",
+    label: "Sensitive",
+    description: "Detects hate speech, harmful or inappropriate language."
+  }
+];
+
+categoriesMeta.forEach(c => categorySelection[c.name] = false);
+
+function toggleCategoryExpand(name) {
+  if (expandedCategories.has(name)) {
+    expandedCategories.delete(name);
+  } else {
+    expandedCategories.add(name);
+  }
+  expandedCategories = new Set(expandedCategories); // reassign for Svelte reactivity
 }
+
+
+function toggleCategoryCheckbox(category, checked) {
+  categorySelection[category] = checked;
+  ruleList
+    .filter(r => r.category === category)
+    .forEach(r => {
+      if (checked && !selectedRuleIds.includes(r.id)) {
+        selectedRuleIds.push(r.id);
+      } else if (!checked) {
+        selectedRuleIds = selectedRuleIds.filter(id => id !== r.id);
+      }
+    });
+}
+
+  function startResize(e) {
+    startY      = e.clientY;
+    startHeight = outputEditorContainer.getBoundingClientRect().height;
+    window.addEventListener('mousemove', resizeOutput);
+    window.addEventListener('mouseup',  stopResize);
+  }
 
 function resizeOutput(e) {
   const dy        = e.clientY - startY;
@@ -121,36 +177,83 @@ function stopResize() {
 
     fetchFiles("rules");
     fetchFiles("readme");
-    ruleList = await allRules();
+    ruleList = await loadRulesFromFirestore();
   });
-
-  function updateDiffModels() {
-    const originalModel = monaco.editor.createModel(originalText, "markdown");
-    const modifiedModel = monaco.editor.createModel(fixedMarkdown, "markdown");
-    diffEditor.setModel({ original: originalModel, modified: modifiedModel });
-  }
 
   async function saveCurrentRule() {
     const name = prompt('Rule name?', 'my-rule');
     if (!name) return;
-    await saveRule(name, rulesEditor.getValue());
-    ruleList = await allRules();   
-  }
-  async function loadRuleFromDB(id) {
-    const rec = await loadRule(id);
-    if (rec) {
-      rulesYaml = rec.yaml;
-      if (rulesEditor) rulesEditor.setValue(rec.yaml);
+
+    const category = prompt('Category? (e.g. structure, style, content, sensitive)', 'structure');
+    if (!category) return;
+
+    const yamlContent = rulesEditor.getValue();
+    try {
+      await addDoc(collection(db, "rules"), {
+        name: name,
+        yaml: yamlContent,
+        category: category,
+        createdAt: new Date()
+      });
+      alert(`Rule "${name}" saved to Firestore!`);
+      await loadRulesFromFirestore(); 
+    } catch (err) {
+      console.error("Error saving rule:", err);
+      alert("Failed to save rule.");
     }
   }
 
-  
-  function togglePalette() {
-    showPalette = !showPalette;
+  async function loadRulesFromFirestore() {
+    const querySnapshot = await getDocs(collection(db, "rules"));
+    const rules = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    ruleList = rules;
+    return rules;
   }
+
+
+  onMount(() => {
+    loadRulesFromFirestore();
+  });
+
+  function updateDiffModels() {
+    const current = diffEditor.getModel();
+
+    if (current?.original) current.original.dispose();
+    if (current?.modified) current.modified.dispose();
+
+    const originalModel = monaco.editor.createModel(originalText, "markdown");
+    const modifiedModel = monaco.editor.createModel(fixedMarkdown, "markdown");
+
+    diffEditor.setModel({ original: originalModel, modified: modifiedModel });
+  }
+
+
+
+  async function loadRuleFromDB(id) {
+    const docSnap = await getDoc(doc(db, "rules", id));
+    if (docSnap.exists()) {
+      const rec = { id: docSnap.id, ...docSnap.data() };
+      rulesYaml = rec.yaml;
+      if (rulesEditor) rulesEditor.setValue(rec.yaml);
+    } else {
+      console.warn("Rule not found in Firestore", id);
+    }
+  }
+
 
   async function handleCombinedRuleSelection(event) {
     const selectedValue = event.target.value;
+
+    if (!selectedValue) {
+      rulesYaml = "";
+      if (rulesEditor) rulesEditor.setValue("");
+      $pipeline = [];
+      return;
+    }
+
     const selectedOption = combinedRuleOptions.find(opt => opt.value === selectedValue);
     if (!selectedOption) return;
 
@@ -160,7 +263,6 @@ function stopResize() {
       await loadFileContent('rules', { target: { value: selectedOption.value } });
     }
   }
-
 
   function formatOperatorOutput(key, data, scopes = Object.keys(data)) {
     let result = ``;
@@ -243,12 +345,31 @@ function stopResize() {
     return result;
   }
 
-
+  function applyDiagnosticsToEditor(diags) {
+    const model = markdownEditor.getModel();
+    monaco.editor.setModelMarkers(
+      model,
+      'my-linter',
+      diags.map(d => ({
+        startLineNumber: d.line,
+        endLineNumber:   d.line,
+        startColumn:     1,
+        endColumn:       model.getLineContent(d.line).length + 1,
+        message:         d.message,
+        severity:
+          d.severity === 'error'
+            ? monaco.MarkerSeverity.Error
+            : d.severity === 'warning'
+            ? monaco.MarkerSeverity.Warning
+            : monaco.MarkerSeverity.Info
+      }))
+    );
+  }
 
   async function runLinter() {
     showOutput = true; 
-    const ruleContent = rulesEditor?.getValue()?.trim();
-    const markdownContent = markdownEditor?.getValue()?.trim();
+    const ruleContent = rulesEditor?.getValue();
+    const markdownContent = markdownEditor?.getValue();
 
     if (!ruleContent || !markdownContent) {
       alert("Please enter both rules.yaml and README content!");
@@ -318,23 +439,7 @@ function stopResize() {
 
 
     const model = markdownEditor.getModel();
-    monaco.editor.setModelMarkers(
-      model,
-      'my-linter',
-      diagnostics.map(d => ({
-        startLineNumber: d.line,
-        endLineNumber:   d.line,
-        startColumn:     1,
-        endColumn:       model.getLineContent(d.line).length + 1,
-        message:         d.message,
-        severity:
-          d.severity === 'error'
-            ? monaco.MarkerSeverity.Error
-            : d.severity === 'warning'
-            ? monaco.MarkerSeverity.Warning
-            : monaco.MarkerSeverity.Info
-      }))
-    );
+    applyDiagnosticsToEditor(diagnostics);
 
     const errorCount = diagnostics.filter(d => d.severity === 'error').length;
     const warningCount = diagnostics.filter(d => d.severity === 'warning').length;
@@ -351,10 +456,12 @@ function stopResize() {
 
   function toggleDiffView() {
     showDiff = !showDiff;
-    if (showDiff) {
+
+    if (showDiff && fixedMarkdown && fixedMarkdown !== originalText) {
       updateDiffModels();
     }
   }
+
 
   function setDefaultHeight(node, visible) {
     const apply = v => {
@@ -372,6 +479,74 @@ function stopResize() {
   function applyFixesToEditor() {
     markdownEditor.setValue(fixedMarkdown);
   }
+
+  async function runMultipleRules() {
+    if (selectedRuleIds.length === 0) {
+      alert("Please select at least one rule");
+      return;
+    }
+
+    const markdownContent = markdownEditor?.getValue();
+    if (!markdownContent) {
+      alert("Please load or write README content!");
+      return;
+    }
+
+    let combinedResults = "";
+    let combinedDiagnostics = [];
+    let workingMarkdown = markdownContent;
+
+    originalText = markdownContent;
+
+    for (const ruleId of selectedRuleIds) {
+      const docSnap = await getDoc(doc(db, "rules", ruleId));
+      if (!docSnap.exists()) continue;
+
+      const rec = { id: docSnap.id, ...docSnap.data() };
+
+      const response = await fetch('/.netlify/functions/runPipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          yamlText: rec.yaml,
+          markdown: workingMarkdown, 
+        }),
+      });
+
+      const ctx = await response.json();
+
+      if (ctx.error) {
+        combinedResults += `Rule ${rec.name}: Error - ${ctx.error}\n\n`;
+      } else if (ctx.diagnostics && ctx.diagnostics.length) {
+        combinedResults += `Rule ${rec.name}:\n` + ctx.diagnostics.map(d =>
+          `${d.severity.toUpperCase()} [${d.line}]: ${d.message}`
+        ).join('\n') + '\n\n';
+        combinedDiagnostics.push(...ctx.diagnostics);
+      }
+
+      if (ctx.fixedMarkdown && ctx.fixedMarkdown !== workingMarkdown) {
+        workingMarkdown = ctx.fixedMarkdown;
+        combinedResults += `Rule ${rec.name}: Suggested fixes available (click Show Diff View).\n\n`;
+      } else if (!(ctx.diagnostics && ctx.diagnostics.length > 0)) {
+        // no diagnostics, no fixes
+        combinedResults += `Rule ${rec.name}: Passed.\n\n`;
+      }
+
+
+    }
+
+    fixedMarkdown = workingMarkdown;
+
+    applyDiagnosticsToEditor(combinedDiagnostics);
+
+    if (showDiff && fixedMarkdown && fixedMarkdown !== originalText) {
+      updateDiffModels();
+    }
+
+    lintResults = combinedResults;
+    showOutput = true;
+  }
+
 
   async function fetchFiles(type) {
     try {
@@ -471,6 +646,7 @@ button:hover { background: #004b8a; }
   flex-direction: column;
   width: 100%;     
   max-width: 100%; 
+  position: relative;
 }
 
 .editor-container,
@@ -490,6 +666,8 @@ select {
   border: 1px solid #ccc;
   background: #f0f4f8;
 }
+
+.hidden { display: none !important; }
 
 .diff-editor-container { display: none; }
 .diff-editor-container.show { display: flex; }
@@ -530,6 +708,45 @@ select {
   position: relative;
 }
 
+.mode-toggle-bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  background: #f0f4f8;
+  border-right: 1px solid #ccc;
+  padding: 10px 0;
+  width: 40px; /* like a vertical toolbar */
+  flex-shrink: 0;
+}
+
+.mode-toggle-bar button {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  width: 100%;
+  background: #005a9e;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 0;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.mode-toggle-bar button:hover {
+  background: #004b8a;
+}
+
+.mode-toggle-bar button.active {
+  background: #004b8a;
+  font-weight: bold;
+}
+
+
+
+
 </style>
 
 <main>
@@ -540,9 +757,14 @@ select {
     {#if combinedRuleOptions.find(o => o.value === selectedCombinedRule && o.type === 'saved')}
       <button class="delete-btn" on:click={async () => {
         if (confirm("Delete this rule?")) {
-          await deleteRule(selectedCombinedRule);
-          ruleList = await allRules();
+          try {
+            await deleteDoc(doc(db, "rules", selectedCombinedRule));
+          } catch (e) {
+            console.warn("Firestore delete skipped or failed", e);
+          }
+          ruleList = await loadRulesFromFirestore();
           selectedCombinedRule = '';
+          rulesEditor?.setValue('');
         }
       }}>
         Delete Rule
@@ -560,7 +782,23 @@ select {
 <div class="resizable-pane">
   <div class="top-pane" bind:this={topPane}>
     <div class="container">
-      <div class="file-upload">
+      <div class="file-upload flex" style="flex-direction: row;">
+
+        <div class="mode-toggle-bar">
+          <button
+            class:active={mode === 'runner'}
+            on:click={() => mode = 'runner'}
+          >
+            Runner
+          </button>
+          <button
+            class:active={mode === 'loader'}
+            on:click={() => mode = 'loader'}
+          >
+            Loader
+          </button>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column;">
         <select on:change={handleCombinedRuleSelection} bind:value={selectedCombinedRule}>
           <option value="">Select Rule</option>
           <optgroup label="Saved Rules">
@@ -574,10 +812,71 @@ select {
             {/each}
           </optgroup>
         </select>
-        <div class="bg-gray-50 p-4 rounded border relative">
-          <OperatorTriggerPanel bind:rulesEditor />
-        </div>
-        <div class="editor-container" bind:this={rulesEditorContainer}></div>
+        {#if mode === 'runner'}
+          <div class="bg-gray-50 p-4 rounded border relative">
+            <OperatorTriggerPanel bind:rulesEditor />
+          </div>
+        {/if}
+
+  <div
+    class="editor-container {mode !== 'runner' ? 'hidden' : ''}"
+    bind:this={rulesEditorContainer}
+  />
+<div
+  class="bg-gray-50 p-4 rounded border flex flex-col gap-2 overflow-y-auto {mode !== 'loader' ? 'hidden' : ''}"
+  style="max-height: 400px;"
+>
+  <h3 class="font-semibold text-sm">Available Rules</h3>
+
+  {#each categoriesMeta as cat}
+    <div class="mb-2 p-2 border rounded bg-white">
+      <div class="flex items-center justify-between">
+        <label class="flex items-center gap-2 text-sm font-semibold">
+          <input
+            type="checkbox"
+            bind:checked={categorySelection[cat.name]}
+            on:change={(e) => toggleCategoryCheckbox(cat.name, e.target.checked)}
+          />
+          {cat.label} Rules
+        </label>
+        <button
+          class="text-xs text-blue-600 hover:text-blue-800"
+          on:click={() => toggleCategoryExpand(cat.name)}
+          aria-expanded={expandedCategories.has(cat.name)}
+        >
+          {expandedCategories.has(cat.name) ? "Hide Rules" : "Show Rules"}
+        </button>
+      </div>
+      <span class="text-xs text-gray-600 italic block mt-1">{cat.description}</span>
+        {#if expandedCategories.has(cat.name)}
+          <div class="ml-4 mt-2 flex flex-col gap-1">
+            {#each ruleList.filter(r => r.category === cat.name) as rule (rule.id)}
+              <label class="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  bind:group={selectedRuleIds}
+                  value={rule.id}
+                />
+                {rule.name}
+              </label>
+            {:else}
+              <span class="text-xs text-gray-400 italic">No rules in this category</span>
+            {/each}
+          </div>
+        {/if}
+    </div>
+  {/each}
+
+  <button
+    class="mt-4 p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+    on:click={runMultipleRules}
+  >
+    Run Selected Rules
+  </button>
+</div>
+
+
+      </div>
       </div>
 
       <div class="file-upload" style="display: {showDiff ? 'none' : 'flex'}">

@@ -90,7 +90,7 @@ export function run(ctx, cfg = {}) {
     ctx.diagnostics.push({
       line: 1,
       severity: 'info',
-      message: `All entries match /${pattern}/`
+      message: `All entries match /${patterns.join(' | ')}/`
     });
   }
 
