@@ -33,7 +33,8 @@ export function run(ctx, cfg = {}) {
     result[scopeName].push({ line, content: text.trim() });
 
   const matchesQuery = text =>
-    queries.some(q => text.includes(q));
+    queries.some(q => text.toLowerCase().includes(q.toLowerCase()));
+
 
   if (scopeName === 'document') {
     (ctx.markdown ?? '').split('\n').forEach((l, i) => {

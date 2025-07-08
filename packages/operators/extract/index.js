@@ -3,7 +3,7 @@ import { toString } from 'mdast-util-to-string';
 
 const EMOJI_REGEX = /:[\w+-]+:|[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{FE0F}\u{1F1E6}-\u{1F1FF}]/gu;
 const DATE_REGEX  = /\b(?:\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}|\d{4}[\/-]\d{1,2}[\/-]\d{1,2})\b/g;
-const BUILTIN_RX = { emoji: EMOJI_REGEX, newline: /\n/g,  date: DATE_REGEX };
+const BUILTIN_RX = { emoji: EMOJI_REGEX, newline: /\r?\n/g,  date: DATE_REGEX };
 
 const escapeRE = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const toRegExp = t => BUILTIN_RX[t] || new RegExp(escapeRE(t), 'gi');
@@ -258,16 +258,16 @@ export function run(ctx, cfg = {}) {
 
     endoffile() {
       if (isRegex) {
-        let last = null;
-        for (const m of md.matchAll(re)) last = m;
-
-        if (last && last.index + last[0].length === md.length) {
-          const preMatch = md.slice(0, last.index);
-          const line = preMatch.split('\n').length;
-
-          result.endoffile.push({ content: last[0], line });
+          const endsWithNewline = /\r?\n$/.test(md);
+          if (endsWithNewline) {
+            const line = md.split('\n').length;
+            result.endoffile.push({
+              content: '\\n',
+              line
+            });
+          }
         }
-      } else {
+      else {
         const endLine = md.split('\n').length;
         visit(ctx.ast, n => {
           if (n.position?.start?.line === endLine && matchNode(n)) {

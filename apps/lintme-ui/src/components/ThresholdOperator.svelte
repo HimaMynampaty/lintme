@@ -8,7 +8,7 @@
   const dispatch = createEventDispatcher();
   const types = [
     'lessthan', 'greaterthan', 'greaterthanequalto',
-    'lessthanequalto', 'equal', 'equalto'
+    'lessthanequalto', 'equalto'
   ];
 
   let countScopes = [];

@@ -59,7 +59,7 @@ Use the rule definition and diagnostics above to identify and fix issues in the 
 
 Apply the rule's intent exactly as described in the YAML.
 
-You MUST base your fixes only on the rule and its configuration — do NOT invent new rules.
+You MUST base your fixes only on the rule and its configuration — do NOT invent new rules. If there are no issues related to the rule passes, you must return the same markdown content as fix. 
 
 Additionally:
 ${prompt}
@@ -90,8 +90,12 @@ Do NOT include explanations, notes, or wrap the output in code blocks.
     ctx.diagnostics.push({
       line: 1,
       severity: 'warning',
-      message: 'fixUsingLLM: Fix could not be extracted, please change the prompt'
+      message: 'fixUsingLLM: Marker not found — falling back to raw LLM output.'
     });
+      ctx.rawLLMFallback = llmResult;
+      fixedText = llmResult
+        .replace(/```(markdown)?/g, '')
+        .trim();
   }
 
   ctx.fixedMarkdown = fixedText;

@@ -108,8 +108,7 @@ function compare(actual, type, expected) {
     lessthanequalto: '<=',
     greaterthanequal: '>=',
     greaterthanequalto: '>=',
-    equal: '=',
-    equalto: '='
+    equalto: '=',
   };
 
   const key = String(type).toLowerCase().trim();
@@ -130,7 +129,6 @@ function formatMsg(scope, line, actual, target, type, val, ctx) {
     '>': 'greater than',
     '>=': 'greater than or equal to',
     '=': 'equal to',
-    '==': 'equal to'
   };
 
   const alias = {
@@ -140,7 +138,6 @@ function formatMsg(scope, line, actual, target, type, val, ctx) {
     greaterthan: '>',
     greaterthanequal: '>=',
     greaterthanequalto: '>=',
-    equal: '=',
     equalto: '='
   };
 
