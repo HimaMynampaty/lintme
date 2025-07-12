@@ -34,7 +34,6 @@
     let diffEditor;
     let ruleList = [];
     let combinedRuleOptions = [];
-    let showPalette = false;
     let startY;
     let startHeight;
     let outputEditorContainer;
@@ -45,6 +44,8 @@
     let expandedCategories = new Set();
     let ruleStatus = {}; 
     let categorySelection = {}; 
+    let selectedReadmeId = '';
+    const baseURL = import.meta.env.VITE_BACKEND_URL;
 
     function setRuleStatus(id, status) {
       ruleStatus[id] = status;
@@ -141,26 +142,12 @@
     }
   }
 
-
-    function startResize(e) {
-      startY      = e.clientY;
-      startHeight = outputEditorContainer.getBoundingClientRect().height;
-      window.addEventListener('mousemove', resizeOutput);
-      window.addEventListener('mouseup',  stopResize);
-    }
-
   function resizeOutput(e) {
     const dy        = e.clientY - startY;
     const newHeight = Math.max(120, startHeight - dy);      // drag up ⇒ bigger
     outputEditorContainer.style.flexBasis = `${newHeight}px`;
     outputEditor?.layout();                                 // relayout Monaco
   }
-
-  function stopResize() {
-    window.removeEventListener('mousemove', resizeOutput);
-    window.removeEventListener('mouseup',  stopResize);
-  }
-
 
     $: combinedRuleOptions = [
       ...ruleList.map(r => ({
@@ -222,9 +209,7 @@
         scrollBeyondLastLine: false
       });
 
-
-      fetchFiles("rules");
-      fetchFiles("readme");
+      readmeList = await loadReadmesFromFirestore();
       ruleList = await loadRulesFromFirestore();
     });
 
@@ -250,6 +235,39 @@
         alert("Failed to save rule.");
       }
     }
+
+    async function saveReadmeToDB() {
+      const name = prompt("Enter a name for this README:");
+      if (!name) return;
+
+      try {
+        const content = markdownEditor?.getValue() || "";
+        await addDoc(collection(db, "readmes"), {
+          name,
+          content,
+          createdAt: new Date()
+        });
+        alert(`README "${name}" saved!`);
+        await loadReadmesFromFirestore();
+      } catch (err) {
+        console.error("Error saving README:", err);
+        alert("Failed to save README.");
+      }
+    }
+
+
+    async function loadReadmesFromFirestore() {
+      try {
+        const snapshot = await getDocs(collection(db, "readmes"));
+        readmeFiles = snapshot.docs.map(doc => ({
+          id: doc.id,
+          name: doc.data().name
+        }));
+      } catch (err) {
+        console.error("Error loading readmes:", err);
+      }
+      return readmeFiles;
+    }   
 
     async function loadRulesFromFirestore() {
       const querySnapshot = await getDocs(collection(db, "rules"));
@@ -611,27 +629,12 @@
       lintResults = combinedResults;
     }
 
-
-    async function fetchFiles(type) {
-      try {
-        const response = await fetch(`http://localhost:5000/api/files?type=${type}`);
-        const data = await response.json();
-        if (type === "rules") {
-          rulesFiles = data.files;
-        } else {
-          readmeFiles = data.files;
-        }
-      } catch (error) {
-        console.error("Error fetching files:", error);
-      }
-    }
-
     async function loadFileContent(type, event) {
       const fileName = event.target.value;
       if (!fileName) return;
 
       try {
-        const response = await fetch(`http://localhost:5000/api/file-content?type=${type}&fileName=${fileName}`);
+        const response = await fetch(`${baseURL}/api/file-content?type=${type}&fileName=${fileName}`);
         const data = await response.json();
 
         if (type === "rules") {
@@ -645,6 +648,24 @@
         console.error("Error loading file content:", error);
       }
     }
+
+    async function loadReadmeFromDB(event) {
+    const readmeId = event.target.value;
+    if (!readmeId) return;
+
+    try {
+      const docSnap = await getDoc(doc(db, "readmes", readmeId));
+      if (docSnap.exists()) {
+        const rec = docSnap.data();
+        markdownText = rec.content;
+        selectedReadmeId = readmeId;
+        if (markdownEditor) markdownEditor.setValue(markdownText);
+      }
+    } catch (err) {
+      console.error("Failed to load README:", err);
+    }
+  }
+
 
     function getCategoryStatus(category) {
       const selectedInCategory = ruleList
@@ -845,6 +866,7 @@
       <h2>LintMe - Markdown Linter</h2>
       <button on:click={runLinter}>Run Linter</button>
       <button on:click={saveCurrentRule}>Save rule</button>
+      <button on:click={saveReadmeToDB}>Save README</button>
       {#if combinedRuleOptions.find(o => o.value === selectedCombinedRule && o.type === 'saved')}
         <button class="delete-btn" on:click={async () => {
           if (confirm("Delete this rule?")) {
@@ -895,11 +917,6 @@
             <optgroup label="Saved Rules">
               {#each ruleList as r}
                 <option value={r.id}>{r.name}</option>
-              {/each}
-            </optgroup>
-            <optgroup label="YAML Files">
-              {#each rulesFiles as file}
-                <option value={file}>{file}</option>
               {/each}
             </optgroup>
           </select>
@@ -990,10 +1007,10 @@
         </div>
 
         <div class="file-upload" style="display: {showDiff ? 'none' : 'flex'}">
-          <select on:change={(e) => loadFileContent('readme', e)}>
+          <select on:change={loadReadmeFromDB} bind:value={selectedReadmeId}>
             <option value="">Select README</option>
             {#each readmeFiles as file}
-              <option value={file}>{file}</option>
+              <option value={file.id}>{file.name}</option>
             {/each}
           </select>
           <div class="editor-container" bind:this={markdownEditorContainer}></div>

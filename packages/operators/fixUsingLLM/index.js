@@ -123,12 +123,12 @@ function stripCodeFence(text = '') {
 
 async function callGroqModel(model, prompt) {
   try {
-    const response = await fetch("http://localhost:5000/api/groq-chat", {
+    const response = await fetch("https://lintme-backend.onrender.com/api/groq-chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model, prompt })
     });
-
+    console.log("Calling backend from render")
     const data = await response.json();
     return data.result || "No valid response.";
   } catch (error) {
