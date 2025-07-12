@@ -98,6 +98,11 @@ async function getReadmeCached(url) {
 
 // Keep the existing routes
 
+app.get("/", (req, res) => {
+  res.send("LintMe backend is running!");
+});
+
+
 // API to execute commands
 app.post("/api/validate-commands", (req, res) => {
     const { commands, timeout = 5000 } = req.body;
