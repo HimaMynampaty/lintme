@@ -4,12 +4,12 @@
   "author": "Hima Mynampaty",
   "description": "Composable markdown lint rule builder and engine",
   "private": true,
-"scripts": {
-  "test": "vitest run",
-  "dev": "concurrently -n backend -c blue \"yarn workspace backend start\"",
-  "build:functions": "esbuild netlify/functions-src/runPipeline.js --bundle --platform=node --format=esm --outdir=netlify/functions --out-extension:.js=.mjs"
-},
-"type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "dev": "concurrently -n backend -c blue \"yarn workspace backend start\"",
+    "build:functions": "esbuild netlify/functions-src/runPipeline.js --bundle --platform=node --format=esm --outdir=netlify/functions --external:retext-equality --external:retext-profanities --out-extension:.js=.mjs"
+  },
+  "type": "module",
   "workspaces": [
     "apps/*",
     "packages/*",
@@ -29,7 +29,9 @@
     "firebase": "^11.10.0",
     "idb": "^8.0.3",
     "mdast-util-gfm": "^3.1.0",
-    "micromark-extension-gfm": "^3.0.0"
-    
+    "micromark-extension-gfm": "^3.0.0",
+    "retext": "^9.0.0",
+    "retext-equality": "^7.1.0",
+    "retext-profanities": "^8.0.0"
   }
 }
