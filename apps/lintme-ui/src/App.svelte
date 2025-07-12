@@ -209,7 +209,7 @@
         scrollBeyondLastLine: false
       });
 
-      readmeList = await loadReadmesFromFirestore();
+      readmeFiles = await loadReadmesFromFirestore();
       ruleList = await loadRulesFromFirestore();
     });
 
