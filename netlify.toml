@@ -1,5 +1,5 @@
 [build]
-command = "yarn workspace lintme-ui build"
+command = "yarn build:functions && yarn workspace lintme-ui build"
 publish = "apps/lintme-ui/dist"
 
 [dev]
