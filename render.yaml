@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: lintme-backend
+    env: node
+    rootDir: packages/backend
+    buildCommand: yarn install
+    startCommand: node server.js
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false

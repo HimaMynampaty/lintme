@@ -6,12 +6,12 @@
   "private": true,
   "scripts": {
     "test": "vitest run",
-    "dev": "concurrently -n rules-ui,backend -c green,blue,magenta \"yarn workspace rules-ui dev\" \"yarn workspace backend start\""
+    "dev": "concurrently -n backend -c blue \"yarn workspace backend start\""
+
   },
   "workspaces": [
     "apps/*",
     "packages/*",
-    "packages/operators/*",
     "shared/*"
   ],
   "devDependencies": {
