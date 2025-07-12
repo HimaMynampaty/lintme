@@ -51,50 +51,50 @@ async function getReadmeCached(url) {
 }
 
 // Helper function to get files from a directory
-function getFilesFromDirectory(directoryPath) {
-    try {
-        return fs.readdirSync(directoryPath).filter(file => fs.statSync(path.join(directoryPath, file)).isFile());
-    } catch (error) {
-        console.error("Error reading directory:", error);
-        return [];
-    }
-}
+// function getFilesFromDirectory(directoryPath) {
+//     try {
+//         return fs.readdirSync(directoryPath).filter(file => fs.statSync(path.join(directoryPath, file)).isFile());
+//     } catch (error) {
+//         console.error("Error reading directory:", error);
+//         return [];
+//     }
+// }
 
 // API to list files from specified folders
-app.get("/api/files", (req, res) => {
-    const { type } = req.query;
+// app.get("/api/files", (req, res) => {
+//     const { type } = req.query;
 
-    const rulesPath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\rules";
-    const readmePath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\readMe";
+//     const rulesPath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\rules";
+//     const readmePath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\readMe";
 
-    const directoryPath = type === "rules" ? rulesPath : readmePath;
-    const files = getFilesFromDirectory(directoryPath);
+//     const directoryPath = type === "rules" ? rulesPath : readmePath;
+//     const files = getFilesFromDirectory(directoryPath);
 
-    res.json({ files });
-});
+//     res.json({ files });
+// });
 
 // API to read file content
-app.get("/api/file-content", (req, res) => {
-    const { type, fileName } = req.query;
+// app.get("/api/file-content", (req, res) => {
+//     const { type, fileName } = req.query;
 
-    const rulesPath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\rules";
-    const readmePath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\readMe";
+//     const rulesPath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\rules";
+//     const readmePath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\readMe";
 
-    const directoryPath = type === "rules" ? rulesPath : readmePath;
-    const filePath = path.join(directoryPath, fileName);
+//     const directoryPath = type === "rules" ? rulesPath : readmePath;
+//     const filePath = path.join(directoryPath, fileName);
 
-    if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: "File not found" });
-    }
+//     if (!fs.existsSync(filePath)) {
+//         return res.status(404).json({ error: "File not found" });
+//     }
 
-    try {
-        const content = fs.readFileSync(filePath, "utf-8");
-        res.json({ content });
-    } catch (error) {
-        console.error("Error reading file:", error);
-        res.status(500).json({ error: "Failed to read file" });
-    }
-});
+//     try {
+//         const content = fs.readFileSync(filePath, "utf-8");
+//         res.json({ content });
+//     } catch (error) {
+//         console.error("Error reading file:", error);
+//         res.status(500).json({ error: "Failed to read file" });
+//     }
+// });
 
 // Keep the existing routes
 
