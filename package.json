@@ -7,9 +7,9 @@
 "scripts": {
   "test": "vitest run",
   "dev": "concurrently -n backend -c blue \"yarn workspace backend start\"",
-  "build:functions": "esbuild netlify/functions-src/runPipeline.js --bundle --platform=node --outdir=netlify/functions --packages=external"
-
+  "build:functions": "esbuild netlify/functions-src/runPipeline.js --bundle --platform=node --format=esm --outdir=netlify/functions --packages=external"
 },
+"type": "module",
   "workspaces": [
     "apps/*",
     "packages/*",

@@ -1,9 +1,5 @@
-var __create = Object.create;
 var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __esm = (fn, res) => function __init() {
   return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
 };
@@ -11,43 +7,25 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // packages/operators/generate-ast/index.js
 var generate_ast_exports = {};
 __export(generate_ast_exports, {
   run: () => run
 });
+import { fromMarkdown } from "mdast-util-from-markdown";
+import { gfm } from "micromark-extension-gfm";
+import { gfmFromMarkdown } from "mdast-util-gfm";
 function run(ctx, config = {}) {
-  const ast = (0, import_mdast_util_from_markdown.fromMarkdown)(ctx.markdown, {
-    extensions: [(0, import_micromark_extension_gfm.gfm)()],
-    mdastExtensions: [(0, import_mdast_util_gfm.gfmFromMarkdown)()]
+  const ast = fromMarkdown(ctx.markdown, {
+    extensions: [gfm()],
+    mdastExtensions: [gfmFromMarkdown()]
   });
   ctx.ast = ast;
   return ctx;
 }
-var import_mdast_util_from_markdown, import_micromark_extension_gfm, import_mdast_util_gfm;
 var init_generate_ast = __esm({
   "packages/operators/generate-ast/index.js"() {
-    import_mdast_util_from_markdown = require("mdast-util-from-markdown");
-    import_micromark_extension_gfm = require("micromark-extension-gfm");
-    import_mdast_util_gfm = require("mdast-util-gfm");
   }
 });
 
@@ -56,6 +34,8 @@ var extract_exports = {};
 __export(extract_exports, {
   run: () => run2
 });
+import { visit, EXIT } from "unist-util-visit";
+import { toString } from "mdast-util-to-string";
 function run2(ctx, cfg = {}) {
   if (!ctx.ast) return pushErr(ctx, "extract operator needs generateAST to run first");
   const { target, scopes } = cfg;
@@ -68,10 +48,10 @@ function run2(ctx, cfg = {}) {
   const isInternal = (url) => !isExternal(url);
   if (!isRegex && !["internallink", "externallink"].includes(target)) {
     let found = false;
-    (0, import_unist_util_visit.visit)(ctx.ast, (n) => {
+    visit(ctx.ast, (n) => {
       if (n.type === target) {
         found = true;
-        return import_unist_util_visit.EXIT;
+        return EXIT;
       }
     });
     if (!found) {
@@ -136,14 +116,14 @@ function run2(ctx, cfg = {}) {
       return snippet.join("\n");
     }
     if (typeof n.value === "string") return n.value;
-    return (0, import_mdast_util_to_string.toString)(n);
+    return toString(n);
   };
   const malformed = checkLinkFormatting(md);
   const result = { document: [], paragraph: [], line: {}, endoffile: [] };
   const handlers = {
     document() {
       if (isRegex) {
-        (0, import_unist_util_visit.visit)(ctx.ast, "text", (n) => {
+        visit(ctx.ast, "text", (n) => {
           const hits = matchText(n.value);
           const ln = n.position?.start?.line;
           for (const h of hits) {
@@ -151,7 +131,7 @@ function run2(ctx, cfg = {}) {
           }
         });
       } else {
-        (0, import_unist_util_visit.visit)(ctx.ast, (n) => {
+        visit(ctx.ast, (n) => {
           if (!matchNode(n)) return;
           if (n.type === "link" && n.title == null && n.children?.length === 1 && n.children[0].type === "text" && n.url === n.children[0].value) return;
           result.document.push({
@@ -174,9 +154,9 @@ function run2(ctx, cfg = {}) {
       }
     },
     paragraph() {
-      (0, import_unist_util_visit.visit)(ctx.ast, "paragraph", (p) => {
+      visit(ctx.ast, "paragraph", (p) => {
         const decorated = [];
-        const matches = isRegex ? matchText((0, import_mdast_util_to_string.toString)(p)) : collectMatches(p, matchNode);
+        const matches = isRegex ? matchText(toString(p)) : collectMatches(p, matchNode);
         if (matches.length) {
           decorated.push(
             ...matches.map(
@@ -201,7 +181,7 @@ function run2(ctx, cfg = {}) {
     },
     line() {
       if (isRegex) {
-        (0, import_unist_util_visit.visit)(ctx.ast, "text", (n) => {
+        visit(ctx.ast, "text", (n) => {
           const hits = matchText(n.value);
           if (hits.length) {
             const ln = n.position?.start?.line;
@@ -211,7 +191,7 @@ function run2(ctx, cfg = {}) {
           }
         });
       } else {
-        (0, import_unist_util_visit.visit)(ctx.ast, (n) => {
+        visit(ctx.ast, (n) => {
           if (!matchNode(n)) return;
           if (n.type === "link" && n.title == null && n.children?.length === 1 && n.children[0].type === "text" && n.url === n.children[0].value) return;
           const ln = n.position?.start?.line;
@@ -246,7 +226,7 @@ function run2(ctx, cfg = {}) {
         }
       } else {
         const endLine = md.split("\n").length;
-        (0, import_unist_util_visit.visit)(ctx.ast, (n) => {
+        visit(ctx.ast, (n) => {
           if (n.position?.start?.line === endLine && matchNode(n)) {
             result.endoffile.push({
               ...n,
@@ -293,18 +273,16 @@ function run2(ctx, cfg = {}) {
 }
 function collectMatches(parent, predicate) {
   const out = [];
-  (0, import_unist_util_visit.visit)(parent, (n) => predicate(n) && out.push(n));
+  visit(parent, (n) => predicate(n) && out.push(n));
   return out;
 }
 function pushErr(ctx, msg) {
   ctx.diagnostics.push({ line: 1, severity: "error", message: msg });
   return ctx;
 }
-var import_unist_util_visit, import_mdast_util_to_string, EMOJI_REGEX, DATE_REGEX, BUILTIN_RX, escapeRE, toRegExp;
+var EMOJI_REGEX, DATE_REGEX, BUILTIN_RX, escapeRE, toRegExp;
 var init_extract = __esm({
   "packages/operators/extract/index.js"() {
-    import_unist_util_visit = require("unist-util-visit");
-    import_mdast_util_to_string = require("mdast-util-to-string");
     EMOJI_REGEX = /:[\w+-]+:|[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{FE0F}\u{1F1E6}-\u{1F1FF}]/gu;
     DATE_REGEX = /\b(?:\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}|\d{4}[\/-]\d{1,2}[\/-]\d{1,2})\b/g;
     BUILTIN_RX = { emoji: EMOJI_REGEX, newline: /\r?\n/g, date: DATE_REGEX };
@@ -643,6 +621,7 @@ var sage_exports = {};
 __export(sage_exports, {
   run: () => run7
 });
+import { toString as toString2 } from "mdast-util-to-string";
 async function run7(ctx, cfg = {}) {
   if (!ctx.extracted) {
     ctx.diagnostics.push({
@@ -664,16 +643,14 @@ async function run7(ctx, cfg = {}) {
   const result = {
     document: data.document.map((h) => ({
       line: h.line,
-      slug: slugify((0, import_mdast_util_to_string2.toString)(h))
+      slug: slugify(toString2(h))
     }))
   };
   ctx.slugs = { scopes: ["document"], data: result };
   return { scopes: ["document"], data: result };
 }
-var import_mdast_util_to_string2;
 var init_sage = __esm({
   "packages/operators/sage/index.js"() {
-    import_mdast_util_to_string2 = require("mdast-util-to-string");
   }
 });
 
@@ -748,6 +725,7 @@ var length_exports = {};
 __export(length_exports, {
   run: () => run9
 });
+import { toString as toString3 } from "mdast-util-to-string";
 function run9(ctx, cfg = {}) {
   if (!ctx.extracted) {
     ctx.diagnostics.push({
@@ -762,22 +740,22 @@ function run9(ctx, cfg = {}) {
   const textLength = (txt) => txt ? txt.length : 0;
   const calculators = {
     document: () => {
-      summary.document = data.document?.map((n) => (0, import_mdast_util_to_string3.toString)(n)).reduce((acc, txt) => acc + textLength(txt), 0);
+      summary.document = data.document?.map((n) => toString3(n)).reduce((acc, txt) => acc + textLength(txt), 0);
     },
     line: () => {
       for (const [lineNum, matches] of Object.entries(data.line ?? {})) {
-        const total = matches.map((n) => (0, import_mdast_util_to_string3.toString)(n)).reduce((acc, txt) => acc + textLength(txt), 0);
+        const total = matches.map((n) => toString3(n)).reduce((acc, txt) => acc + textLength(txt), 0);
         summary.line[lineNum] = total;
       }
     },
     paragraph: () => {
       for (const para of data.paragraph ?? []) {
-        const total = para.matches.map((n) => (0, import_mdast_util_to_string3.toString)(n)).reduce((acc, txt) => acc + textLength(txt), 0);
+        const total = para.matches.map((n) => toString3(n)).reduce((acc, txt) => acc + textLength(txt), 0);
         summary.paragraph.push({ line: para.line, length: total });
       }
     },
     endoffile: () => {
-      summary.endoffile = data.endoffile?.map((n) => (0, import_mdast_util_to_string3.toString)(n)).reduce((acc, txt) => acc + textLength(txt), 0);
+      summary.endoffile = data.endoffile?.map((n) => toString3(n)).reduce((acc, txt) => acc + textLength(txt), 0);
     }
   };
   for (const s of scopes) calculators[s]?.();
@@ -790,10 +768,8 @@ function run9(ctx, cfg = {}) {
   ctx.previous = { target, scopes };
   return { target, scopes, data: summary };
 }
-var import_mdast_util_to_string3;
 var init_length = __esm({
   "packages/operators/length/index.js"() {
-    import_mdast_util_to_string3 = require("mdast-util-to-string");
   }
 });
 
@@ -865,6 +841,7 @@ var fixUsingLLM_exports = {};
 __export(fixUsingLLM_exports, {
   run: () => run11
 });
+import yaml2 from "js-yaml";
 async function run11(ctx, cfg = {}) {
   const {
     prompt = "",
@@ -883,7 +860,7 @@ async function run11(ctx, cfg = {}) {
     description: ctx.description || "",
     pipeline: ctx.pipeline || []
   };
-  const ruleYaml = import_js_yaml2.default.dump({
+  const ruleYaml = yaml2.dump({
     rule: ruleDefinition.name,
     description: ruleDefinition.description,
     pipeline: ruleDefinition.pipeline
@@ -983,10 +960,8 @@ async function callGroqModel(model, prompt) {
     return "Error generating suggestions.";
   }
 }
-var import_js_yaml2;
 var init_fixUsingLLM = __esm({
   "packages/operators/fixUsingLLM/index.js"() {
-    import_js_yaml2 = __toESM(require("js-yaml"), 1);
   }
 });
 
@@ -995,6 +970,9 @@ var detectHateSpeech_exports = {};
 __export(detectHateSpeech_exports, {
   run: () => run12
 });
+import { retext } from "retext";
+import retextEquality from "retext-equality";
+import retextProfanities from "retext-profanities";
 async function run12(ctx, cfg = {}) {
   const markdown = ctx.markdown ?? "";
   if (!markdown.trim()) {
@@ -1006,7 +984,7 @@ async function run12(ctx, cfg = {}) {
     return ctx;
   }
   const scope = cfg.scope === "previousstepoutput" && ctx.extracted ? "previousstepoutput" : "document";
-  const file = await (0, import_retext.retext)().use(import_retext_equality.default).use(import_retext_profanities.default).process(markdown);
+  const file = await retext().use(retextEquality).use(retextProfanities).process(markdown);
   const lines = markdown.split("\n");
   const results = [];
   const seen = /* @__PURE__ */ new Set();
@@ -1051,27 +1029,16 @@ async function run12(ctx, cfg = {}) {
     data
   };
 }
-var import_retext, import_retext_equality, import_retext_profanities;
 var init_detectHateSpeech = __esm({
   "packages/operators/detectHateSpeech/index.js"() {
-    import_retext = require("retext");
-    import_retext_equality = __toESM(require("retext-equality"), 1);
-    import_retext_profanities = __toESM(require("retext-profanities"), 1);
   }
 });
 
-// netlify/functions-src/runPipeline.js
-var runPipeline_exports = {};
-__export(runPipeline_exports, {
-  handler: () => handler
-});
-module.exports = __toCommonJS(runPipeline_exports);
-
 // packages/pipeline-runner/utils/parseRules.js
-var import_js_yaml = __toESM(require("js-yaml"), 1);
+import yaml from "js-yaml";
 function parseRules(yamlText) {
   try {
-    return import_js_yaml.default.load(yamlText);
+    return yaml.load(yamlText);
   } catch {
     return { error: "Invalid YAML format. Check syntax." };
   }
@@ -1150,7 +1117,6 @@ async function handler(event) {
     };
   }
 }
-// Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
+export {
   handler
-});
+};
