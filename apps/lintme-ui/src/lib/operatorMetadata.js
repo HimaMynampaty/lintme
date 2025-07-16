@@ -11,4 +11,6 @@ export const operatorDescriptions = {
   compare: 'Compare values from different steps.',
   detectHateSpeech: 'Detect potentially hateful, biased, or offensive language using Retext.',
   fetchFromGithub: 'Access GitHub to fetch file path, content, metadata.',
+  readmeLocationCheck: 'Checks if README files exist in standard locations like root or folders.',
+
 };

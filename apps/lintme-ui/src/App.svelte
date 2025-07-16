@@ -472,7 +472,7 @@
 
 
 
-      const judgmentOperators = new Set(['threshold', 'isPresent', 'compare', 'fixUsingLLM', 'detectHateSpeech']);
+      const judgmentOperators = new Set(['threshold', 'isPresent', 'compare', 'fixUsingLLM', 'detectHateSpeech', 'readmeLocationCheck']);
 
       if (diagnostics.length > 0) {
         const errorCount = diagnostics.filter(d => d.severity === 'error').length;

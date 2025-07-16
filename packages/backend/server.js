@@ -142,8 +142,7 @@ app.post("/api/groq-chat", async (req, res) => {
         console.error("Groq API error:", error);
         res.status(500).json({ error: "LLM generation failed." });
     }
-});
-app.post("/api/github-file", async (req, res) => {
+});app.post("/api/github-file", async (req, res) => {
   console.log("🔁 [github-file] Incoming request:", req.body);
 
   const {
@@ -157,65 +156,94 @@ app.post("/api/github-file", async (req, res) => {
     return res.status(400).json({ error: "repo is required." });
   }
 
+  const [owner, repoName] = repo.split("/");
+
+  const refURL = `https://api.github.com/repos/${owner}/${repoName}/branches/${encodeURIComponent(branch)}`;
+  const refResp = await fetch(refURL, {
+    headers: {
+      "User-Agent": "lintme-backend",
+      Authorization: `Bearer ${process.env.GITHUB_TOKEN || ""}`
+    }
+  });
+
+  if (!refResp.ok) {
+    return res.status(refResp.status).json({
+      error: `Branch '${branch}' not found (GitHub returned ${refResp.status})`
+    });
+  }
+
+  const refJson = await refResp.json();
+  const commitSha = refJson?.commit?.commit?.tree?.sha;
+
+  if (!commitSha) {
+    return res.status(500).json({
+      error: "Could not resolve commit SHA for given branch."
+    });
+  }
+
+  const treeURL = `https://api.github.com/repos/${owner}/${repoName}/git/trees/${commitSha}?recursive=1`;
+  console.log(`treeURL": ${treeURL}`);
+  const treeResp = await fetch(treeURL, {
+    headers: {
+      "User-Agent": "lintme-backend",
+      Authorization: `Bearer ${process.env.GITHUB_TOKEN || ""}`
+    }
+  });
+
+  if (!treeResp.ok) {
+    return res.status(treeResp.status).json({
+      error: `GitHub returned ${treeResp.status} for git/trees`
+    });
+  }
+
+  const tree = await treeResp.json();
+
+  const matches = tree.tree.filter(n =>
+    n.type === "blob" && /^readme\.md$/i.test(n.path.split("/").pop())
+  );
+console.log("Fetched tree contains paths:");
+tree.tree.forEach(n => {
+  if (n.type === "blob") {
+    console.log("  -", n.path);
+  }
+});
+
+
+console.log("matches",matches);
+if (!matches.length) {
+  return res.json({
+    repo,
+    branch,
+    fileName,
+    readmes: []
+  });
+}
+  const urls = matches.map(m => ({
+    path: m.path,
+    url: `https://raw.githubusercontent.com/${repo}/${branch}/${m.path}`
+  }));
+
   if (fetchType === "path") {
-    try {
-      const [owner, repoName] = repo.split("/");
-
-      const treeURL = `https://api.github.com/repos/${owner}/${repoName}/git/trees/${encodeURIComponent(branch)}?recursive=1`;
-      const treeResp = await fetch(treeURL, {
-        headers: { "User-Agent": "lintme-backend" }
-      });
-
-      if (!treeResp.ok) {
-        return res.status(treeResp.status).json({
-          error: `GitHub returned ${treeResp.status} for git/trees`
-        });
-      }
-
-      const tree = await treeResp.json();
-
-      const match = tree.tree.find(n =>
-        n.type === "blob" && /^readme\.md$/i.test(n.path.split("/").pop())
-      );
-
-      if (!match) {
-        return res.status(404).json({ error: "README not found in repository." });
-      }
-
-      const rawURL = `https://raw.githubusercontent.com/${repo}/${branch}/${match.path}`;
-
-      return res.json({
-        repo,
-        branch,
-        fileName: match.path.split("/").pop(),
-        path: match.path,
-        url: rawURL
-      });
-    } catch (e) {
-      console.error("GitHub tree API error:", e);
-      return res.status(500).json({ error: "GitHub tree lookup failed." });
-    }
+    return res.json({ repo, branch, fileName, readmes: urls });
   }
 
-  const url = `https://raw.githubusercontent.com/${repo}/${branch}/${fileName}`;
-
-  try {
-    const r = await fetch(url);
-    if (!r.ok) {
-      console.warn(`GitHub responded ${r.status} for ${url}`);
-      return res.status(r.status).json({ error: `GitHub returned ${r.status}` });
-    }
-
-    const content = await r.text();
-    return res.json(
-      fetchType === "content"
-        ? { repo, branch, fileName, url, content }
-        : { repo, branch, fileName, url }
+  if (fetchType === "content") {
+    const contents = await Promise.all(
+      urls.map(async ({ path, url }) => {
+        try {
+          const r = await fetch(url);
+          const text = await r.text();
+          return { path, url, content: text };
+        } catch (e) {
+          return { path, url, error: e.message };
+        }
+      })
     );
-  } catch (err) {
-    console.error("GitHub proxy error:", err);
-    res.status(500).json({ error: "GitHub fetch failed." });
+
+    return res.json({ repo, branch, fileName, readmes: contents });
   }
+
+  return res.status(400).json({ error: "Invalid fetchType" });
 });
 
 app.get("/api/wordlist", (req, res) => {

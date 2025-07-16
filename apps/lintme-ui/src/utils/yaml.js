@@ -25,6 +25,8 @@ export function parseYAML(text = '') {
           fileName: raw.fileName ?? 'README.md',
           fetchType: raw.fetchType ?? 'content'
         };
+      case 'readmeLocationCheck':
+        return { id, operator: 'readmeLocationCheck' };
       case 'sage':
       case 'count':
       case 'length':

@@ -1060,57 +1060,86 @@ async function run13(ctx, cfg = {}) {
     return ctx;
   }
   try {
-    const payloadBody = { repo, branch, fileName, fetchType };
     const res = await fetch2(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payloadBody)
+      body: JSON.stringify({ repo, branch, fileName, fetchType })
     });
     if (!res.ok) {
+      const text = await res.text();
+      let message = `fetchFromGithub: backend returned ${res.status}`;
+      try {
+        const json = JSON.parse(text);
+        if (json?.error) {
+          message = `fetchFromGithub: ${json.error}`;
+        }
+      } catch (_) {
+      }
       ctx.diagnostics.push({
         line: 1,
         severity: "error",
-        message: `fetchFromGithub: Failed to retrieve '${fileName}' \u2013 status ${res.status}`
+        message
       });
       return ctx;
     }
     const payload = await res.json();
     ctx.fetchResult = payload;
-    const { path, content, url } = payload;
+    const readmes = payload.readmes || [];
+    if (!readmes.length) {
+      ctx.diagnostics.push({
+        line: 1,
+        severity: "error",
+        message: `No README.md files found in '${repo}'`
+      });
+      return ctx;
+    }
+    ctx.internalInfo = [];
     if (fetchType === "path") {
-      if (!path || path !== fileName) {
-        ctx.diagnostics.push({
-          line: 1,
-          severity: "error",
-          message: `README not found at root (${url})`
-        });
-      } else {
-        ctx.diagnostics.push({
+      for (const { path, url } of readmes) {
+        ctx.internalInfo.push({
           line: 1,
           severity: "info",
-          message: `README found at root: '${url}'`
+          message: `README found: ${url}`
         });
       }
-      ctx.debug = { readmePath: path || null, readmeURL: url || null };
-    } else if (fetchType === "content") {
-      if (content) {
-        ctx.markdown = content;
-        ctx.diagnostics.push({
+      ctx.debug = {
+        foundPaths: readmes.map((r) => r.path),
+        foundURLs: readmes.map((r) => r.url)
+      };
+      return {
+        data: {
+          paths: readmes.map((r) => r.path),
+          urls: readmes.map((r) => r.url)
+        }
+      };
+    }
+    if (fetchType === "content") {
+      ctx.markdown = "";
+      for (const { path, content, url } of readmes) {
+        ctx.markdown += `
+
+## ${path}
+
+${content}`;
+        ctx.internalInfo.push({
           line: 1,
           severity: "info",
-          message: `Loaded ${fileName} : ${content})`
-        });
-        ctx.debug = {
-          preview: content.slice(0, 300) + (content.length > 300 ? "..." : ""),
-          readmeURL: url
-        };
-      } else {
-        ctx.diagnostics.push({
-          line: 1,
-          severity: "warning",
-          message: `No content found in ${fileName}`
+          message: `Loaded README: ${url} (${content.length} chars)`
         });
       }
+      ctx.debug = {
+        readmeCount: readmes.length,
+        combinedLength: ctx.markdown.length
+      };
+      return {
+        data: {
+          files: readmes.map((r) => ({
+            path: r.path,
+            url: r.url,
+            length: r.content.length
+          }))
+        }
+      };
     }
   } catch (err) {
     ctx.diagnostics.push({
@@ -1123,6 +1152,56 @@ async function run13(ctx, cfg = {}) {
 }
 var init_fetchFromGithub = __esm({
   "packages/operators/fetchFromGithub/index.js"() {
+  }
+});
+
+// packages/operators/readmeLocationCheck/index.js
+var readmeLocationCheck_exports = {};
+__export(readmeLocationCheck_exports, {
+  run: () => run14
+});
+async function run14(ctx) {
+  const readmes = ctx.fetchResult?.readmes || [];
+  if (readmes.length === 0) {
+    const msg = `No README.md files were found from the previous step. Make sure you ran 'fetchFromGithub' with fetchType: "path" first.`;
+    ctx.diagnostics.push({ line: 1, severity: "error", message: msg });
+    return {
+      data: {
+        success: false,
+        violations: [{ line: 1, severity: "error", message: msg }]
+      }
+    };
+  }
+  const counts = { root: 0, folder: 0, nested: 0 };
+  for (const { path } of readmes) {
+    counts[classify(path)]++;
+  }
+  const violations = [];
+  if (counts.root === 0) {
+    violations.push({
+      line: 1,
+      severity: "warning",
+      message: "Top level README.md is missing. Add one to the repository root for better discoverability."
+    });
+    ctx.diagnostics.push(...violations);
+  }
+  return {
+    data: {
+      success: violations.length === 0,
+      violations,
+      counts,
+      paths: readmes.map((r) => r.path)
+    }
+  };
+}
+function classify(path) {
+  const depth = path.split("/").length - 1;
+  if (depth === 0) return "root";
+  if (depth === 1) return "folder";
+  return "nested";
+}
+var init_readmeLocationCheck = __esm({
+  "packages/operators/readmeLocationCheck/index.js"() {
   }
 });
 
@@ -1150,7 +1229,8 @@ var OPERATORS = {
   "search": () => Promise.resolve().then(() => (init_search(), search_exports)).then((m) => m.run),
   "fixUsingLLM": () => Promise.resolve().then(() => (init_fixUsingLLM(), fixUsingLLM_exports)).then((m) => m.run),
   "detectHateSpeech": () => init_detectHateSpeech().then(() => detectHateSpeech_exports).then((m) => m.run),
-  "fetchFromGithub": () => Promise.resolve().then(() => (init_fetchFromGithub(), fetchFromGithub_exports)).then((m) => m.run)
+  "fetchFromGithub": () => Promise.resolve().then(() => (init_fetchFromGithub(), fetchFromGithub_exports)).then((m) => m.run),
+  "readmeLocationCheck": () => Promise.resolve().then(() => (init_readmeLocationCheck(), readmeLocationCheck_exports)).then((m) => m.run)
 };
 
 // packages/pipeline-runner/index.js
@@ -1178,8 +1258,8 @@ async function runPipeline(yamlText, markdown) {
       });
       continue;
     }
-    const run14 = await loader();
-    const opOutput = await run14(ctx, step);
+    const run15 = await loader();
+    const opOutput = await run15(ctx, step);
     if (opOutput && typeof opOutput === "object" && opOutput !== ctx) {
       ctx.pipelineResults ??= [];
       ctx.pipelineResults.push({ name: opName, data: opOutput });

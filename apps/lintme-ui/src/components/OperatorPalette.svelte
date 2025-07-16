@@ -18,6 +18,8 @@
     { name: 'threshold', label: 'threshold' },
     { name: 'detectHateSpeech', label: 'detectHateSpeech' },
     { name: 'fetchFromGithub', label: 'fetchFromGithub' },
+    { name: 'readmeLocationCheck', label: 'readmeLocationCheck' },
+
   ];
 
   function choose(op) {

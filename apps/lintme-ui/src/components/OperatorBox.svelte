@@ -14,6 +14,8 @@
   import SearchOperator      from './SearchOperator.svelte';
   import DetectHateSpeechOperator from './DetectHateSpeechOperator.svelte';
   import FetchFromGithubOperator from './FetchFromGithubOperator.svelte';
+  import ReadmeLocationCheckOperator from './ReadmeLocationCheckOperator.svelte';
+
 
   export let step;
   export let index;
@@ -127,6 +129,8 @@
             <DetectHateSpeechOperator bind:data={step} {storeIndex} on:input={changed} />
           {:else if step.operator === 'fetchFromGithub'}
             <FetchFromGithubOperator bind:data={step} on:input={changed} />
+          {:else if step.operator === 'readmeLocationCheck'}
+            <ReadmeLocationCheckOperator bind:data={step} {storeIndex} on:input={changed} />
           {/if}
         {/key}
       </div>
