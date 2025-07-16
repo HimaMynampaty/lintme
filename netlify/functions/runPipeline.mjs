@@ -1035,6 +1035,64 @@ var init_detectHateSpeech = __esm({
   }
 });
 
+// packages/operators/fetchFromGithub/index.js
+var fetchFromGithub_exports = {};
+__export(fetchFromGithub_exports, {
+  run: () => run13
+});
+import fetch2 from "node-fetch";
+async function run13(ctx, cfg = {}) {
+  const {
+    repo = "",
+    branch = "main",
+    fileName = "README.md",
+    fetchType = "content",
+    apiBase = process.env.BACKEND_URL || "http://localhost:5000"
+    // ⬅ configurable
+  } = cfg;
+  if (!repo || !fileName) {
+    ctx.diagnostics.push({
+      line: 1,
+      severity: "error",
+      message: "fetchFromGithub: repo and fileName are required."
+    });
+    return ctx;
+  }
+  try {
+    const res = await fetch2("https://lintme-backend.onrender.com/api/github-file", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ repo, branch, fileName, fetchType })
+    });
+    if (!res.ok) {
+      ctx.diagnostics.push({
+        line: 1,
+        severity: "error",
+        message: `fetchFromGithub: backend returned ${res.status}`
+      });
+      return ctx;
+    }
+    const payload = await res.json();
+    ctx.fetchResult = payload;
+    ctx.diagnostics.push({
+      line: 1,
+      severity: "info",
+      message: `fetchFromGithub: fetched ${fetchType} for ${fileName}`
+    });
+  } catch (err) {
+    ctx.diagnostics.push({
+      line: 1,
+      severity: "error",
+      message: `fetchFromGithub: ${err.message}`
+    });
+  }
+  return ctx;
+}
+var init_fetchFromGithub = __esm({
+  "packages/operators/fetchFromGithub/index.js"() {
+  }
+});
+
 // packages/pipeline-runner/utils/parseRules.js
 import yaml from "js-yaml";
 function parseRules(yamlText) {
@@ -1058,7 +1116,8 @@ var OPERATORS = {
   "length": () => Promise.resolve().then(() => (init_length(), length_exports)).then((m) => m.run),
   "search": () => Promise.resolve().then(() => (init_search(), search_exports)).then((m) => m.run),
   "fixUsingLLM": () => Promise.resolve().then(() => (init_fixUsingLLM(), fixUsingLLM_exports)).then((m) => m.run),
-  "detectHateSpeech": () => init_detectHateSpeech().then(() => detectHateSpeech_exports).then((m) => m.run)
+  "detectHateSpeech": () => init_detectHateSpeech().then(() => detectHateSpeech_exports).then((m) => m.run),
+  "fetchFromGithub": () => Promise.resolve().then(() => (init_fetchFromGithub(), fetchFromGithub_exports)).then((m) => m.run)
 };
 
 // packages/pipeline-runner/index.js
@@ -1086,8 +1145,8 @@ async function runPipeline(yamlText, markdown) {
       });
       continue;
     }
-    const run13 = await loader();
-    const opOutput = await run13(ctx, step);
+    const run14 = await loader();
+    const opOutput = await run14(ctx, step);
     if (opOutput && typeof opOutput === "object" && opOutput !== ctx) {
       ctx.pipelineResults ??= [];
       ctx.pipelineResults.push({ name: opName, data: opOutput });

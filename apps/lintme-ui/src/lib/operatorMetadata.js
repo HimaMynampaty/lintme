@@ -10,4 +10,5 @@ export const operatorDescriptions = {
   search: 'Search for specific words or phrases.',
   compare: 'Compare values from different steps.',
   detectHateSpeech: 'Detect potentially hateful, biased, or offensive language using Retext.',
+  fetchFromGithub: 'Access GitHub to fetch file path, content, metadata.',
 };

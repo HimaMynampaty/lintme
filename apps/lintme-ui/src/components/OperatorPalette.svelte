@@ -16,7 +16,8 @@
     { name: 'sage', label: 'sage' },
     { name: 'search', label: 'search' },       
     { name: 'threshold', label: 'threshold' },
-    { name: 'detectHateSpeech', label: 'detectHateSpeech' }
+    { name: 'detectHateSpeech', label: 'detectHateSpeech' },
+    { name: 'fetchFromGithub', label: 'fetchFromGithub' },
   ];
 
   function choose(op) {

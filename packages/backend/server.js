@@ -50,53 +50,6 @@ async function getReadmeCached(url) {
   return text;
 }
 
-// Helper function to get files from a directory
-// function getFilesFromDirectory(directoryPath) {
-//     try {
-//         return fs.readdirSync(directoryPath).filter(file => fs.statSync(path.join(directoryPath, file)).isFile());
-//     } catch (error) {
-//         console.error("Error reading directory:", error);
-//         return [];
-//     }
-// }
-
-// API to list files from specified folders
-// app.get("/api/files", (req, res) => {
-//     const { type } = req.query;
-
-//     const rulesPath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\rules";
-//     const readmePath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\readMe";
-
-//     const directoryPath = type === "rules" ? rulesPath : readmePath;
-//     const files = getFilesFromDirectory(directoryPath);
-
-//     res.json({ files });
-// });
-
-// API to read file content
-// app.get("/api/file-content", (req, res) => {
-//     const { type, fileName } = req.query;
-
-//     const rulesPath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\rules";
-//     const readmePath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\readMe";
-
-//     const directoryPath = type === "rules" ? rulesPath : readmePath;
-//     const filePath = path.join(directoryPath, fileName);
-
-//     if (!fs.existsSync(filePath)) {
-//         return res.status(404).json({ error: "File not found" });
-//     }
-
-//     try {
-//         const content = fs.readFileSync(filePath, "utf-8");
-//         res.json({ content });
-//     } catch (error) {
-//         console.error("Error reading file:", error);
-//         res.status(500).json({ error: "Failed to read file" });
-//     }
-// });
-
-// Keep the existing routes
 
 app.get("/", (req, res) => {
   res.send("LintMe backend is running!");
@@ -190,6 +143,32 @@ app.post("/api/groq-chat", async (req, res) => {
         res.status(500).json({ error: "LLM generation failed." });
     }
 });
+
+/*──────────────────  Fetch GitHub file proxy  ──────────────────*/
+app.post("/api/github-file", async (req, res) => {
+  const { repo, branch = "main", fileName = "README.md", fetchType = "content" } = req.body;
+
+  if (!repo || !fileName) {
+    return res.status(400).json({ error: "repo and fileName are required." });
+  }
+
+  const url = `https://raw.githubusercontent.com/${repo}/${branch}/${fileName}`;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return res.status(r.status).json({ error: `GitHub returned ${r.status}` });
+
+    const content = await r.text();
+    return res.json(
+      fetchType === "content"
+        ? { repo, branch, fileName, url, content }
+        : { repo, branch, fileName, url }          // path‑only
+    );
+  } catch (err) {
+    console.error("GitHub proxy error:", err);
+    res.status(500).json({ error: "GitHub fetch failed." });
+  }
+});
+
 
 app.get("/api/wordlist", (req, res) => {
     const absolutePath = req.query.path;

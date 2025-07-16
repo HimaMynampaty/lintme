@@ -16,6 +16,15 @@ export function parseYAML(text = '') {
         return { id, operator: 'compare', baseline: raw.baseline ?? '', against: raw.against ?? '' };
       case 'isPresent':
         return { id, operator: 'isPresent', target: raw.target ?? '' };
+      case 'fetchFromGithub':
+        return {
+          id,
+          operator: 'fetchFromGithub',
+          repo: raw.repo ?? '',
+          branch: raw.branch ?? 'main',
+          fileName: raw.fileName ?? 'README.md',
+          fetchType: raw.fetchType ?? 'content'
+        };
       case 'sage':
       case 'count':
       case 'length':
@@ -65,6 +74,12 @@ export function generateYAML(name = '', description = '', steps = []) {
       if (step.operator === 'compare') {
         if ('baseline' in step) out.baseline = step.baseline;
         if ('against' in step) out.against = step.against;
+      }
+      if (step.operator === 'fetchFromGithub') {
+        if ('repo' in step) out.repo = step.repo;
+        if ('branch' in step) out.branch = step.branch;
+        if ('fileName' in step && step.fileName) out.fileName = step.fileName;
+        if ('fetchType' in step && step.fetchType !== 'content') out.fetchType = step.fetchType;
       }
 
       if (
