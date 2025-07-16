@@ -79,12 +79,15 @@
   }
   const participantId = getParticipantId();
 
-  async function logRuleRun(ruleYamls, source = "single") {
+  async function logRuleRun(ruleYamls, readmeContent, diagnostics = [], source = "single", fixedMarkdown = "") {
     try {
       await addDoc(collection(db, "ruleRuns"), {
         timestamp: new Date(),
         participantId,
         ruleYamls,
+        readmeContent,
+        diagnostics,
+        fixedMarkdown: fixedMarkdown || "",
         source
       });
     } catch (err) {
@@ -195,7 +198,8 @@
         automaticLayout: true,
         minimap: { enabled: false },
         fixedOverflowWidgets: true,
-        fontSize: sharedFontSize
+        fontSize: sharedFontSize,
+        renderSideBySide: false
       });
 
       outputEditor = monaco.editor.create(outputEditorContainer, {
@@ -255,7 +259,6 @@
       }
     }
 
-
     async function loadReadmesFromFirestore() {
       try {
         const snapshot = await getDocs(collection(db, "readmes"));
@@ -263,11 +266,13 @@
           id: doc.id,
           name: doc.data().name
         }));
+        readmeFiles.sort((a, b) => a.name.localeCompare(b.name));
       } catch (err) {
         console.error("Error loading readmes:", err);
       }
       return readmeFiles;
-    }   
+    }
+  
 
     async function loadRulesFromFirestore() {
       const querySnapshot = await getDocs(collection(db, "rules"));
@@ -275,10 +280,11 @@
         id: doc.id,
         ...doc.data()
       }));
+      rules.sort((a, b) => a.name.localeCompare(b.name));
+
       ruleList = rules;
       return rules;
     }
-
 
     onMount(() => {
       loadRulesFromFirestore();
@@ -435,7 +441,6 @@
     async function runLinter() {
 
       const ruleContent = rulesEditor?.getValue();
-      await logRuleRun([ruleContent], "single");
       const markdownContent = markdownEditor?.getValue();
 
       if (!ruleContent || !markdownContent) {
@@ -519,6 +524,7 @@
       if (showDiff) {
         updateDiffModels();
       }
+      await logRuleRun([ruleContent], markdownContent, diagnostics, "single", fixedMarkdown);
     }
 
     function toggleDiffView() {
@@ -625,7 +631,7 @@
       if (!combinedResults.trim()) {
         combinedResults = "All selected rules passed. No issues found.";
       }
-      await logRuleRun(collectedYamls, "multiple");
+      await logRuleRun(collectedYamls, markdownContent, combinedDiagnostics, "multiple", fixedMarkdown);
       lintResults = combinedResults;
     }
 
@@ -650,22 +656,27 @@
     }
 
     async function loadReadmeFromDB(event) {
-    const readmeId = event.target.value;
-    if (!readmeId) return;
+      const readmeId = event.target.value;
 
-    try {
-      const docSnap = await getDoc(doc(db, "readmes", readmeId));
-      if (docSnap.exists()) {
-        const rec = docSnap.data();
-        markdownText = rec.content;
-        selectedReadmeId = readmeId;
-        if (markdownEditor) markdownEditor.setValue(markdownText);
+      if (!readmeId) {
+        markdownText = "";
+        selectedReadmeId = "";
+        if (markdownEditor) markdownEditor.setValue("");
+        return;
       }
-    } catch (err) {
-      console.error("Failed to load README:", err);
-    }
-  }
 
+      try {
+        const docSnap = await getDoc(doc(db, "readmes", readmeId));
+        if (docSnap.exists()) {
+          const rec = docSnap.data();
+          markdownText = rec.content;
+          selectedReadmeId = readmeId;
+          if (markdownEditor) markdownEditor.setValue(markdownText);
+        }
+      } catch (err) {
+        console.error("Failed to load README:", err);
+      }
+    }
 
     function getCategoryStatus(category) {
       const selectedInCategory = ruleList
@@ -718,20 +729,20 @@
   h2 {
     margin: 0;
     font-size: 1.5rem;
-    color: #005a9e;
+    color: #7859c3;
   }
 
   button {
     padding: 10px 16px;
     font-size: 14px;
-    background: #005a9e;
+    background: #7859c3;
     color: #fff;
     border: none;
     border-radius: 8px;
     cursor: pointer;
     transition: background .15s;
   }
-  button:hover { background: #004b8a; }
+  button:hover { background: #673ec8; }
 
   .container {
     flex: 1 1 auto;
@@ -796,7 +807,7 @@
   min-height: 0;
   max-height: 85vh;
   background: #1e1e1e;
-  border-top: 3px solid #005a9e;
+  border-top: 3px solid #7859c3;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -821,7 +832,7 @@
     writing-mode: vertical-rl;
     transform: rotate(180deg);
     width: 100%;
-    background: #005a9e;
+    background: #7859c3;
     color: white;
     border: none;
     border-radius: 8px;
@@ -832,11 +843,11 @@
   }
 
   .mode-toggle-bar button:hover {
-    background: #004b8a;
+    background: #5f37bd;
   }
 
   .mode-toggle-bar button.active {
-    background: #004b8a;
+    background: #673ec8;
     font-weight: bold;
   }
 
@@ -844,7 +855,7 @@
     width: 12px;
     height: 12px;
     border: 2px solid #ccc;
-    border-top-color: #005a9e;
+    border-top-color: #7859c3;
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
     display: inline-block;
@@ -857,40 +868,103 @@
     }
   }
 
+.select-compact {
+  max-width: 260px;
+  width: 100%;
+}
+
+.rule-select-row{
+  display:flex;
+  align-items:center;       
+  gap:8px;                 
+  margin-bottom:10px;     
+}
+
+.rule-select-row select{
+  margin:0;
+}
+
+.rule-select-row button{
+  height:40px;              
+  line-height:1;           
+}
+
+.diff-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.diff-switch input {
+  display: none;                
+}
+
+.diff-switch .slider {
+  position: relative;
+  width: 46px;
+  height: 24px;
+  background: #888;
+  border-radius: 9999px;
+  transition: background 0.2s;
+}
+
+.diff-switch .slider::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.diff-switch input:checked + .slider {
+  background: #7859c3;
+}
+
+.diff-switch input:checked + .slider::before {
+  transform: translateX(22px);
+}
+
+.header-container {
+  justify-content: space-between; 
+}
+
+.left-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 
 
   </style>
 
   <main>
     <div class="header-container">
-      <h2>LintMe - Markdown Linter</h2>
-      <button on:click={runLinter}>Run Linter</button>
-      <button on:click={saveCurrentRule}>Save rule</button>
-      <button on:click={saveReadmeToDB}>Save README</button>
-      {#if combinedRuleOptions.find(o => o.value === selectedCombinedRule && o.type === 'saved')}
-        <button class="delete-btn" on:click={async () => {
-          if (confirm("Delete this rule?")) {
-            try {
-              await deleteDoc(doc(db, "rules", selectedCombinedRule));
-            } catch (e) {
-              console.warn("Firestore delete skipped or failed", e);
-            }
-            ruleList = await loadRulesFromFirestore();
-            selectedCombinedRule = '';
-            rulesEditor?.setValue('');
-          }
-        }}>
-          Delete Rule
-        </button>
-      {/if}
+      <div class="left-header">
+        <h2>LintMe - Markdown Linter</h2>
+        {#if mode === 'runner'}
+          <button on:click={runLinter}>Run Linter</button>
+        {/if}
+      </div>
 
-      <button on:click={toggleDiffView}>
-        {showDiff ? "Hide Diff View" : "Show Diff View"}
-      </button>
-      <button on:click={applyFixesToEditor}>
-        Apply Fixes to Editor
-      </button>
+      <div class="right-header">
+        <label class="diff-switch" title={showDiff ? "Hide difference view" : "Show difference view"}>
+          <input
+            type="checkbox"
+            checked={showDiff}
+            on:change={toggleDiffView}
+          />
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
+
 
   <div class="resizable-pane">
     <div class="top-pane" bind:this={topPane}>
@@ -912,14 +986,40 @@
             </button>
           </div>
           <div style="flex:1; display:flex; flex-direction:column;">
-          <select on:change={handleCombinedRuleSelection} bind:value={selectedCombinedRule}>
-            <option value="">Select Rule</option>
-            <optgroup label="Saved Rules">
-              {#each ruleList as r}
-                <option value={r.id}>{r.name}</option>
-              {/each}
-            </optgroup>
-          </select>
+            <div class="rule-select-row">
+              <select
+                class="select-compact"
+                on:change={handleCombinedRuleSelection}
+                bind:value={selectedCombinedRule}
+              >
+                <option value="">Select Rule</option>
+                {#each ruleList as r}
+                  <option value={r.id}>{r.name}</option>
+                {/each}
+              </select>
+
+              {#if mode === 'runner'}
+                <button on:click={saveCurrentRule}>Save Rule</button>
+
+                {#if combinedRuleOptions.find(o => o.value === selectedCombinedRule && o.type === 'saved')}
+                  <button class="delete-btn" on:click={async () => {
+                    if (confirm("Delete this rule?")) {
+                      try {
+                        await deleteDoc(doc(db, "rules", selectedCombinedRule));
+                      } catch (e) {
+                        console.warn("Firestore delete skipped or failed", e);
+                      }
+                      ruleList = await loadRulesFromFirestore();
+                      selectedCombinedRule = '';
+                      rulesEditor?.setValue('');
+                    }
+                  }}>
+                    Delete Rule
+                  </button>
+                {/if}
+              {/if}
+            </div>
+
           {#if mode === 'runner'}
             <div class="bg-gray-50 p-4 rounded border relative">
               <OperatorTriggerPanel bind:rulesEditor />
@@ -1007,12 +1107,23 @@
         </div>
 
         <div class="file-upload" style="display: {showDiff ? 'none' : 'flex'}">
-          <select on:change={loadReadmeFromDB} bind:value={selectedReadmeId}>
-            <option value="">Select README</option>
-            {#each readmeFiles as file}
-              <option value={file.id}>{file.name}</option>
-            {/each}
-          </select>
+          <div class="rule-select-row">
+            <select
+              class="select-compact"
+              on:change={loadReadmeFromDB}
+              bind:value={selectedReadmeId}
+            >
+              <option value="">Select README</option>
+              {#each readmeFiles as file}
+                <option value={file.id}>{file.name}</option>
+              {/each}
+            </select>
+
+            <button on:click={saveReadmeToDB}>Save README</button>
+            <button on:click={applyFixesToEditor}>
+              Apply Fixes
+            </button>
+          </div>
           <div class="editor-container" bind:this={markdownEditorContainer}></div>
           <div
             class="bottom-pane"
