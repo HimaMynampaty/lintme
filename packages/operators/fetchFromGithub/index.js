@@ -7,6 +7,7 @@ export async function run(ctx, cfg = {}) {
     fileName  = "README.md",
     fetchType = "content",
     apiBase   = "https://lintme-backend.onrender.com"
+    //apiBase   = "http://localhost:5000"
   } = cfg;
 
   const endpoint = `${apiBase}/api/github-file`;
@@ -94,7 +95,7 @@ if (!res.ok) {
         ctx.internalInfo.push({
           line: 1,
           severity: "info",
-          message: `Loaded README: ${url} ${content})`
+          message: `Loaded README: ${url}`
         });
       }
 
@@ -108,11 +109,12 @@ if (!res.ok) {
           files: readmes.map(r => ({
             path: r.path,
             url: r.url,
-            length: r.content.length
+            content: r.content
           }))
         }
       };
     }
+
 
   } catch (err) {
     ctx.diagnostics.push({

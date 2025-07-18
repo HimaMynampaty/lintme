@@ -947,7 +947,7 @@ function stripCodeFence(text = "") {
 }
 async function callGroqModel(model, prompt) {
   try {
-    const response = await fetch("http://localhost:5000/api/groq-chat", {
+    const response = await fetch("https://lintme-backend.onrender.com/api/groq-chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model, prompt })
@@ -1047,7 +1047,8 @@ async function run13(ctx, cfg = {}) {
     branch = "main",
     fileName = "README.md",
     fetchType = "content",
-    apiBase = "http://localhost:5000"
+    apiBase = "https://lintme-backend.onrender.com"
+    //apiBase   = "http://localhost:5000"
   } = cfg;
   const endpoint = `${apiBase}/api/github-file`;
   console.log("[fetchFromGithub] Calling:", endpoint);
@@ -1124,7 +1125,7 @@ ${content}`;
         ctx.internalInfo.push({
           line: 1,
           severity: "info",
-          message: `Loaded README: ${url} (${content.length} chars)`
+          message: `Loaded README: ${url}`
         });
       }
       ctx.debug = {
@@ -1136,7 +1137,7 @@ ${content}`;
           files: readmes.map((r) => ({
             path: r.path,
             url: r.url,
-            length: r.content.length
+            content: r.content
           }))
         }
       };

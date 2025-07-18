@@ -83,7 +83,6 @@ export function generateYAML(name = '', description = '', steps = []) {
         if ('fileName' in step && step.fileName) out.fileName = step.fileName;
         if ('fetchType' in step && step.fetchType !== 'content') out.fetchType = step.fetchType;
       }
-console.log("[runPipeline] Running step:", step.operator);
 
       if (
         NEEDS_TARGET.has(step.operator) &&

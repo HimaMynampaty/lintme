@@ -8,7 +8,6 @@
     import { db } from "./lib/firebase.js";
     import { pipeline } from './stores/pipeline.js';
 
-
     const sharedFontSize = 14;
     let markdownText = "";
     let originalText = "";
@@ -45,7 +44,10 @@
     let ruleStatus = {}; 
     let categorySelection = {}; 
     let selectedReadmeId = '';
+    let lintState = 'idle';
+    let multiLintState = 'idle';
     const baseURL = import.meta.env.VITE_BACKEND_URL;
+
 
     function setRuleStatus(id, status) {
       ruleStatus[id] = status;
@@ -145,13 +147,6 @@
     }
   }
 
-  function resizeOutput(e) {
-    const dy        = e.clientY - startY;
-    const newHeight = Math.max(120, startHeight - dy);      // drag up ⇒ bigger
-    outputEditorContainer.style.flexBasis = `${newHeight}px`;
-    outputEditor?.layout();                                 // relayout Monaco
-  }
-
     $: combinedRuleOptions = [
       ...ruleList.map(r => ({
         label: r.name,
@@ -190,6 +185,7 @@
         fixedOverflowWidgets: true,
         fontSize: sharedFontSize
       });
+
       markdownEditor.onDidChangeModelContent(() => {
         markdownText = markdownEditor.getValue();
       });
@@ -201,6 +197,7 @@
         fontSize: sharedFontSize,
         renderSideBySide: false
       });
+      
 
       outputEditor = monaco.editor.create(outputEditorContainer, {
         value: lintResults || 'No lint results to display yet.',
@@ -439,7 +436,9 @@
     }
 
     async function runLinter() {
-
+      
+      try {
+      await tick();
       const ruleContent = rulesEditor?.getValue();
       const markdownContent = markdownEditor?.getValue();
 
@@ -447,7 +446,7 @@
         alert("Please enter both rules.yaml and README content!");
         return;
       }
-
+      lintState = 'running';
       originalText = markdownContent;
 
       const response = await fetch('/.netlify/functions/runPipeline', {
@@ -469,8 +468,6 @@
       }
       diagnostics   = ctx.diagnostics || [];
       fixedMarkdown = ctx.fixedMarkdown || originalText;
-
-
 
       const judgmentOperators = new Set(['threshold', 'isPresent', 'compare', 'fixUsingLLM', 'detectHateSpeech', 'readmeLocationCheck']);
 
@@ -516,7 +513,10 @@
       const errorCount = diagnostics.filter(d => d.severity === 'error').length;
       const warningCount = diagnostics.filter(d => d.severity === 'warning').length;
       const lintFailed = errorCount > 0 || warningCount > 0;
-
+      lintState = errorCount > 0 ? 'error'
+          : warningCount > 0 ? 'warning'
+          : 'success';
+      applyDiagnosticsToEditor(diagnostics);    
       if (lintFailed && ctx.fixedMarkdown && ctx.fixedMarkdown !== originalText) {
         lintResults += '\n\n Click "Show Diff View" to review the suggested fixes, "Apply Fixes to Editor" to accept the fix.';
       }
@@ -525,6 +525,12 @@
         updateDiffModels();
       }
       await logRuleRun([ruleContent], markdownContent, diagnostics, "single", fixedMarkdown);
+      } catch (err) {
+        console.error("Linting failed", err);
+        lintState = 'error';
+      } finally {
+        setTimeout(() => lintState = 'idle', 5000);
+      }
     }
 
     function toggleDiffView() {
@@ -554,86 +560,90 @@
     }
 
     async function runMultipleRules() {
-      let collectedYamls = [];
-
+      const markdownContent = markdownEditor?.getValue();
       if (selectedRuleIds.length === 0) {
         alert("Please select at least one rule");
         return;
       }
-
-      const markdownContent = markdownEditor?.getValue();
       if (!markdownContent) {
         alert("Please load or write README content!");
         return;
       }
 
-      let combinedResults = "";
-      let combinedDiagnostics = [];
-      let workingMarkdown = markdownContent;
+      multiLintState = 'running';
+      try {
+        await tick();
 
-      originalText = markdownContent;
+        let collectedYamls = [];
+        let combinedResults = "";
+        let combinedDiagnostics = [];
+        let workingMarkdown = markdownContent;
+        originalText = markdownContent;
 
-      for (const ruleId of selectedRuleIds) {
-        setRuleStatus(ruleId, 'running');
+        for (const ruleId of selectedRuleIds) {
+          setRuleStatus(ruleId, 'running');
+          const docSnap = await getDoc(doc(db, "rules", ruleId));
+          if (!docSnap.exists()) {
+            setRuleStatus(ruleId, 'fail');
+            continue;
+          }
 
-        const docSnap = await getDoc(doc(db, "rules", ruleId));
-        if (!docSnap.exists()) {
-          setRuleStatus(ruleId, 'fail');
-          continue;
+          const rec = { id: docSnap.id, ...docSnap.data() };
+          collectedYamls.push(rec.yaml);
+
+          const response = await fetch('/.netlify/functions/runPipeline', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ yamlText: rec.yaml, markdown: workingMarkdown }),
+          });
+
+          const ctx = await response.json();
+
+          if (ctx.error) {
+            combinedResults += `Rule ${rec.name}: Error - ${ctx.error}\n\n`;
+            setRuleStatus(ruleId, 'fail');
+            continue;
+          }
+
+          const hasErrors = (ctx.diagnostics || []).some(d => d.severity === 'error');
+          const hasWarnings = (ctx.diagnostics || []).some(d => d.severity === 'warning');
+
+          if (ctx.diagnostics?.length) {
+            combinedResults += `Rule ${rec.name}:\n` +
+              ctx.diagnostics.map(d => `${d.severity.toUpperCase()} [${d.line}]: ${d.message}`).join('\n') + '\n\n';
+            combinedDiagnostics.push(...ctx.diagnostics);
+          }
+
+          if (ctx.fixedMarkdown && ctx.fixedMarkdown !== workingMarkdown) {
+            workingMarkdown = ctx.fixedMarkdown;
+            combinedResults += `Rule ${rec.name}: Suggested fixes available.\n\n`;
+          }
+
+          setRuleStatus(ruleId, hasErrors || hasWarnings ? 'fail' : 'pass');
         }
 
-        const rec = { id: docSnap.id, ...docSnap.data() };
-        collectedYamls.push(rec.yaml);
+        fixedMarkdown = workingMarkdown;
+        applyDiagnosticsToEditor(combinedDiagnostics);
+        if (showDiff && fixedMarkdown !== originalText) updateDiffModels();
 
-        const response = await fetch('/.netlify/functions/runPipeline', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            yamlText: rec.yaml,
-            markdown: workingMarkdown, 
-          }),
-        });
-
-        const ctx = await response.json();
-
-        if (ctx.error) {
-          combinedResults += `Rule ${rec.name}: Error - ${ctx.error}\n\n`;
-          setRuleStatus(ruleId, 'fail');
-          continue;
+        if (!combinedResults.trim()) {
+          combinedResults = "All selected rules passed. No issues found.";
         }
 
-        const hasErrors = (ctx.diagnostics || []).some(d => d.severity === 'error');
-        const hasWarnings = (ctx.diagnostics || []).some(d => d.severity === 'warning');
+        const hasErr = combinedDiagnostics.some(d => d.severity === 'error');
+        const hasWarn = combinedDiagnostics.some(d => d.severity === 'warning');
+        multiLintState = hasErr ? 'error' : hasWarn ? 'warning' : 'success';
 
-        if (ctx.diagnostics && ctx.diagnostics.length) {
-          combinedResults += `Rule ${rec.name}:\n` + ctx.diagnostics.map(d =>
-            `${d.severity.toUpperCase()} [${d.line}]: ${d.message}`
-          ).join('\n') + '\n\n';
-          combinedDiagnostics.push(...ctx.diagnostics);
-        }
-
-        if (ctx.fixedMarkdown && ctx.fixedMarkdown !== workingMarkdown) {
-          workingMarkdown = ctx.fixedMarkdown;
-          combinedResults += `Rule ${rec.name}: Suggested fixes available (click Show Diff View).\n\n`;
-        }
-
-        setRuleStatus(ruleId, hasErrors || hasWarnings ? 'fail' : 'pass');
+        await logRuleRun(collectedYamls, markdownContent, combinedDiagnostics, "multiple", fixedMarkdown);
+        lintResults = combinedResults;
+      } catch (e) {
+        console.error("runMultipleRules failed", e);
+        multiLintState = 'error';
+      } finally {
+        setTimeout(() => (multiLintState = 'idle'), 2000);
       }
-
-
-      fixedMarkdown = workingMarkdown;
-
-      applyDiagnosticsToEditor(combinedDiagnostics);
-
-      if (showDiff && fixedMarkdown && fixedMarkdown !== originalText) {
-        updateDiffModels();
-      }
-      if (!combinedResults.trim()) {
-        combinedResults = "All selected rules passed. No issues found.";
-      }
-      await logRuleRun(collectedYamls, markdownContent, combinedDiagnostics, "multiple", fixedMarkdown);
-      lintResults = combinedResults;
     }
+
 
     async function loadFileContent(type, event) {
       const fileName = event.target.value;
@@ -678,17 +688,16 @@
       }
     }
 
-    function getCategoryStatus(category) {
+    function getCategoryStatus(category, _status = ruleStatus) {
       const selectedInCategory = ruleList
         .filter(r => r.category === category && selectedRuleIds.includes(r.id))
         .map(r => r.id)
         .filter(id => id in ruleStatus);
 
       if (!selectedInCategory.length) return null;
-
       if (selectedInCategory.some(id => ruleStatus[id] === 'running')) return 'running';
-      if (selectedInCategory.some(id => ruleStatus[id] === 'fail')) return 'fail';
-      if (selectedInCategory.every(id => ruleStatus[id] === 'pass')) return 'pass';
+      if (selectedInCategory.some(id => ruleStatus[id] === 'fail'))    return 'fail';
+      if (selectedInCategory.every(id => ruleStatus[id] === 'pass'))   return 'pass';
 
       return null;
     }
@@ -939,7 +948,31 @@
   align-items: center;
   gap: 20px;
 }
+button.running {
+  cursor: progress;
+}
 
+button {
+  background: #7859c3;
+  color: #fff;
+}
+
+button.success {
+  background: #2DA44E;
+}
+
+button.error {
+  background: #D32F2F;
+}
+
+button.running {
+  background: #888;
+  cursor: progress;
+}
+
+button {
+  transition: background 0.3s ease;
+}
 
 
   </style>
@@ -949,11 +982,27 @@
       <div class="left-header">
         <h2>LintMe - Markdown Linter</h2>
         {#if mode === 'runner'}
-          <button on:click={runLinter}>Run Linter</button>
+      <button
+        on:click={runLinter}
+        disabled={lintState === 'running'}
+        class:running={lintState === 'running'}
+        class:success={lintState === 'success'}
+        class:error={lintState === 'error' || lintState === 'warning'}
+      >
+        {#if lintState === 'running'}
+          Running…<span class="loader-spinner"/>
+        {:else if lintState === 'success'}
+          Lint Successful
+        {:else if lintState === 'warning' || lintState === 'error'}
+          Lint Failed
+        {:else}
+          Run Linter
+        {/if}
+      </button>
         {/if}
       </div>
 
-      <div class="right-header">
+      <div class="right-header flex items-center gap-3">
         <label class="diff-switch" title={showDiff ? "Hide difference view" : "Show difference view"}>
           <input
             type="checkbox"
@@ -962,6 +1011,10 @@
           />
           <span class="slider"></span>
         </label>
+
+        <button on:click={applyFixesToEditor}>
+          Apply Fixes
+        </button>
       </div>
     </div>
 
@@ -1049,13 +1102,14 @@
           />
           {cat.label} Rules
 
-          {#if getCategoryStatus(cat.name) === 'running'}
+          {#if getCategoryStatus(cat.name, ruleStatus) === 'running'}
             <span class="loader-spinner"></span>
-          {:else if getCategoryStatus(cat.name) === 'pass'}
+          {:else if getCategoryStatus(cat.name, ruleStatus) === 'pass'}
             ✅
-          {:else if getCategoryStatus(cat.name) === 'fail'}
+          {:else if getCategoryStatus(cat.name, ruleStatus) === 'fail'}
             ❌
           {/if}
+
 
         </label>
 
@@ -1095,11 +1149,23 @@
     {/each}
 
     <button
-      class="mt-4 p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
       on:click={runMultipleRules}
+      disabled={multiLintState === 'running'}
+      class:running={multiLintState === 'running'}
+      class:success={multiLintState === 'success'}
+      class:error={multiLintState === 'error'||multiLintState === 'warning'}
     >
-      Run Selected Rules
+      {#if multiLintState === 'running'}
+        Running<span class="loader-spinner"/>
+      {:else if multiLintState === 'success'}
+        Lint Successful
+      {:else if multiLintState === 'error' || multiLintState === 'warning'}
+        Lint Failed
+      {:else}
+        Run Selected Rules
+      {/if}
     </button>
+
   </div>
 
 
@@ -1120,9 +1186,27 @@
             </select>
 
             <button on:click={saveReadmeToDB}>Save README</button>
-            <button on:click={applyFixesToEditor}>
-              Apply Fixes
-            </button>
+              {#if selectedReadmeId}
+                <button
+                  class="delete-btn"
+                  on:click={async () => {
+                    if (confirm("Delete this README?")) {
+                      try {
+                        await deleteDoc(doc(db, "readmes", selectedReadmeId));
+                        selectedReadmeId = '';
+                        markdownText = '';
+                        if (markdownEditor) markdownEditor.setValue('');
+                        readmeFiles = await loadReadmesFromFirestore();
+                      } catch (err) {
+                        console.error("Error deleting README:", err);
+                        alert("Failed to delete README.");
+                      }
+                    }
+                  }}
+                >
+                  Delete README
+                </button>
+              {/if}
           </div>
           <div class="editor-container" bind:this={markdownEditorContainer}></div>
           <div
