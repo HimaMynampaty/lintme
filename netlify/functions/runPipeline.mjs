@@ -670,8 +670,10 @@ async function run8(ctx, cfg = {}) {
     });
     return {};
   }
-  const A = steps[baseline - 1].data.data ?? steps[baseline - 1].data;
-  const B = steps[against - 1].data.data ?? steps[against - 1].data;
+  const stepA = steps[baseline - 1].data;
+  const stepB = steps[against - 1].data;
+  const A = stepA.data ?? stepA;
+  const B = stepB.data ?? stepB;
   const scope = A.document && B.document ? "document" : Object.keys(A)[0] || "document";
   const aVal = A[scope] ?? [];
   const bVal = B[scope] ?? [];
@@ -687,7 +689,7 @@ async function run8(ctx, cfg = {}) {
   const missing = aVal.filter((x) => !setB.has(keyOf(x)));
   const extra = bVal.filter((x) => !setA.has(keyOf(x)));
   missing.forEach((item) => {
-    const line = item && typeof item === "object" && item.line ? item.line : 1;
+    const line = item?.line ?? 1;
     const label = item.content ?? item.url ?? item.slug ?? JSON.stringify(item);
     ctx.diagnostics.push({
       line,
@@ -696,7 +698,7 @@ async function run8(ctx, cfg = {}) {
     });
   });
   extra.forEach((item) => {
-    const line = item && typeof item === "object" && item.line ? item.line : 1;
+    const line = item?.line ?? 1;
     const label = item.content ?? item.url ?? item.slug ?? JSON.stringify(item);
     ctx.diagnostics.push({
       line,
@@ -710,6 +712,17 @@ async function run8(ctx, cfg = {}) {
       extra: extra.map(pretty)
     }
   };
+  const imgDiff = stepB?.pngDiff && stepB?.pngA && stepB?.pngB;
+  if (imgDiff) {
+    ctx.diagnostics.push({
+      line: 1,
+      severity: "warning",
+      message: [
+        `\u{1F5BC}\uFE0F Visual difference found (${stepB.pixelChanges} pixels)`,
+        `[View baseline](${stepB.pngA}) \u2022 [View new](${stepB.pngB}) \u2022 [View diff](${stepB.pngDiff})`
+      ].join("\n")
+    });
+  }
   return { scopes: [scope], data: summary };
   function pretty(x) {
     return typeof x === "string" ? x : x.content ?? x.url ?? x.slug ?? JSON.stringify(x);

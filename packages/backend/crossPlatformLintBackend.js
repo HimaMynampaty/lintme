@@ -10,6 +10,7 @@ import pixelmatch   from 'pixelmatch';
 import { PNG }      from 'pngjs';
 import fs           from 'node:fs/promises';
 import path         from 'node:path';
+import { executablePath } from 'puppeteer';
 
 const dd = new DiffDOM.DiffDOM();
 
@@ -170,7 +171,11 @@ async function renderInBrowser(markdown, tool) {
   }
 
   if (tool === 'puppeteer') {
-    const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+    //const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+    const browser = await puppeteer.launch({
+      args: ['--no-sandbox'],
+      executablePath: executablePath()
+    });
     const page    = await browser.newPage();
     const html    = await renderWith(page);
     await browser.close();
@@ -192,7 +197,11 @@ async function renderInBrowser(markdown, tool) {
 /*  PNG HELPERS                                                       */
 /* ------------------------------------------------------------------ */
 export async function htmlToPNG(html, { width = 800, height = 600 } = {}) {
-  const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+  //const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+  const browser = await puppeteer.launch({
+      args: ['--no-sandbox'],
+      executablePath: executablePath()
+  });
   const page    = await browser.newPage();
   await page.setViewport({ width, height, deviceScaleFactor: 1 });
   await page.setContent(html, { waitUntil: 'networkidle0' });
