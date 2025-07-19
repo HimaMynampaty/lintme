@@ -27,6 +27,13 @@ export function parseYAML(text = '') {
         };
       case 'readmeLocationCheck':
         return { id, operator: 'readmeLocationCheck' };
+      case 'markdownRender':
+        return {
+          id,
+          operator: 'markdownRender',
+          renderer: raw.renderer ?? 'marked',
+          output: raw.output ?? 'html'
+        };  
       case 'sage':
       case 'count':
       case 'length':
@@ -71,6 +78,10 @@ export function generateYAML(name = '', description = '', steps = []) {
       if (step.operator === 'fixUsingLLM') {
         if ('prompt' in step) out.prompt = step.prompt;
         if ('model' in step) out.model = step.model;
+      }
+      if (step.operator === 'markdownRender') {
+        if ('renderer' in step) out.renderer = step.renderer;
+        if ('output' in step) out.output = step.output;
       }
 
       if (step.operator === 'compare') {

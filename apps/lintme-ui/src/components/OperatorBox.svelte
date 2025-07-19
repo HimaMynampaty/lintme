@@ -15,7 +15,7 @@
   import DetectHateSpeechOperator from './DetectHateSpeechOperator.svelte';
   import FetchFromGithubOperator from './FetchFromGithubOperator.svelte';
   import ReadmeLocationCheckOperator from './ReadmeLocationCheckOperator.svelte';
-
+  import MarkdownRenderOperator from './MarkdownRenderOperator.svelte';
 
   export let step;
   export let index;
@@ -131,6 +131,8 @@
             <FetchFromGithubOperator bind:data={step} on:input={changed} />
           {:else if step.operator === 'readmeLocationCheck'}
             <ReadmeLocationCheckOperator bind:data={step} {storeIndex} on:input={changed} />
+          {:else if step.operator === 'markdownRender'}
+            <MarkdownRenderOperator bind:data={step} on:input={changed} />  
           {/if}
         {/key}
       </div>

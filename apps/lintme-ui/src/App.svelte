@@ -201,7 +201,7 @@
 
       outputEditor = monaco.editor.create(outputEditorContainer, {
         value: lintResults || 'No lint results to display yet.',
-        language: 'plaintext',
+        language: 'markdown',
         readOnly: true,
         automaticLayout: true,
         minimap: { enabled: false },
@@ -210,6 +210,7 @@
         scrollBeyondLastLine: false
       });
 
+      
       readmeFiles = await loadReadmesFromFirestore();
       ruleList = await loadRulesFromFirestore();
     });

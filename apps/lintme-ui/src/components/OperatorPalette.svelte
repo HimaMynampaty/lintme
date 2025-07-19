@@ -19,7 +19,7 @@
     { name: 'detectHateSpeech', label: 'detectHateSpeech' },
     { name: 'fetchFromGithub', label: 'fetchFromGithub' },
     { name: 'readmeLocationCheck', label: 'readmeLocationCheck' },
-
+    { name: 'markdownRender', label: 'markdownRender' },
   ];
 
   function choose(op) {

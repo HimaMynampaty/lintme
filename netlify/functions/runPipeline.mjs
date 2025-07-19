@@ -1206,6 +1206,70 @@ var init_readmeLocationCheck = __esm({
   }
 });
 
+// packages/operators/markdownRender/index.js
+var markdownRender_exports = {};
+__export(markdownRender_exports, {
+  run: () => run15
+});
+async function run15(ctx, cfg = {}) {
+  const {
+    renderer = "marked",
+    output = "html",
+    apiBase = "http://localhost:5000"
+  } = cfg;
+  const markdown = ctx.markdown ?? "";
+  if (!markdown.trim()) {
+    ctx.diagnostics.push({
+      line: 1,
+      severity: "error",
+      message: "markdownRender: No Markdown content to render."
+    });
+    return ctx;
+  }
+  const endpoint = `${apiBase}/api/markdown-render`;
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ markdown, renderer, output })
+  });
+  if (!res.ok) {
+    ctx.diagnostics.push({
+      line: 1,
+      severity: "error",
+      message: `markdownRender: Server error \u2014 ${res.status} ${res.statusText}`
+    });
+    return ctx;
+  }
+  const { result } = await res.json();
+  if (!result) {
+    ctx.diagnostics.push({
+      line: 1,
+      severity: "warning",
+      message: "markdownRender: No output received from server."
+    });
+    return ctx;
+  }
+  if (output === "html" || output === "dom") {
+    ctx.output = result;
+  }
+  ctx.markdownRender = { renderer, output, result };
+  ctx.debug = { renderedLength: String(result).length };
+  const scopes = ["document"];
+  const data = {
+    document: [
+      {
+        line: 1,
+        content: output === "image" ? `[Click the link to view the rendered image](${result})` : result
+      }
+    ]
+  };
+  return { scopes, data };
+}
+var init_markdownRender = __esm({
+  "packages/operators/markdownRender/index.js"() {
+  }
+});
+
 // packages/pipeline-runner/utils/parseRules.js
 import yaml from "js-yaml";
 function parseRules(yamlText) {
@@ -1231,7 +1295,8 @@ var OPERATORS = {
   "fixUsingLLM": () => Promise.resolve().then(() => (init_fixUsingLLM(), fixUsingLLM_exports)).then((m) => m.run),
   "detectHateSpeech": () => init_detectHateSpeech().then(() => detectHateSpeech_exports).then((m) => m.run),
   "fetchFromGithub": () => Promise.resolve().then(() => (init_fetchFromGithub(), fetchFromGithub_exports)).then((m) => m.run),
-  "readmeLocationCheck": () => Promise.resolve().then(() => (init_readmeLocationCheck(), readmeLocationCheck_exports)).then((m) => m.run)
+  "readmeLocationCheck": () => Promise.resolve().then(() => (init_readmeLocationCheck(), readmeLocationCheck_exports)).then((m) => m.run),
+  "markdownRender": () => Promise.resolve().then(() => (init_markdownRender(), markdownRender_exports)).then((m) => m.run)
 };
 
 // packages/pipeline-runner/index.js
@@ -1259,8 +1324,8 @@ async function runPipeline(yamlText, markdown) {
       });
       continue;
     }
-    const run15 = await loader();
-    const opOutput = await run15(ctx, step);
+    const run16 = await loader();
+    const opOutput = await run16(ctx, step);
     if (opOutput && typeof opOutput === "object" && opOutput !== ctx) {
       ctx.pipelineResults ??= [];
       ctx.pipelineResults.push({ name: opName, data: opOutput });

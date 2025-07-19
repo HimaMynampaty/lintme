@@ -13,4 +13,5 @@ export const OPERATORS = {
   'detectHateSpeech':   () => import('../operators/detectHateSpeech/index.js').then(m => m.run),
   'fetchFromGithub': () => import('../operators/fetchFromGithub/index.js').then(m => m.run),
   'readmeLocationCheck': () => import('../operators/readmeLocationCheck/index.js').then(m => m.run),
+  'markdownRender': () => import('../operators/markdownRender/index.js').then(m => m.run),
 };

@@ -57,6 +57,13 @@
             scope: 'document',
             scopes: ['document']
           }];
+        case 'markdownRender':
+          return [...steps, {
+            id,
+            operator: 'markdownRender',
+            renderer: 'marked',      
+            output: 'html'    
+          }];  
         default:
           return [...steps, { id, operator: opName }];  
       }

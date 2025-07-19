@@ -12,5 +12,5 @@ export const operatorDescriptions = {
   detectHateSpeech: 'Detect potentially hateful, biased, or offensive language using Retext.',
   fetchFromGithub: 'Access GitHub to fetch file path, content, metadata.',
   readmeLocationCheck: 'Checks if README files exist in standard locations like root or folders.',
-
+  markdownRender: 'Render Markdown using a chosen engine (e.g., marked, puppeteer) to generate HTML, DOM, or image output.',
 };

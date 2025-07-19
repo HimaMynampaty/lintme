@@ -14,15 +14,21 @@ const require = createRequire(import.meta.url);
 const damerauPkg            = require("talisman/metrics/damerau-levenshtein.js");
 const damerauLevenshtein    = damerauPkg.default || damerauPkg;
 
+
+import markdownRenderRouter from './markdownRenderServer.js';
+
 import { pipeline } from "@xenova/transformers";
 import { checkCrossPlatformDifferenceBackend } from './crossPlatformLintBackend.js'
-
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const __dirname = path.resolve();
+app.use('/markdown-images', express.static(path.join(__dirname, 'public/markdown-images')));
+app.use(markdownRenderRouter);
 
 const shell = os.platform() === "win32" ? "cmd.exe" : "/bin/sh";
 
@@ -143,7 +149,6 @@ app.post("/api/groq-chat", async (req, res) => {
         res.status(500).json({ error: "LLM generation failed." });
     }
 });app.post("/api/github-file", async (req, res) => {
-  console.log("🔁 [github-file] Incoming request:", req.body);
 
   const {
     repo,
@@ -564,8 +569,6 @@ app.post("/api/cross-platform-diff", async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
-
-  
 
 const PORT = 5000;
 app.listen(PORT, () => {

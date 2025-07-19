@@ -107,7 +107,7 @@ function renderMarkedWithLines(md) {
   return marked.parse(md, { sourcepos: true });
 }
 
-async function renderByType(md, engine, withLines = false) {
+export async function renderByType(md, engine, withLines = false) {
   switch (engine) {
     case 'marked':      return withLines ? renderMarkedWithLines(md) : marked.parse(md);
     case 'markdown-it': return new MarkdownIt().render(md);
@@ -191,7 +191,7 @@ async function renderInBrowser(markdown, tool) {
 /* ------------------------------------------------------------------ */
 /*  PNG HELPERS                                                       */
 /* ------------------------------------------------------------------ */
-async function htmlToPNG(html, { width = 800, height = 600 } = {}) {
+export async function htmlToPNG(html, { width = 800, height = 600 } = {}) {
   const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
   const page    = await browser.newPage();
   await page.setViewport({ width, height, deviceScaleFactor: 1 });
