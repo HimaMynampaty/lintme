@@ -3,7 +3,10 @@ services:
     name: lintme-backend
     env: node
     rootDir: packages/backend
-    buildCommand: yarn install
+    buildCommand: |
+      yarn install \
+      && npx puppeteer browsers install chrome \
+      && yarn build:functions
     startCommand: node server.js
     envVars:
       - key: GROQ_API_KEY
