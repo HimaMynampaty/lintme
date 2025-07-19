@@ -1,7 +1,7 @@
 export async function run(ctx, cfg = {}) {
   const { baseline, against, level = 'error' } = cfg;
-  const steps = ctx.pipelineResults ?? [];
 
+  const steps = ctx.pipelineResults ?? [];
   if (!steps[baseline - 1] || !steps[against - 1]) {
     ctx.diagnostics.push({
       line: 1,
@@ -11,11 +11,8 @@ export async function run(ctx, cfg = {}) {
     return {};
   }
 
-  const stepA = steps[baseline - 1].data;
-  const stepB = steps[against  - 1].data;
-
-  const A = stepA.data ?? stepA;
-  const B = stepB.data ?? stepB;
+  const A = steps[baseline - 1].data.data ?? steps[baseline - 1].data;
+  const B = steps[against  - 1].data.data ?? steps[against  - 1].data;
 
   const scope =
     (A.document && B.document) ? 'document'
@@ -44,8 +41,9 @@ export async function run(ctx, cfg = {}) {
   const extra   = bVal.filter(x => !setA.has(keyOf(x)));
 
   missing.forEach((item) => {
-    const line = item?.line ?? 1;
-    const label = item.content ?? item.url ?? item.slug ?? JSON.stringify(item);
+    const line = item && typeof item === 'object' && item.line ? item.line : 1;
+    const label =
+      item.content ?? item.url ?? item.slug ?? JSON.stringify(item);
     ctx.diagnostics.push({
       line,
       severity: level,
@@ -54,14 +52,17 @@ export async function run(ctx, cfg = {}) {
   });
 
   extra.forEach((item) => {
-    const line = item?.line ?? 1;
-    const label = item.content ?? item.url ?? item.slug ?? JSON.stringify(item);
+    const line = item && typeof item === 'object' && item.line ? item.line : 1;
+    const label =
+      item.content ?? item.url ?? item.slug ?? JSON.stringify(item);
     ctx.diagnostics.push({
       line,
-      severity: level,
+      severity: level,                
       message: `Compare found extra: ${label}`
     });
   });
+
+
 
   const summary = {
     [scope]: {
@@ -69,20 +70,6 @@ export async function run(ctx, cfg = {}) {
       extra:   extra.map(pretty)
     }
   };
-
-  // 🖼️ Include image diff message if available
-  const imgDiff = stepB?.pngDiff && stepB?.pngA && stepB?.pngB;
-
-  if (imgDiff) {
-    ctx.diagnostics.push({
-      line: 1,
-      severity: 'warning',
-      message: [
-        `🖼️ Visual difference found (${stepB.pixelChanges} pixels)`,
-        `[View baseline](${stepB.pngA}) • [View new](${stepB.pngB}) • [View diff](${stepB.pngDiff})`
-      ].join('\n')
-    });
-  }
 
   return { scopes: [scope], data: summary };
 

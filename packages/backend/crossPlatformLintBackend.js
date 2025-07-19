@@ -173,8 +173,7 @@ async function renderInBrowser(markdown, tool) {
   if (tool === 'puppeteer') {
     //const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const browser = await puppeteer.launch({
-      args: ['--no-sandbox'],
-      executablePath: executablePath()
+      args: ['--no-sandbox']
     });
     const page    = await browser.newPage();
     const html    = await renderWith(page);
@@ -199,8 +198,7 @@ async function renderInBrowser(markdown, tool) {
 export async function htmlToPNG(html, { width = 800, height = 600 } = {}) {
   //const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
   const browser = await puppeteer.launch({
-      args: ['--no-sandbox'],
-      executablePath: executablePath()
+      args: ['--no-sandbox']
   });
   const page    = await browser.newPage();
   await page.setViewport({ width, height, deviceScaleFactor: 1 });
