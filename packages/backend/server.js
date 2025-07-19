@@ -1,18 +1,22 @@
 import express from "express";
 import cors    from "cors";
-import fetch   from "node-fetch";
 import Groq    from "groq-sdk";
 import dotenv  from "dotenv";
 import fs      from "fs";
-import path    from "path";
 import os      from "os";
 import { exec } from "child_process";
 import natural from "natural";
-
+import pixelmatch from 'pixelmatch';
+import { PNG }     from 'pngjs';
+import fsPromises  from 'fs/promises';
+import crypto      from 'crypto';
+import path        from 'path';
+import fetch       from 'node-fetch';
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const damerauPkg            = require("talisman/metrics/damerau-levenshtein.js");
 const damerauLevenshtein    = damerauPkg.default || damerauPkg;
+const IMAGE_DIFF_DIR = path.join(path.resolve(), 'public/markdown-images');
 
 
 import markdownRenderRouter from './markdownRenderServer.js';
@@ -31,6 +35,7 @@ app.use('/markdown-images', express.static(path.join(__dirname, 'public/markdown
 app.use(markdownRenderRouter);
 
 const shell = os.platform() === "win32" ? "cmd.exe" : "/bin/sh";
+await fsPromises.mkdir(IMAGE_DIFF_DIR, { recursive: true });
 
 let embedder;                          // lazy‑loaded
 const readmeCache = new Map();         // url → { ts, text }
@@ -123,6 +128,66 @@ app.post("/api/check-link", async (req, res) => {
         return res.status(500).json({ error: "Request failed or timed out." });
     }
 });
+
+
+// --- Add this route below others (before app.listen) ---
+app.post('/api/image-diff', async (req, res) => {
+  try {
+    const { imageA, imageB, threshold = 0.10 } = req.body;
+    if (!imageA || !imageB) {
+      return res.status(400).json({ error: "imageA and imageB are required." });
+    }
+
+    const [bufA, bufB] = await Promise.all([
+      fetchBuffer(imageA),
+      fetchBuffer(imageB)
+    ]);
+
+    const pngA = PNG.sync.read(bufA);
+    const pngB = PNG.sync.read(bufB);
+
+    if (pngA.width !== pngB.width || pngA.height !== pngB.height) {
+      return res.status(400).json({
+        error: `Dimension mismatch: ${pngA.width}x${pngA.height} vs ${pngB.width}x${pngB.height}`
+      });
+    }
+
+    const diffPNG = new PNG({ width: pngA.width, height: pngA.height });
+    const changedPixels = pixelmatch(
+      pngA.data, pngB.data, diffPNG.data,
+      pngA.width, pngA.height,
+      { threshold }
+    );
+
+    const id    = crypto.randomUUID().slice(0,8);
+    const fileA = path.join(IMAGE_DIFF_DIR, `cmp_base_${id}.png`);
+    const fileB = path.join(IMAGE_DIFF_DIR, `cmp_against_${id}.png`);
+    const fileD = path.join(IMAGE_DIFF_DIR, `cmp_diff_${id}.png`);
+
+    await Promise.all([
+      fsPromises.writeFile(fileA, bufA),
+      fsPromises.writeFile(fileB, bufB),
+      fsPromises.writeFile(fileD, PNG.sync.write(diffPNG))
+    ]);
+
+    const host = `${req.protocol}://${req.get('host')}`;
+    res.json({
+      changedPixels,
+      pngA: `${host}/markdown-images/${path.basename(fileA)}`,
+      pngB: `${host}/markdown-images/${path.basename(fileB)}`,
+      diff: `${host}/markdown-images/${path.basename(fileD)}`
+    });
+  } catch (err) {
+    console.error('image-diff error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+async function fetchBuffer(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Fetch failed (${r.status}) for ${url}`);
+  return Buffer.from(await r.arrayBuffer());
+}
 
 // API to interact with Groq
 app.post("/api/groq-chat", async (req, res) => {

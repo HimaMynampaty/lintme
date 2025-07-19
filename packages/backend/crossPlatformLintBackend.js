@@ -202,9 +202,9 @@ export async function htmlToPNG(html, { width = 800, height = 600 } = {}) {
   console.log('Resolved Chromium path:', (await import('puppeteer')).executablePath());
 
   const page    = await browser.newPage();
-  await page.setViewport({ width, height, deviceScaleFactor: 1 });
+  await page.setViewport({ width: 1024, height: 800, deviceScaleFactor: 1 });
   await page.setContent(html, { waitUntil: 'networkidle0' });
-  const buffer  = await page.screenshot({ type: 'png', fullPage: false });
+  const buffer = await page.screenshot({ type: 'png', fullPage: true , captureBeyondViewport: true });
   await browser.close();
   return buffer;
 }

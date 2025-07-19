@@ -62,5 +62,10 @@ export async function run(ctx, cfg = {}) {
     ]
   };
 
-  return { scopes, data };
+  return {
+  scopes,
+  data,
+  markdownRender: { renderer, output, result }
+};
+
 }
