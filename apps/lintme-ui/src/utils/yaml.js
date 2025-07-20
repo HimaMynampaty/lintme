@@ -26,7 +26,11 @@ export function parseYAML(text = '') {
           fetchType: raw.fetchType ?? 'content'
         };
       case 'readmeLocationCheck':
-        return { id, operator: 'readmeLocationCheck' };
+        return {
+          id,
+          operator: 'readmeLocationCheck',
+          paths: raw.paths ?? []
+        };
       case 'markdownRender':
         return {
           id,
@@ -78,6 +82,11 @@ export function generateYAML(name = '', description = '', steps = []) {
       if (step.operator === 'fixUsingLLM') {
         if ('prompt' in step) out.prompt = step.prompt;
         if ('model' in step) out.model = step.model;
+      }
+      if (step.operator === 'readmeLocationCheck') {
+        if (Array.isArray(step.paths) && step.paths.length > 0) {
+          out.paths = step.paths;
+        }
       }
       if (step.operator === 'markdownRender') {
         if ('renderer' in step) out.renderer = step.renderer;

@@ -4,9 +4,9 @@
     import OperatorTriggerPanel from './components/OperatorTriggerPanel.svelte';
     const params = new URLSearchParams(window.location.search);
     let rulesYaml = decodeURIComponent(params.get("rule") || "");
-    import { collection, addDoc, getDocs, deleteDoc, getDoc, doc } from "firebase/firestore";
+    import { collection, addDoc, getDocs, deleteDoc, getDoc, doc, query, where, setDoc } from "firebase/firestore";
     import { db } from "./lib/firebase.js";
-    import { pipeline } from './stores/pipeline.js';
+    import SvelteSelect from 'svelte-select';
 
     const sharedFontSize = 14;
     let markdownText = "";
@@ -33,8 +33,6 @@
     let diffEditor;
     let ruleList = [];
     let combinedRuleOptions = [];
-    let startY;
-    let startHeight;
     let outputEditorContainer;
     let outputEditor;
 
@@ -46,6 +44,9 @@
     let selectedReadmeId = '';
     let lintState = 'idle';
     let multiLintState = 'idle';
+    let selectedRule      = null;
+    let selectedRuleId    = ''; 
+    let selectedReadme     = null;
     const baseURL = import.meta.env.VITE_BACKEND_URL;
 
 
@@ -215,47 +216,70 @@
       ruleList = await loadRulesFromFirestore();
     });
 
-    async function saveCurrentRule() {
-      const name = prompt('Rule name?', 'my-rule');
-      if (!name) return;
 
-      const category = prompt('Category? (e.g. structure, style, content, sensitive)', 'structure');
-      if (!category) return;
+  async function saveCurrentRule() {
+    const yamlContent = rulesEditor.getValue();
+    const ruleMatch = yamlContent.match(/rule:\s*(\S+)/);
+    const defaultName = ruleMatch ? ruleMatch[1] : 'my-rule';
 
-      const yamlContent = rulesEditor.getValue();
-      try {
+    const name = prompt("Rule name?", defaultName);
+    if (!name) return;
+
+    const category = prompt("Category? (e.g. structure, style, content, sensitive)", "structure");
+    if (!category) return;
+
+    const q = query(collection(db, "rules"), where("name", "==", name));
+    const snap = await getDocs(q);
+
+    try {
+      if (!snap.empty) {
+        const ref = snap.docs[0].ref;
+        await setDoc(ref, { name, yaml: yamlContent, category, updatedAt: new Date() });
+        alert(`Rule "${name}" was replaced.`);
+      } else {
         await addDoc(collection(db, "rules"), {
-          name: name,
-          yaml: yamlContent,
-          category: category,
-          createdAt: new Date()
-        });
-        alert(`Rule "${name}" saved to Firestore!`);
-        await loadRulesFromFirestore(); 
-      } catch (err) {
-        console.error("Error saving rule:", err);
-        alert("Failed to save rule.");
-      }
-    }
-
-    async function saveReadmeToDB() {
-      const name = prompt("Enter a name for this README:");
-      if (!name) return;
-
-      try {
-        const content = markdownEditor?.getValue() || "";
-        await addDoc(collection(db, "readmes"), {
           name,
-          content,
+          yaml: yamlContent,
+          category,
           createdAt: new Date()
         });
-        alert(`README "${name}" saved!`);
-        await loadReadmesFromFirestore();
-      } catch (err) {
-        console.error("Error saving README:", err);
-        alert("Failed to save README.");
+        alert(`Rule "${name}" saved!`);
       }
+
+      ruleList = await loadRulesFromFirestore();
+    } catch (err) {
+      console.error("Error saving rule:", err);
+      alert("Failed to save rule.");
     }
+  }
+
+
+
+  async function saveReadmeToDB() {
+    const name = prompt("Enter a name for this README:");
+    if (!name) return;
+
+    const content = markdownEditor?.getValue() || "";
+    const q = query(collection(db, "readmes"), where("name", "==", name));
+    const snap = await getDocs(q);
+
+    try {
+      if (!snap.empty) {
+        const ref = snap.docs[0].ref;
+        await setDoc(ref, { name, content, updatedAt: new Date() });
+        alert(`README "${name}" was replaced.`);
+      } else {
+        await addDoc(collection(db, "readmes"), { name, content, createdAt: new Date() });
+        alert(`README "${name}" saved!`);
+      }
+
+      readmeFiles = await loadReadmesFromFirestore();
+    } catch (err) {
+      console.error("Error saving README:", err);
+      alert("Failed to save README.");
+    }
+  }
+
 
     async function loadReadmesFromFirestore() {
       try {
@@ -313,25 +337,10 @@
       }
     }
 
-
-    async function handleCombinedRuleSelection(event) {
-      const selectedValue = event.target.value;
-
-      if (!selectedValue) {
-        rulesYaml = "";
-        if (rulesEditor) rulesEditor.setValue("");
-        $pipeline = [];
-        return;
-      }
-
-      const selectedOption = combinedRuleOptions.find(opt => opt.value === selectedValue);
-      if (!selectedOption) return;
-
-      if (selectedOption.type === 'saved') {
-        await loadRuleFromDB(selectedOption.value);
-      } else if (selectedOption.type === 'yaml') {
-        await loadFileContent('rules', { target: { value: selectedOption.value } });
-      }
+    async function handleCombinedRuleSelection(opt) {
+      if (!opt) return;           
+      if (opt.type === 'saved')   await loadRuleFromDB(opt.value);
+      else if (opt.type === 'yaml') await loadFileContent('rules', { target:{value:opt.value} });
     }
 
     function formatOperatorOutput(key, data, scopes = Object.keys(data)) {
@@ -490,7 +499,7 @@
         const isJudging = judgmentOperators.has(ctx.lastOperator);
         const fixedByLLM = ctx.fixedMarkdown && ctx.fixedMarkdown !== originalText;
         if (isJudging && fixedByLLM) {
-          lintResults = `Fixes were suggested.\n\nClick "Show Diff View" to preview or "Apply Fixes to Editor".`;
+          lintResults = `Fixes were suggested.\n\nClick on the Toggle "Show difference view" to preview or "Apply Fixes" to apply the suggested changes to your README.`;
         } else if (isJudging) {
           lintResults = `Lint successful! No issues found.`;
         } else {
@@ -666,26 +675,12 @@
       }
     }
 
-    async function loadReadmeFromDB(event) {
-      const readmeId = event.target.value;
-
-      if (!readmeId) {
-        markdownText = "";
-        selectedReadmeId = "";
-        if (markdownEditor) markdownEditor.setValue("");
-        return;
-      }
-
-      try {
-        const docSnap = await getDoc(doc(db, "readmes", readmeId));
-        if (docSnap.exists()) {
-          const rec = docSnap.data();
-          markdownText = rec.content;
-          selectedReadmeId = readmeId;
-          if (markdownEditor) markdownEditor.setValue(markdownText);
-        }
-      } catch (err) {
-        console.error("Failed to load README:", err);
+    async function loadReadmeFromDB(id) {
+      if (!id) return;
+      const docSnap = await getDoc(doc(db,'readmes', id));
+      if (docSnap.exists()) {
+        markdownText = docSnap.data().content;
+        markdownEditor?.setValue(markdownText);
       }
     }
 
@@ -701,10 +696,6 @@
       if (selectedInCategory.every(id => ruleStatus[id] === 'pass'))   return 'pass';
 
       return null;
-    }
-
-    function hasSelectedRules(category) {
-      return ruleList.some(r => r.category === category && selectedRuleIds.includes(r.id));
     }
 
  
@@ -782,16 +773,6 @@
     min-width: 0;
     overflow: visible;
     width: 100%;
-  }
-
-
-  select {
-    margin-bottom: 10px;
-    padding: 10px;
-    font-size: 16px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    background: #f0f4f8;
   }
 
   .hidden { display: none !important; }
@@ -878,20 +859,12 @@
     }
   }
 
-.select-compact {
-  max-width: 260px;
-  width: 100%;
-}
 
 .rule-select-row{
   display:flex;
   align-items:center;       
   gap:8px;                 
   margin-bottom:10px;     
-}
-
-.rule-select-row select{
-  margin:0;
 }
 
 .rule-select-row button{
@@ -974,6 +947,11 @@ button.running {
 button {
   transition: background 0.3s ease;
 }
+.compact-select {
+  flex: 1 1 auto;         
+  min-width: 180px;          
+  max-width: 100%;           
+}
 
 
   </style>
@@ -1003,20 +981,23 @@ button {
         {/if}
       </div>
 
-      <div class="right-header flex items-center gap-3">
-        <label class="diff-switch" title={showDiff ? "Hide difference view" : "Show difference view"}>
-          <input
-            type="checkbox"
-            checked={showDiff}
-            on:change={toggleDiffView}
-          />
-          <span class="slider"></span>
-        </label>
+      {#if fixedMarkdown && fixedMarkdown !== originalText}
+        <div class="right-header flex items-center gap-3">
+          <label class="diff-switch" title={showDiff ? "Hide difference view" : "Show difference view"}>
+            <input
+              type="checkbox"
+              checked={showDiff}
+              on:change={toggleDiffView}
+            />
+            <span class="slider"></span>
+          </label>
 
-        <button on:click={applyFixesToEditor}>
-          Apply Fixes
-        </button>
-      </div>
+          <button on:click={applyFixesToEditor}>
+            Apply Fixes
+          </button>
+        </div>
+      {/if}
+
     </div>
 
 
@@ -1041,38 +1022,44 @@ button {
           </div>
           <div style="flex:1; display:flex; flex-direction:column;">
             <div class="rule-select-row">
-              <select
-                class="select-compact"
-                on:change={handleCombinedRuleSelection}
-                bind:value={selectedCombinedRule}
-              >
-                <option value="">Select Rule</option>
-                {#each ruleList as r}
-                  <option value={r.id}>{r.name}</option>
-                {/each}
-              </select>
-
+              <div class="compact-select">
+              <SvelteSelect
+                items={combinedRuleOptions}
+                bind:value={selectedRule}
+                placeholder="Select Rule"
+                clearable
+                on:select={({ detail }) => {
+                    selectedRule      = detail;     
+                    selectedRuleId    = detail.value;  
+                    handleCombinedRuleSelection(detail); 
+                }}
+                on:clear={() => {
+                    selectedRule = null;
+                    selectedRuleId = '';
+                    rulesYaml = '';
+                    rulesEditor?.setValue('');
+                }}
+              />
+              </div>
               {#if mode === 'runner'}
                 <button on:click={saveCurrentRule}>Save Rule</button>
-
-                {#if combinedRuleOptions.find(o => o.value === selectedCombinedRule && o.type === 'saved')}
-                  <button class="delete-btn" on:click={async () => {
-                    if (confirm("Delete this rule?")) {
-                      try {
-                        await deleteDoc(doc(db, "rules", selectedCombinedRule));
-                      } catch (e) {
-                        console.warn("Firestore delete skipped or failed", e);
-                      }
-                      ruleList = await loadRulesFromFirestore();
-                      selectedCombinedRule = '';
-                      rulesEditor?.setValue('');
-                    }
-                  }}>
-                    Delete Rule
-                  </button>
-                {/if}
+                    {#if selectedRule?.type === 'saved'}
+                      <button class="delete-btn"
+                              on:click={async () => {
+                                  if (confirm('Delete this rule?')) {
+                                      await deleteDoc(doc(db,'rules', selectedRuleId));
+                                      ruleList = await loadRulesFromFirestore();
+                                      selectedRule = null;
+                                      selectedRuleId = '';
+                                      rulesEditor?.setValue('');
+                                  }
+                              }}>
+                        Delete Rule
+                      </button>
+                    {/if}
               {/if}
             </div>
+            
 
           {#if mode === 'runner'}
             <div class="bg-gray-50 p-4 rounded border relative">
@@ -1175,36 +1162,38 @@ button {
 
         <div class="file-upload" style="display: {showDiff ? 'none' : 'flex'}">
           <div class="rule-select-row">
-            <select
-              class="select-compact"
-              on:change={loadReadmeFromDB}
-              bind:value={selectedReadmeId}
-            >
-              <option value="">Select README</option>
-              {#each readmeFiles as file}
-                <option value={file.id}>{file.name}</option>
-              {/each}
-            </select>
-
+            <div class="compact-select">
+            <SvelteSelect
+              items={readmeFiles.map(f => ({ label: f.name, value: f.id })) }
+              bind:value={selectedReadme}
+              placeholder="Select README"
+              clearable
+              on:select={({ detail }) => {
+                  selectedReadme    = detail;
+                  selectedReadmeId  = detail.value;
+                  loadReadmeFromDB(detail.value);  
+              }}
+              on:clear={() => {
+                  selectedReadme = null;
+                  selectedReadmeId = '';
+                  markdownText = '';
+                  markdownEditor?.setValue('');
+              }}
+            />
+            </div>
             <button on:click={saveReadmeToDB}>Save README</button>
               {#if selectedReadmeId}
-                <button
-                  class="delete-btn"
-                  on:click={async () => {
-                    if (confirm("Delete this README?")) {
-                      try {
-                        await deleteDoc(doc(db, "readmes", selectedReadmeId));
-                        selectedReadmeId = '';
-                        markdownText = '';
-                        if (markdownEditor) markdownEditor.setValue('');
-                        readmeFiles = await loadReadmesFromFirestore();
-                      } catch (err) {
-                        console.error("Error deleting README:", err);
-                        alert("Failed to delete README.");
-                      }
-                    }
-                  }}
-                >
+                <button class="delete-btn"
+                        on:click={async () => {
+                            if (confirm('Delete this README?')) {
+                                await deleteDoc(doc(db,'readmes', selectedReadmeId));
+                                readmeFiles = await loadReadmesFromFirestore();
+                                selectedReadme = null;
+                                selectedReadmeId = '';
+                                markdownText = '';
+                                markdownEditor?.setValue('');
+                            }
+                        }}>
                   Delete README
                 </button>
               {/if}

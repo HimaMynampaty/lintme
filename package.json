@@ -33,6 +33,7 @@
     "puppeteer": "^24.14.0",
     "retext": "^9.0.0",
     "retext-equality": "^7.1.0",
-    "retext-profanities": "^8.0.0"
+    "retext-profanities": "^8.0.0",
+    "svelte-select": "^5.8.3"
   }
 }
