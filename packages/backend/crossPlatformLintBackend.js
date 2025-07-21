@@ -93,10 +93,18 @@ export async function checkCrossPlatformDifferenceBackend(
 /*  RENDER HELPERS                                                    */
 /* ------------------------------------------------------------------ */
 function renderMarkedWithLines(md) {
-  marked.use({
+  marked.setOptions({
     gfm: true,
     headerIds: false,
     mangle: false,
+    breaks: true,
+    pedantic: false,
+    smartLists: true,
+    smartypants: false,
+    xhtml: false,
+  });
+
+  marked.use({
     walkTokens(token) {
       if (token?.position?.start?.line != null) {
         token.attrs = token.attrs || [];
@@ -104,13 +112,22 @@ function renderMarkedWithLines(md) {
       }
     }
   });
-  return marked.parse(md, { sourcepos: true });
+
+  return marked.parse(md);
 }
+
 
 export async function renderByType(md, engine, withLines = false) {
   switch (engine) {
     case 'marked':      return withLines ? renderMarkedWithLines(md) : marked.parse(md);
-    case 'markdown-it': return new MarkdownIt().render(md);
+    case 'markdown-it': {
+      const mdParser = new MarkdownIt({
+        html: true,
+        linkify: true,
+        typographer: true
+      });
+      return mdParser.render(md);
+    }
     case 'puppeteer':
     case 'playwright':  return renderInBrowser(md, engine);
     default:            throw new Error(`Unsupported renderer: ${engine}`);

@@ -14,4 +14,5 @@ export const OPERATORS = {
   'fetchFromGithub': () => import('../operators/fetchFromGithub/index.js').then(m => m.run),
   'readmeLocationCheck': () => import('../operators/readmeLocationCheck/index.js').then(m => m.run),
   'markdownRender': () => import('../operators/markdownRender/index.js').then(m => m.run),
+  'calculateContrast': () => import('../operators/calculateContrast/index.js').then(m => m.run),
 };

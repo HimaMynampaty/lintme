@@ -57,6 +57,11 @@
             scope: 'document',
             scopes: ['document']
           }];
+        case 'calculateContrast':
+          return [...steps, {
+            id,
+            operator: 'calculateContrast'
+          }];  
         case 'markdownRender':
           return [...steps, {
             id,

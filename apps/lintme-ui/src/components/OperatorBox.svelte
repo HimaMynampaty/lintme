@@ -16,6 +16,7 @@
   import FetchFromGithubOperator from './FetchFromGithubOperator.svelte';
   import ReadmeLocationCheckOperator from './ReadmeLocationCheckOperator.svelte';
   import MarkdownRenderOperator from './MarkdownRenderOperator.svelte';
+  import CalculateContrastOperator from './CalculateContrastOperator.svelte';
 
   export let step;
   export let index;
@@ -133,6 +134,8 @@
             <ReadmeLocationCheckOperator bind:data={step} {storeIndex} on:input={changed} />
           {:else if step.operator === 'markdownRender'}
             <MarkdownRenderOperator bind:data={step} on:input={changed} />  
+          {:else if step.operator === 'calculateContrast'}
+            <CalculateContrastOperator bind:data={step} {storeIndex} on:input={changed} />
           {/if}
         {/key}
       </div>

@@ -20,6 +20,7 @@
     { name: 'fetchFromGithub', label: 'fetchFromGithub' },
     { name: 'readmeLocationCheck', label: 'readmeLocationCheck' },
     { name: 'markdownRender', label: 'markdownRender' },
+    { name: 'calculateContrast', label: 'calculateContrast' },
   ];
 
   function choose(op) {

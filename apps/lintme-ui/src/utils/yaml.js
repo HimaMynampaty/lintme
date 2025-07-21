@@ -25,6 +25,11 @@ export function parseYAML(text = '') {
           fileName: raw.fileName ?? 'README.md',
           fetchType: raw.fetchType ?? 'content'
         };
+      case 'calculateContrast':
+        return {
+          id,
+          operator: 'calculateContrast'
+      };
       case 'readmeLocationCheck':
         return {
           id,
@@ -96,6 +101,9 @@ export function generateYAML(name = '', description = '', steps = []) {
       if (step.operator === 'compare') {
         if ('baseline' in step) out.baseline = step.baseline;
         if ('against' in step) out.against = step.against;
+      }
+      if (step.operator === 'calculateContrast') {
+        if ('minContrast' in step) out.minContrast = step.minContrast;
       }
       if (step.operator === 'fetchFromGithub') {
         if ('repo' in step) out.repo = step.repo;
