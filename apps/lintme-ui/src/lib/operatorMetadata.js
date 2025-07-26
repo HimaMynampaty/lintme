@@ -10,4 +10,8 @@ export const operatorDescriptions = {
   search: 'Search for specific words or phrases.',
   compare: 'Compare values from different steps.',
   detectHateSpeech: 'Detect potentially hateful, biased, or offensive language using Retext.',
+  fetchFromGithub: 'Access GitHub to fetch file path, content, metadata.',
+  readmeLocationCheck: 'Validates presence and location of README.md files',
+  markdownRender: 'Render Markdown using a chosen engine (e.g., marked, puppeteer) to generate HTML, DOM, or image output.',
+  customCode: 'Run user-defined JavaScript on the input data'
 };

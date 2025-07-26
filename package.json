@@ -6,27 +6,37 @@
   "private": true,
   "scripts": {
     "test": "vitest run",
-    "dev": "concurrently -n rules-ui,backend -c green,blue,magenta \"yarn workspace rules-ui dev\" \"yarn workspace backend start\""
+    "dev": "concurrently -n backend -c blue \"yarn workspace backend start\"",
+    "build:functions": "esbuild netlify/functions-src/runPipeline.js --bundle --platform=node --format=esm --outdir=netlify/functions --external:retext-equality --external:retext-profanities --packages=external --out-extension:.js=.mjs"
   },
+  "type": "module",
   "workspaces": [
     "apps/*",
     "packages/*",
-    "packages/operators/*",
     "shared/*"
   ],
   "devDependencies": {
     "autoprefixer": "^10.4.21",
     "c8": "^10.1.3",
     "concurrently": "^9.1.2",
+    "esbuild": "^0.25.6",
     "postcss": "^8.5.4",
     "tailwindcss": "^3",
     "vite": "^6.3.5",
     "vitest": "^3.1.3"
   },
   "dependencies": {
+    "acron": "^1.0.5",
+    "canvas": "^3.1.2",
     "firebase": "^11.10.0",
     "idb": "^8.0.3",
     "mdast-util-gfm": "^3.1.0",
-    "micromark-extension-gfm": "^3.0.0"
+    "micromark-extension-gfm": "^3.0.0",
+    "node-html-parser": "^7.0.1",
+    "puppeteer": "^24.14.0",
+    "retext": "^9.0.0",
+    "retext-equality": "^7.1.0",
+    "retext-profanities": "^8.0.0",
+    "svelte-select": "^5.8.3"
   }
 }

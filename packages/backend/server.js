@@ -1,22 +1,28 @@
 import express from "express";
 import cors    from "cors";
-import fetch   from "node-fetch";
 import Groq    from "groq-sdk";
 import dotenv  from "dotenv";
 import fs      from "fs";
-import path    from "path";
 import os      from "os";
 import { exec } from "child_process";
 import natural from "natural";
-
+import pixelmatch from 'pixelmatch';
+import { PNG }     from 'pngjs';
+import fsPromises  from 'fs/promises';
+import crypto      from 'crypto';
+import path        from 'path';
+import fetch       from 'node-fetch';
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const damerauPkg            = require("talisman/metrics/damerau-levenshtein.js");
 const damerauLevenshtein    = damerauPkg.default || damerauPkg;
+const IMAGE_DIFF_DIR = path.join(path.resolve(), 'public/markdown-images');
+
+
+import markdownRenderRouter from './markdownRenderServer.js';
 
 import { pipeline } from "@xenova/transformers";
 import { checkCrossPlatformDifferenceBackend } from './crossPlatformLintBackend.js'
-
 
 dotenv.config();
 
@@ -24,7 +30,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const __dirname = path.resolve();
+app.use('/markdown-images', express.static(path.join(__dirname, 'public/markdown-images')));
+app.use(markdownRenderRouter);
+
 const shell = os.platform() === "win32" ? "cmd.exe" : "/bin/sh";
+await fsPromises.mkdir(IMAGE_DIFF_DIR, { recursive: true });
 
 let embedder;                          // lazy‑loaded
 const readmeCache = new Map();         // url → { ts, text }
@@ -50,53 +61,11 @@ async function getReadmeCached(url) {
   return text;
 }
 
-// Helper function to get files from a directory
-function getFilesFromDirectory(directoryPath) {
-    try {
-        return fs.readdirSync(directoryPath).filter(file => fs.statSync(path.join(directoryPath, file)).isFile());
-    } catch (error) {
-        console.error("Error reading directory:", error);
-        return [];
-    }
-}
 
-// API to list files from specified folders
-app.get("/api/files", (req, res) => {
-    const { type } = req.query;
-
-    const rulesPath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\rules";
-    const readmePath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\readMe";
-
-    const directoryPath = type === "rules" ? rulesPath : readmePath;
-    const files = getFilesFromDirectory(directoryPath);
-
-    res.json({ files });
+app.get("/", (req, res) => {
+  res.send("LintMe backend is running!");
 });
 
-// API to read file content
-app.get("/api/file-content", (req, res) => {
-    const { type, fileName } = req.query;
-
-    const rulesPath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\rules";
-    const readmePath = "C:\\Users\\Hima\\Documents\\Utah-edu-summer\\LintMe\\apps\\lintme-ui\\examples\\readMe";
-
-    const directoryPath = type === "rules" ? rulesPath : readmePath;
-    const filePath = path.join(directoryPath, fileName);
-
-    if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: "File not found" });
-    }
-
-    try {
-        const content = fs.readFileSync(filePath, "utf-8");
-        res.json({ content });
-    } catch (error) {
-        console.error("Error reading file:", error);
-        res.status(500).json({ error: "Failed to read file" });
-    }
-});
-
-// Keep the existing routes
 
 // API to execute commands
 app.post("/api/validate-commands", (req, res) => {
@@ -160,6 +129,66 @@ app.post("/api/check-link", async (req, res) => {
     }
 });
 
+
+// --- Add this route below others (before app.listen) ---
+app.post('/api/image-diff', async (req, res) => {
+  try {
+    const { imageA, imageB, threshold = 0.10 } = req.body;
+    if (!imageA || !imageB) {
+      return res.status(400).json({ error: "imageA and imageB are required." });
+    }
+
+    const [bufA, bufB] = await Promise.all([
+      fetchBuffer(imageA),
+      fetchBuffer(imageB)
+    ]);
+
+    const pngA = PNG.sync.read(bufA);
+    const pngB = PNG.sync.read(bufB);
+
+    if (pngA.width !== pngB.width || pngA.height !== pngB.height) {
+      return res.status(400).json({
+        error: `Dimension mismatch: ${pngA.width}x${pngA.height} vs ${pngB.width}x${pngB.height}`
+      });
+    }
+
+    const diffPNG = new PNG({ width: pngA.width, height: pngA.height });
+    const changedPixels = pixelmatch(
+      pngA.data, pngB.data, diffPNG.data,
+      pngA.width, pngA.height,
+      { threshold }
+    );
+
+    const id    = crypto.randomUUID().slice(0,8);
+    const fileA = path.join(IMAGE_DIFF_DIR, `cmp_base_${id}.png`);
+    const fileB = path.join(IMAGE_DIFF_DIR, `cmp_against_${id}.png`);
+    const fileD = path.join(IMAGE_DIFF_DIR, `cmp_diff_${id}.png`);
+
+    await Promise.all([
+      fsPromises.writeFile(fileA, bufA),
+      fsPromises.writeFile(fileB, bufB),
+      fsPromises.writeFile(fileD, PNG.sync.write(diffPNG))
+    ]);
+
+    const host = `${req.protocol}://${req.get('host')}`;
+    res.json({
+      changedPixels,
+      pngA: `${host}/markdown-images/${path.basename(fileA)}`,
+      pngB: `${host}/markdown-images/${path.basename(fileB)}`,
+      diff: `${host}/markdown-images/${path.basename(fileD)}`
+    });
+  } catch (err) {
+    console.error('image-diff error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+async function fetchBuffer(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Fetch failed (${r.status}) for ${url}`);
+  return Buffer.from(await r.arrayBuffer());
+}
+
 // API to interact with Groq
 app.post("/api/groq-chat", async (req, res) => {
     const { model, prompt } = req.body;
@@ -184,6 +213,107 @@ app.post("/api/groq-chat", async (req, res) => {
         console.error("Groq API error:", error);
         res.status(500).json({ error: "LLM generation failed." });
     }
+});app.post("/api/github-file", async (req, res) => {
+
+  const {
+    repo,
+    branch = "main",
+    fileName = "README.md",
+    fetchType = "content"
+  } = req.body;
+
+  if (!repo) {
+    return res.status(400).json({ error: "repo is required." });
+  }
+
+  const [owner, repoName] = repo.split("/");
+
+  const refURL = `https://api.github.com/repos/${owner}/${repoName}/branches/${encodeURIComponent(branch)}`;
+  const refResp = await fetch(refURL, {
+    headers: {
+      "User-Agent": "lintme-backend",
+      Authorization: `Bearer ${process.env.GITHUB_TOKEN || ""}`
+    }
+  });
+
+  if (!refResp.ok) {
+    return res.status(refResp.status).json({
+      error: `Branch '${branch}' not found (GitHub returned ${refResp.status})`
+    });
+  }
+
+  const refJson = await refResp.json();
+  const commitSha = refJson?.commit?.commit?.tree?.sha;
+
+  if (!commitSha) {
+    return res.status(500).json({
+      error: "Could not resolve commit SHA for given branch."
+    });
+  }
+
+  const treeURL = `https://api.github.com/repos/${owner}/${repoName}/git/trees/${commitSha}?recursive=1`;
+  console.log(`treeURL": ${treeURL}`);
+  const treeResp = await fetch(treeURL, {
+    headers: {
+      "User-Agent": "lintme-backend",
+      Authorization: `Bearer ${process.env.GITHUB_TOKEN || ""}`
+    }
+  });
+
+  if (!treeResp.ok) {
+    return res.status(treeResp.status).json({
+      error: `GitHub returned ${treeResp.status} for git/trees`
+    });
+  }
+
+  const tree = await treeResp.json();
+
+  const matches = tree.tree.filter(n =>
+    n.type === "blob" && /^readme\.md$/i.test(n.path.split("/").pop())
+  );
+console.log("Fetched tree contains paths:");
+tree.tree.forEach(n => {
+  if (n.type === "blob") {
+    console.log("  -", n.path);
+  }
+});
+
+
+console.log("matches",matches);
+if (!matches.length) {
+  return res.json({
+    repo,
+    branch,
+    fileName,
+    readmes: []
+  });
+}
+  const urls = matches.map(m => ({
+    path: m.path,
+    url: `https://raw.githubusercontent.com/${repo}/${branch}/${m.path}`
+  }));
+
+  if (fetchType === "path") {
+    return res.json({ repo, branch, fileName, readmes: urls });
+  }
+
+  if (fetchType === "content") {
+    const contents = await Promise.all(
+      urls.map(async ({ path, url }) => {
+        try {
+          const r = await fetch(url);
+          const text = await r.text();
+          return { path, url, content: text };
+        } catch (e) {
+          return { path, url, error: e.message };
+        }
+      })
+    );
+
+    return res.json({ repo, branch, fileName, readmes: contents });
+  }
+
+  return res.status(400).json({ error: "Invalid fetchType" });
 });
 
 app.get("/api/wordlist", (req, res) => {
@@ -207,7 +337,6 @@ app.get("/api/wordlist", (req, res) => {
     }
 });
 
-  /*────────────────────────  ROUTE  ────────────────────────*/
   app.post("/api/compare-readmes", async (req, res) => {
     const {
       current,
@@ -505,8 +634,6 @@ app.post("/api/cross-platform-diff", async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
-
-  
 
 const PORT = 5000;
 app.listen(PORT, () => {

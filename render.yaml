@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: lintme-backend
+    env: node
+    rootDir: packages/backend
+    buildCommand: |
+      yarn install \
+      && npx puppeteer browsers install chrome \
+      && yarn build:functions
+    startCommand: node server.js
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false

@@ -1,6 +1,7 @@
-import { retext } from 'retext';
-import retextEquality from 'retext-equality';
-import retextProfanities from 'retext-profanities';
+const { retext } = await import("retext");
+const retextEquality = (await import("retext-equality")).default;
+const retextProfanities = (await import("retext-profanities")).default;
+
 
 export async function run(ctx, cfg = {}) {
   const markdown = ctx.markdown ?? '';

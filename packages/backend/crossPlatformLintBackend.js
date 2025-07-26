@@ -93,10 +93,18 @@ export async function checkCrossPlatformDifferenceBackend(
 /*  RENDER HELPERS                                                    */
 /* ------------------------------------------------------------------ */
 function renderMarkedWithLines(md) {
-  marked.use({
+  marked.setOptions({
     gfm: true,
     headerIds: false,
     mangle: false,
+    breaks: true,
+    pedantic: false,
+    smartLists: true,
+    smartypants: false,
+    xhtml: false,
+  });
+
+  marked.use({
     walkTokens(token) {
       if (token?.position?.start?.line != null) {
         token.attrs = token.attrs || [];
@@ -104,13 +112,22 @@ function renderMarkedWithLines(md) {
       }
     }
   });
-  return marked.parse(md, { sourcepos: true });
+
+  return marked.parse(md);
 }
 
-async function renderByType(md, engine, withLines = false) {
+
+export async function renderByType(md, engine, withLines = false) {
   switch (engine) {
     case 'marked':      return withLines ? renderMarkedWithLines(md) : marked.parse(md);
-    case 'markdown-it': return new MarkdownIt().render(md);
+    case 'markdown-it': {
+      const mdParser = new MarkdownIt({
+        html: true,
+        linkify: true,
+        typographer: true
+      });
+      return mdParser.render(md);
+    }
     case 'puppeteer':
     case 'playwright':  return renderInBrowser(md, engine);
     default:            throw new Error(`Unsupported renderer: ${engine}`);
@@ -170,7 +187,10 @@ async function renderInBrowser(markdown, tool) {
   }
 
   if (tool === 'puppeteer') {
-    const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+    //const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+    const browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
     const page    = await browser.newPage();
     const html    = await renderWith(page);
     await browser.close();
@@ -191,12 +211,17 @@ async function renderInBrowser(markdown, tool) {
 /* ------------------------------------------------------------------ */
 /*  PNG HELPERS                                                       */
 /* ------------------------------------------------------------------ */
-async function htmlToPNG(html, { width = 800, height = 600 } = {}) {
-  const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+export async function htmlToPNG(html, { width = 800, height = 600 } = {}) {
+  //const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+  const browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
+  console.log('Resolved Chromium path:', (await import('puppeteer')).executablePath());
+
   const page    = await browser.newPage();
-  await page.setViewport({ width, height, deviceScaleFactor: 1 });
+  await page.setViewport({ width: 1024, height: 800, deviceScaleFactor: 1 });
   await page.setContent(html, { waitUntil: 'networkidle0' });
-  const buffer  = await page.screenshot({ type: 'png', fullPage: false });
+  const buffer = await page.screenshot({ type: 'png', fullPage: true , captureBeyondViewport: true });
   await browser.close();
   return buffer;
 }

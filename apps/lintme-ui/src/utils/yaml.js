@@ -16,6 +16,39 @@ export function parseYAML(text = '') {
         return { id, operator: 'compare', baseline: raw.baseline ?? '', against: raw.against ?? '' };
       case 'isPresent':
         return { id, operator: 'isPresent', target: raw.target ?? '' };
+      case 'fetchFromGithub':
+        return {
+          id,
+          operator: 'fetchFromGithub',
+          repo: raw.repo ?? '',
+          branch: raw.branch ?? 'main',
+          fileName: raw.fileName ?? 'README.md',
+          fetchType: raw.fetchType ?? 'content'
+        };
+      case 'calculateContrast':
+        return {
+          id,
+          operator: 'calculateContrast'
+      };
+      case 'customCode':
+        return {
+          id,
+          operator: 'customCode',
+          code: raw.code ?? ''
+        };
+      case 'readmeLocationCheck':
+        return {
+          id,
+          operator: 'readmeLocationCheck',
+          paths: raw.paths ?? []
+        };
+      case 'markdownRender':
+        return {
+          id,
+          operator: 'markdownRender',
+          renderer: raw.renderer ?? 'marked',
+          output: raw.output ?? 'html'
+        };  
       case 'sage':
       case 'count':
       case 'length':
@@ -61,10 +94,30 @@ export function generateYAML(name = '', description = '', steps = []) {
         if ('prompt' in step) out.prompt = step.prompt;
         if ('model' in step) out.model = step.model;
       }
-
+      if (step.operator === 'readmeLocationCheck') {
+        if (Array.isArray(step.paths) && step.paths.length > 0) {
+          out.paths = step.paths;
+        }
+      }
+      if (step.operator === 'markdownRender') {
+        if ('renderer' in step) out.renderer = step.renderer;
+        if ('output' in step) out.output = step.output;
+      }
+      if (step.operator === 'customCode') {
+        if ('code' in step) out.code = step.code;
+      }
       if (step.operator === 'compare') {
         if ('baseline' in step) out.baseline = step.baseline;
         if ('against' in step) out.against = step.against;
+      }
+      if (step.operator === 'calculateContrast') {
+        if ('minContrast' in step) out.minContrast = step.minContrast;
+      }
+      if (step.operator === 'fetchFromGithub') {
+        if ('repo' in step) out.repo = step.repo;
+        if ('branch' in step) out.branch = step.branch;
+        if ('fileName' in step && step.fileName) out.fileName = step.fileName;
+        if ('fetchType' in step && step.fetchType !== 'content') out.fetchType = step.fetchType;
       }
 
       if (

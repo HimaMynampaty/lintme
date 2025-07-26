@@ -57,6 +57,24 @@
             scope: 'document',
             scopes: ['document']
           }];
+        case 'calculateContrast':
+          return [...steps, {
+            id,
+            operator: 'calculateContrast'
+          }];  
+        case 'markdownRender':
+          return [...steps, {
+            id,
+            operator: 'markdownRender',
+            renderer: 'marked',      
+            output: 'html'    
+          }];  
+        case 'customCode':
+          return [...steps, {
+            id,
+            operator: 'customCode',
+            code: `export function run(ctx) {\n  // Write your custom logic here\n  return ctx;\n}`
+          }];  
         default:
           return [...steps, { id, operator: opName }];  
       }

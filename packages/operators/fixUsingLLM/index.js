@@ -37,42 +37,41 @@ export async function run(ctx, cfg = {}) {
     .join('\n');
 
   const fullPrompt = `
-You are a Markdown linter and fixer.
+  You are a Markdown linter. Your job is to fix ONLY the issues that violate the specific rule defined below.
 
-## Rule Definition (YAML):
-${ruleYaml}
+  ## Rule Definition (YAML):
+  ${ruleYaml}
 
-## Intermediate Operator Outputs:
-${JSON.stringify(operatorOutputs, null, 2)}
+  ## Operator-Specific Prompt:
+  ${prompt}
 
-## Current Diagnostics
-${diagnosticText || '(none)'}
+  ## Diagnostics from Previous Steps:
+  ${diagnosticText || '(none)'}
 
+  ## Markdown Document:
+  \`\`\`markdown
+  ${ctx.markdown}
+  \`\`\`
 
-## Markdown to Review:
-\`\`\`markdown
-${ctx.markdown}
-\`\`\`
+  ## Very Important Instructions:
 
-## Instructions:
-Use the rule definition and diagnostics above to identify and fix issues in the Markdown.
+  - ONLY fix issues that are directly and clearly covered by the rule above.
+  - DO NOT make any changes based on grammar, tone, inclusivity, or clarity unless the rule *explicitly* calls for it.
+  - DO NOT invent improvements or infer intent not stated in the rule.
+  - If the Markdown content does NOT violate the rule, return the **original input exactly as is** — unchanged.
+  - You MUST behave like a deterministic function: same input → same output.
+  - If there is even slight ambiguity in whether something violates the rule, you MUST NOT change it.
+  - DO NOT change headings, formatting, phrasing, or terms unless they clearly break the rule.
+  - If the original Markdown ends with a blank line, your output must preserve that exact trailing newline.
 
-Apply the rule's intent exactly as described in the YAML.
+  ## Output Format:
 
-You MUST base your fixes only on the rule and its configuration — do NOT invent new rules. If there are no issues related to the rule passes, you must return the same markdown content as fix. 
+  - ONLY include the corrected (or unmodified) Markdown **below** the marker.
+  - NEVER include explanations, comments, anything after markdown or wrap it in a code block.
 
-Additionally:
-${prompt}
+  ---FIXED MARKDOWN BELOW---
+  `
 
-## Required Output:
-You MUST append only the fixed Markdown version **below** this line and nothing else:
-
-
----FIXED MARKDOWN BELOW---
-
-Only the corrected Markdown should be present below that line.
-Do NOT include explanations, notes, or wrap the output in code blocks.
-`.trim();
 
   console.log('[fixUsingLLM] Prompt sent to LLM:\n', fullPrompt);
 
@@ -85,33 +84,51 @@ Do NOT include explanations, notes, or wrap the output in code blocks.
   const markerIndex = llmResult.indexOf(marker);
 
   if (markerIndex !== -1) {
-    fixedText = llmResult.slice(markerIndex + marker.length).trim();
+    fixedText = llmResult.slice(markerIndex + marker.length);
   } else {
     ctx.diagnostics.push({
       line: 1,
       severity: 'warning',
       message: 'fixUsingLLM: Marker not found — falling back to raw LLM output.'
     });
-      ctx.rawLLMFallback = llmResult;
-      fixedText = llmResult
-        .replace(/```(markdown)?/g, '')
-        .trim();
+    ctx.rawLLMFallback = llmResult;
+    fixedText = llmResult.replace(/```(markdown)?/g, '');
   }
-
+  fixedText = stripCodeFence(fixedText);
   ctx.fixedMarkdown = fixedText;
   ctx.llmResponse = llmResult;
+
+  if (fixedText.trim() !== ctx.markdown.trim()) {
+    ctx.diagnostics.push({
+      line: 1,
+      severity: 'error',
+      message: 'Lint failed — issues detected and corrected by the LLM.'
+    });
+  } else {
+    ctx.diagnostics.push({
+      line: 1,
+      severity: 'info',
+      message: 'Lint successful! No issues found.'
+    });
+  }
 
   return { prompt, model };
 }
 
+function stripCodeFence(text = '') {
+  text = text.replace(/^\s*```(?:\w+)?\s*\n?/i, '');
+  text = text.replace(/\n?```\s*$/i, '');
+  return text;
+}
+
 async function callGroqModel(model, prompt) {
   try {
-    const response = await fetch("http://localhost:5000/api/groq-chat", {
+    const response = await fetch("https://lintme-backend.onrender.com/api/groq-chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model, prompt })
     });
-
+    console.log("Calling backend from render")
     const data = await response.json();
     return data.result || "No valid response.";
   } catch (error) {

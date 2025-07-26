@@ -1,5 +1,5 @@
 [build]
-command = "yarn workspace lintme-ui build"
+command = "yarn build:functions && yarn workspace lintme-ui build"
 publish = "apps/lintme-ui/dist"
 
 [dev]
@@ -12,3 +12,8 @@ autoLaunch = true
 
 [functions]
 directory = "netlify/functions"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
