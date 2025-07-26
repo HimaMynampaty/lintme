@@ -21,6 +21,7 @@
     { name: 'readmeLocationCheck', label: 'readmeLocationCheck' },
     { name: 'markdownRender', label: 'markdownRender' },
     { name: 'calculateContrast', label: 'calculateContrast' },
+    { name: 'customCode', label: 'customCode' }
   ];
 
   function choose(op) {
@@ -58,12 +59,13 @@
 
   </div>
 
-  <button
-    class="w-full mt-2 text-xs text-center text-gray-500 hover:text-gray-700"
-    on:click={() => dispatch('close')}
-  >
-    Close
-  </button>
+<button
+  class="w-full mt-2 text-xs text-center text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-100"
+  on:click={() => dispatch('close')}
+>
+  Close
+</button>
+
 </div>
 
 <style>

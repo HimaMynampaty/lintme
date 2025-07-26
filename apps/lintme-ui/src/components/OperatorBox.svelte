@@ -17,6 +17,7 @@
   import ReadmeLocationCheckOperator from './ReadmeLocationCheckOperator.svelte';
   import MarkdownRenderOperator from './MarkdownRenderOperator.svelte';
   import CalculateContrastOperator from './CalculateContrastOperator.svelte';
+  import CustomCodeOperator from './CustomCodeOperator.svelte';
 
   export let step;
   export let index;
@@ -64,7 +65,7 @@
 
     <button
       type="button"
-      class="w-full text-left border border-gray-300 bg-white px-4 py-2 rounded-md shadow-sm text-sm text-indigo-700 flex items-center gap-2 hover:shadow-md transition"
+      class="w-full text-left border border-gray-300 bg-white px-4 py-2 rounded-md shadow-sm text-sm text-gray-800 flex items-center gap-2 hover:shadow-md hover:bg-white transition"
       on:click={togglePopup}
       data-step={step?.id ? `step-${step.id}` : ''}
       aria-haspopup="dialog"
@@ -76,7 +77,7 @@
     </button>
 
     <button
-      class="absolute -top-2 -right-2 bg-white text-gray-400 hover:text-red-500 border border-gray-200 rounded-full w-6 h-6 text-xs flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+      class="absolute -top-2 -right-2 bg-white text-gray-400 hover:text-red-800 border border-gray-200 rounded-full w-6 h-6 text-xs flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100  hover:bg-white transition-opacity"
       on:click|stopPropagation={remove}
       aria-label="Remove step"
       title="Delete step"
@@ -136,6 +137,8 @@
             <MarkdownRenderOperator bind:data={step} on:input={changed} />  
           {:else if step.operator === 'calculateContrast'}
             <CalculateContrastOperator bind:data={step} {storeIndex} on:input={changed} />
+          {:else if step.operator === 'customCode'}
+            <CustomCodeOperator bind:data={step} on:input={changed} />
           {/if}
         {/key}
       </div>

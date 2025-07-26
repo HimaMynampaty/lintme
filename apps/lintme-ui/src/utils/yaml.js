@@ -30,6 +30,12 @@ export function parseYAML(text = '') {
           id,
           operator: 'calculateContrast'
       };
+      case 'customCode':
+        return {
+          id,
+          operator: 'customCode',
+          code: raw.code ?? ''
+        };
       case 'readmeLocationCheck':
         return {
           id,
@@ -97,7 +103,9 @@ export function generateYAML(name = '', description = '', steps = []) {
         if ('renderer' in step) out.renderer = step.renderer;
         if ('output' in step) out.output = step.output;
       }
-
+      if (step.operator === 'customCode') {
+        if ('code' in step) out.code = step.code;
+      }
       if (step.operator === 'compare') {
         if ('baseline' in step) out.baseline = step.baseline;
         if ('against' in step) out.against = step.against;

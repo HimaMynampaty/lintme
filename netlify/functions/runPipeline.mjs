@@ -1549,6 +1549,50 @@ var init_calculateContrast = __esm({
   }
 });
 
+// packages/operators/customCode/index.js
+var customCode_exports = {};
+__export(customCode_exports, {
+  run: () => run17
+});
+async function run17(ctx, cfg = {}) {
+  const { code = "" } = cfg;
+  if (!code.trim()) {
+    ctx.diagnostics.push({
+      line: 1,
+      severity: "error",
+      message: "customCode: No code provided in configuration."
+    });
+    return ctx;
+  }
+  try {
+    const normalized = stripExports(code);
+    const wrapper = `
+${normalized}
+if (typeof run !== 'function') {
+  throw new Error('function run(ctx) not found');
+}
+return run(ctx);
+`;
+    const exec = new Function("ctx", wrapper);
+    const result = await Promise.resolve(exec(ctx));
+    return result && typeof result === "object" ? result : ctx;
+  } catch (err) {
+    ctx.diagnostics.push({
+      line: 1,
+      severity: "error",
+      message: `customCode: Error executing code \u2013 ${err.message}`
+    });
+    return ctx;
+  }
+}
+function stripExports(src = "") {
+  return src.replace(/^\s*export\s+(async\s+)?function\s+run/m, "$1function run").replace(/^\s*export\s+default\s+/m, "");
+}
+var init_customCode = __esm({
+  "packages/operators/customCode/index.js"() {
+  }
+});
+
 // packages/pipeline-runner/utils/parseRules.js
 import yaml from "js-yaml";
 function parseRules(yamlText) {
@@ -1576,7 +1620,8 @@ var OPERATORS = {
   "fetchFromGithub": () => Promise.resolve().then(() => (init_fetchFromGithub(), fetchFromGithub_exports)).then((m) => m.run),
   "readmeLocationCheck": () => Promise.resolve().then(() => (init_readmeLocationCheck(), readmeLocationCheck_exports)).then((m) => m.run),
   "markdownRender": () => Promise.resolve().then(() => (init_markdownRender(), markdownRender_exports)).then((m) => m.run),
-  "calculateContrast": () => Promise.resolve().then(() => (init_calculateContrast(), calculateContrast_exports)).then((m) => m.run)
+  "calculateContrast": () => Promise.resolve().then(() => (init_calculateContrast(), calculateContrast_exports)).then((m) => m.run),
+  "customCode": () => Promise.resolve().then(() => (init_customCode(), customCode_exports)).then((m) => m.run)
 };
 
 // packages/pipeline-runner/index.js
@@ -1604,8 +1649,8 @@ async function runPipeline(yamlText, markdown) {
       });
       continue;
     }
-    const run17 = await loader();
-    const opOutput = await run17(ctx, step);
+    const run18 = await loader();
+    const opOutput = await run18(ctx, step);
     if (opOutput && typeof opOutput === "object" && opOutput !== ctx) {
       ctx.pipelineResults ??= [];
       ctx.pipelineResults.push({ name: opName, data: opOutput });

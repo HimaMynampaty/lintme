@@ -7,6 +7,7 @@
     import { collection, addDoc, getDocs, deleteDoc, getDoc, doc, query, where, setDoc } from "firebase/firestore";
     import { db } from "./lib/firebase.js";
     import SvelteSelect from 'svelte-select';
+    import './styles/lintme.css';
 
     const sharedFontSize = 14;
     let markdownText = "";
@@ -47,6 +48,8 @@
     let selectedRule      = null;
     let selectedRuleId    = ''; 
     let selectedReadme     = null;
+    let ruleWarning = '';
+
     const baseURL = import.meta.env.VITE_BACKEND_URL;
 
 
@@ -165,9 +168,6 @@
       outputEditor.setValue(lintResults || 'No lint results to display yet.');
     }
 
-
-    let selectedCombinedRule = '';
-
     onMount(async () => {
       rulesEditor = monaco.editor.create(rulesEditorContainer, {
         value: rulesYaml,
@@ -175,7 +175,8 @@
         automaticLayout: true,
         minimap: { enabled: false },
         fixedOverflowWidgets: true,
-        fontSize: sharedFontSize
+        fontSize: sharedFontSize,
+        wordWrap: 'on'
       });
 
       markdownEditor = monaco.editor.create(markdownEditorContainer, {
@@ -184,7 +185,8 @@
         automaticLayout: true,
         minimap: { enabled: false },
         fixedOverflowWidgets: true,
-        fontSize: sharedFontSize
+        fontSize: sharedFontSize,
+        wordWrap: 'on'
       });
 
       markdownEditor.onDidChangeModelContent(() => {
@@ -196,7 +198,8 @@
         minimap: { enabled: false },
         fixedOverflowWidgets: true,
         fontSize: sharedFontSize,
-        renderSideBySide: false
+        renderSideBySide: false,
+        wordWrap: 'on'
       });
       
 
@@ -324,14 +327,17 @@
       diffEditor.setModel({ original: originalModel, modified: modifiedModel });
     }
 
-
-
     async function loadRuleFromDB(id) {
       const docSnap = await getDoc(doc(db, "rules", id));
       if (docSnap.exists()) {
         const rec = { id: docSnap.id, ...docSnap.data() };
         rulesYaml = rec.yaml;
-        if (rulesEditor) rulesEditor.setValue(rec.yaml);
+
+        await tick();
+
+        if (rulesEditor) {
+          rulesEditor.setValue(rulesYaml);
+        }
       } else {
         console.warn("Rule not found in Firestore", id);
       }
@@ -448,6 +454,10 @@
     async function runLinter() {
       
       try {
+      ruleWarning   = '';
+        lintResults   = '';
+        diagnostics   = [];
+        fixedMarkdown = '';
       await tick();
       const ruleContent = rulesEditor?.getValue();
       const markdownContent = markdownEditor?.getValue();
@@ -503,7 +513,10 @@
         } else if (isJudging) {
           lintResults = `Lint successful! No issues found.`;
         } else {
-          lintResults = `This rule does not produce actual lint results. It may be missing a judgment step like "threshold".`;
+          ruleWarning = `This rule does not produce actual lint results. It may be missing a judgment step like "threshold", "isPresent", "compare".`;
+          setTimeout(() => {
+            ruleWarning = '';
+          }, 5000);
         }
 
         if (!isJudging && ctx.pipelineResults && ctx.pipelineResults.length) {
@@ -701,261 +714,6 @@
  
   </script>
 
-  <style>
-
-  :root {
-    --header-h: 56px;
-  }
-
-  main {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;        
-    font-family: Arial, sans-serif;
-    overflow: hidden;     
-  }
-
-  .header-container {
-    height: var(--header-h);
-    flex-shrink: 0;         
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 0 20px;
-    background: #fff;
-    border-bottom: 1px solid #ccc;
-  }
-
-  h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: #7859c3;
-  }
-
-  button {
-    padding: 10px 16px;
-    font-size: 14px;
-    background: #7859c3;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background .15s;
-  }
-  button:hover { background: #673ec8; }
-
-  .container {
-    flex: 1 1 auto;
-    display: flex;
-    gap: 10px;
-    padding: 10px 0; 
-    box-sizing: border-box;
-    overflow: hidden;
-    width: 100%;      
-    max-width: 100vw; 
-  }
-
-  .file-upload,
-  .diff-editor-container {
-    flex: 1 1 0;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    width: 100%;     
-    max-width: 100%; 
-    position: relative;
-  }
-
-  .editor-container,
-  .diff-editor-container {
-    flex: 1 1 0;
-    min-width: 0;
-    overflow: visible;
-    width: 100%;
-  }
-
-  .hidden { display: none !important; }
-
-  .diff-editor-container { display: none; }
-  .diff-editor-container.show { display: flex; }
-  .resizable-pane {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .top-pane {
-    flex-grow: 1;
-    min-height: 100px;
-    display: flex;
-    flex-direction: column;
-    overflow: visible;
-  }
-.bottom-pane {
-  min-height: 0;
-  max-height: 85vh;
-  background: #1e1e1e;
-  border-top: 3px solid #7859c3;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  box-shadow: inset 0 4px 4px -2px rgba(0, 0, 0, 0.5); 
-}
-
-
-  .mode-toggle-bar {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 10px;
-    background: #f0f4f8;
-    border-right: 1px solid #ccc;
-    padding: 10px 0;
-    width: 40px; 
-    flex-shrink: 0;
-  }
-
-  .mode-toggle-bar button {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    width: 100%;
-    background: #7859c3;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 0;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background .15s;
-  }
-
-  .mode-toggle-bar button:hover {
-    background: #5f37bd;
-  }
-
-  .mode-toggle-bar button.active {
-    background: #673ec8;
-    font-weight: bold;
-  }
-
-  .loader-spinner {
-    width: 12px;
-    height: 12px;
-    border: 2px solid #ccc;
-    border-top-color: #7859c3;
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-    display: inline-block;
-    margin-left: 6px;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-
-.rule-select-row{
-  display:flex;
-  align-items:center;       
-  gap:8px;                 
-  margin-bottom:10px;     
-}
-
-.rule-select-row button{
-  height:40px;              
-  line-height:1;           
-}
-
-.diff-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.diff-switch input {
-  display: none;                
-}
-
-.diff-switch .slider {
-  position: relative;
-  width: 46px;
-  height: 24px;
-  background: #888;
-  border-radius: 9999px;
-  transition: background 0.2s;
-}
-
-.diff-switch .slider::before {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 20px;
-  height: 20px;
-  background: #fff;
-  border-radius: 50%;
-  transition: transform 0.2s;
-}
-
-.diff-switch input:checked + .slider {
-  background: #7859c3;
-}
-
-.diff-switch input:checked + .slider::before {
-  transform: translateX(22px);
-}
-
-.header-container {
-  justify-content: space-between; 
-}
-
-.left-header {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-button.running {
-  cursor: progress;
-}
-
-button {
-  background: #7859c3;
-  color: #fff;
-}
-
-button.success {
-  background: #2DA44E;
-}
-
-button.error {
-  background: #D32F2F;
-}
-
-button.running {
-  background: #888;
-  cursor: progress;
-}
-
-button {
-  transition: background 0.3s ease;
-}
-.compact-select {
-  flex: 1 1 auto;         
-  min-width: 180px;          
-  max-width: 100%;           
-}
-
-
-  </style>
-
   <main>
     <div class="header-container">
       <div class="left-header">
@@ -1011,16 +769,17 @@ button {
               class:active={mode === 'runner'}
               on:click={() => mode = 'runner'}
             >
-              Runner
+              Rule&nbsp;Editor
             </button>
             <button
               class:active={mode === 'loader'}
               on:click={() => mode = 'loader'}
             >
-              Loader
+              Rules&nbsp;Runner
             </button>
           </div>
           <div style="flex:1; display:flex; flex-direction:column;">
+            {#if mode === 'runner'}
             <div class="rule-select-row">
               <div class="compact-select">
               <SvelteSelect
@@ -1041,7 +800,7 @@ button {
                 }}
               />
               </div>
-              {#if mode === 'runner'}
+              
                 <button on:click={saveCurrentRule}>Save Rule</button>
                     {#if selectedRule?.type === 'saved'}
                       <button class="delete-btn"
@@ -1057,14 +816,20 @@ button {
                         Delete Rule
                       </button>
                     {/if}
-              {/if}
+              
             </div>
-            
+
+            {/if}
 
           {#if mode === 'runner'}
             <div class="bg-gray-50 p-4 rounded border relative">
               <OperatorTriggerPanel bind:rulesEditor />
             </div>
+              {#if ruleWarning}
+                <div class="text-base text-yellow-700 bg-yellow-100 p-2 rounded border border-yellow-300 mt-2" style="font-size: 14px;">
+                  ⚠️ {ruleWarning}
+                </div>
+              {/if}
           {/if}
 
     <div
@@ -1102,7 +867,6 @@ button {
         </label>
 
           <button
-            class="text-xs text-blue-600 hover:text-blue-800"
             on:click={() => toggleCategoryExpand(cat.name)}
             aria-expanded={expandedCategories.has(cat.name)}
           >
@@ -1113,13 +877,50 @@ button {
           {#if expandedCategories.has(cat.name)}
             <div class="ml-4 mt-2 flex flex-col gap-1">
               {#each ruleList.filter(r => r.category === cat.name) as rule (rule.id)}
-                <label class="flex items-center gap-2 text-sm">
+                <div
+                  class="flex items-center gap-2 text-sm rule-item"
+                  tabindex="0"
+                  role="button"
+                  on:click={async () => {
+                    selectedRule = { label: rule.name, value: rule.id, type: 'saved' };
+                    selectedRuleId = rule.id;
+                    mode = 'runner';
+                    await loadRuleFromDB(rule.id);
+                    await tick();
+
+                    if (rulesEditorContainer) {
+                      rulesEditorContainer.classList.add('flash-border');
+                      setTimeout(() => {
+                        rulesEditorContainer.classList.remove('flash-border');
+                      }, 1000);
+                    }
+                  }}
+                  on:keydown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      selectedRule = { label: rule.name, value: rule.id, type: 'saved' };
+                      selectedRuleId = rule.id;
+                      mode = 'runner';
+                      loadRuleFromDB(rule.id).then(() => {
+                        if (rulesEditorContainer) {
+                          rulesEditorContainer.classList.add('flash-border');
+                          setTimeout(() => {
+                            rulesEditorContainer.classList.remove('flash-border');
+                          }, 1000);
+                        }
+                      });
+                    }
+                  }}
+                >
                   <input
                     type="checkbox"
                     bind:group={selectedRuleIds}
                     value={rule.id}
+                    on:click|stopPropagation
                   />
-                  {rule.name}
+                  <span title="Click to open this rule in the Rule Editor">
+                    {rule.name}
+                  </span>
                   {#if ruleStatus[rule.id] === 'running'}
                     <span class="loader-spinner"></span>
                   {:else if ruleStatus[rule.id] === 'pass'}
@@ -1127,9 +928,7 @@ button {
                   {:else if ruleStatus[rule.id] === 'fail'}
                     ❌
                   {/if}
-                </label>
-              {:else}
-                <span class="text-xs text-gray-400 italic">No rules in this category</span>
+                </div>
               {/each}
             </div>
           {/if}
@@ -1212,8 +1011,6 @@ button {
 
 
   </div>
-
-
 
     {#if highlightedMarkdown}
       <div class="lint-preview" bind:this={markdownPreviewDiv}>
