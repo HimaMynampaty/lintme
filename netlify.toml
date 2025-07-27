@@ -1,5 +1,5 @@
 [build]
-command = "yarn build:functions && yarn workspace lintme-ui build"
+command = "yarn workspace lintme-ui build"
 publish = "apps/lintme-ui/dist"
 
 [dev]
@@ -8,10 +8,7 @@ targetPort = 5173
 port = 8888
 framework = "vite"
 publish = "apps/lintme-ui"
-autoLaunch = true  
-
-[functions]
-directory = "netlify/functions"
+autoLaunch = true
 
 [[redirects]]
   from = "/*"

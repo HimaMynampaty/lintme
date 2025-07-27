@@ -20,6 +20,7 @@ const IMAGE_DIFF_DIR = path.join(path.resolve(), 'public/markdown-images');
 
 
 import markdownRenderRouter from './markdownRenderServer.js';
+import { runPipeline, parseRules } from '../pipeline-runner/index.js';
 
 import { pipeline } from "@xenova/transformers";
 import { checkCrossPlatformDifferenceBackend } from './crossPlatformLintBackend.js'
@@ -188,6 +189,25 @@ async function fetchBuffer(url) {
   if (!r.ok) throw new Error(`Fetch failed (${r.status}) for ${url}`);
   return Buffer.from(await r.arrayBuffer());
 }
+
+app.post('/api/run-pipeline', async (req, res) => {
+  try {
+    const { yamlText = '', markdown = '' } = req.body || {};
+
+    if (!yamlText.trim() || !markdown.trim()) {
+      return res.status(400).json({ error: 'yamlText and markdown are required.' });
+    }
+
+    const ctx  = await runPipeline(yamlText, markdown);
+    const { pipeline = [] } = parseRules(yamlText);
+    const lastOperator = pipeline.at(-1)?.operator ?? null;
+
+    res.json({ ...ctx, lastOperator });
+  } catch (err) {
+    console.error('run-pipeline error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // API to interact with Groq
 app.post("/api/groq-chat", async (req, res) => {

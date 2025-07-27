@@ -6,8 +6,7 @@
   "private": true,
   "scripts": {
     "test": "vitest run",
-    "dev": "concurrently -n backend -c blue \"yarn workspace backend start\"",
-    "build:functions": "esbuild netlify/functions-src/runPipeline.js --bundle --platform=node --format=esm  --external:canvas  --outdir=netlify/functions --out-extension:.js=.mjs"
+    "dev": "concurrently -n backend -c blue \"yarn workspace backend start\""
   },
   "type": "module",
   "workspaces": [

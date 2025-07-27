@@ -469,7 +469,7 @@
       lintState = 'running';
       originalText = markdownContent;
 
-      const response = await fetch('/.netlify/functions/runPipeline', {
+      const response = await fetch(`${baseURL}/api/run-pipeline`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -614,7 +614,7 @@
           const rec = { id: docSnap.id, ...docSnap.data() };
           collectedYamls.push(rec.yaml);
 
-          const response = await fetch('/.netlify/functions/runPipeline', {
+          const response = await fetch(`${baseURL}/api/run-pipeline`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ yamlText: rec.yaml, markdown: workingMarkdown }),
