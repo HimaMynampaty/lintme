@@ -939,7 +939,7 @@ function run10(ctx, cfg = {}) {
     });
     return ctx;
   }
-  const queries = rawQuery.split(",").map((q) => q.trim()).filter((q) => q.length > 0);
+  const queries = rawQuery.split(",").map((q) => q.trim()).filter(Boolean);
   if (queries.length === 0) {
     ctx.diagnostics.push({
       line: 1,
@@ -948,32 +948,43 @@ function run10(ctx, cfg = {}) {
     });
     return ctx;
   }
-  const scopeName = cfg.scope === "previousstepoutput" && ctx.extracted ? "previousstepoutput" : "document";
+  const scopeName = cfg.scope === "previousstepoutput" ? "previousstepoutput" : "document";
   const result = { [scopeName]: [] };
-  const add = (line, text) => result[scopeName].push({ line, content: text.trim() });
-  const matchesQuery = (text) => queries.some((q) => text.toLowerCase().includes(q.toLowerCase()));
+  const add = (line, content) => result[scopeName].push({ line, content: content.trim() });
+  const matches = (text) => queries.some((q) => text.toLowerCase().includes(q.toLowerCase()));
   if (scopeName === "document") {
-    (ctx.markdown ?? "").split("\n").forEach((l, i) => {
-      if (matchesQuery(l)) add(i + 1, l);
+    (ctx.markdown ?? "").split("\n").forEach((line, i) => {
+      if (matches(line)) add(i + 1, line);
     });
   } else {
-    const prev = ctx.extracted.data ?? {};
-    const walk = (node) => {
-      if (!node) return;
-      if (typeof node === "string") return;
-      if (Array.isArray(node)) return node.forEach(walk);
-      if (node.content && matchesQuery(node.content)) {
-        add(node.line ?? node.position?.start?.line ?? 1, node.content);
+    const previous = ctx.extracted?.data ?? ctx.fetchResult?.data ?? ctx.fetchResult ?? ctx.extracted ?? {};
+    const walk = (node, lineHint = 1) => {
+      if (node == null) return;
+      if (["string", "number", "boolean"].includes(typeof node)) {
+        const str = String(node);
+        if (matches(str)) add(lineHint, str);
         return;
       }
-      const raw = node.value ?? node.raw ?? "";
-      if (typeof raw === "string" && matchesQuery(raw)) {
-        add(node.line ?? node.position?.start?.line ?? 1, raw);
+      if (Array.isArray(node)) {
+        node.forEach((v, idx) => walk(v, idx + 1));
+        return;
       }
-      if (node.matches) walk(node.matches);
-      if (node.children) walk(node.children);
+      if (typeof node === "object") {
+        for (const [k, v] of Object.entries(node)) {
+          if (matches(k)) add(lineHint, k);
+          if (typeof v === "string" && matches(v)) {
+            add(lineHint, `${k}: ${v}`);
+          } else {
+            walk(v, lineHint);
+          }
+        }
+      }
     };
-    Object.values(prev).forEach(walk);
+    walk(previous);
+    if (result[scopeName].length === 0) {
+      const asJson = JSON.stringify(previous);
+      if (matches(asJson)) add(1, asJson);
+    }
   }
   ctx.extracted = {
     target: queries.join(", "),
@@ -1198,8 +1209,9 @@ async function run13(ctx, cfg = {}) {
     branch = "main",
     fileName = "README.md",
     fetchType = "content",
+    metaPath = "",
+    //apiBase    = "http://localhost:5000"
     apiBase = "https://lintme-backend.onrender.com"
-    //apiBase   = "http://localhost:5000"
   } = cfg;
   const endpoint = `${apiBase}/api/github-file`;
   console.log("[fetchFromGithub] Calling:", endpoint);
@@ -1215,7 +1227,7 @@ async function run13(ctx, cfg = {}) {
     const res = await fetch2(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ repo, branch, fileName, fetchType })
+      body: JSON.stringify({ repo, branch, fileName, fetchType, metaPath })
     });
     if (!res.ok) {
       const text = await res.text();
@@ -1236,6 +1248,18 @@ async function run13(ctx, cfg = {}) {
     }
     const payload = await res.json();
     ctx.fetchResult = payload;
+    if (fetchType === "metadata") {
+      ctx.internalInfo = [{
+        line: 1,
+        severity: "info",
+        message: `Fetched metadata from '${repo}' at path '${metaPath || "[root]"}'`
+      }];
+      return {
+        data: {
+          metadata: payload.metadata
+        }
+      };
+    }
     const readmes = payload.readmes || [];
     if (!readmes.length) {
       ctx.diagnostics.push({

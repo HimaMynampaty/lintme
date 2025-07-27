@@ -23,13 +23,16 @@ export function parseYAML(text = '') {
           repo: raw.repo ?? '',
           branch: raw.branch ?? 'main',
           fileName: raw.fileName ?? 'README.md',
-          fetchType: raw.fetchType ?? 'content'
+          fetchType: raw.fetchType ?? 'content',
+          metaPath: raw.metaPath ?? '',
+          useCustomMetaPath: raw.useCustomMetaPath ?? false
         };
+
       case 'calculateContrast':
         return {
           id,
           operator: 'calculateContrast'
-      };
+        };
       case 'customCode':
         return {
           id,
@@ -48,7 +51,7 @@ export function parseYAML(text = '') {
           operator: 'markdownRender',
           renderer: raw.renderer ?? 'marked',
           output: raw.output ?? 'html'
-        };  
+        };
       case 'sage':
       case 'count':
       case 'length':
@@ -117,9 +120,15 @@ export function generateYAML(name = '', description = '', steps = []) {
         if ('repo' in step) out.repo = step.repo;
         if ('branch' in step) out.branch = step.branch;
         if ('fileName' in step && step.fileName) out.fileName = step.fileName;
-        if ('fetchType' in step && step.fetchType !== 'content') out.fetchType = step.fetchType;
-      }
+        if ('fetchType' in step) {
+          out.fetchType = step.fetchType;
+        }
 
+        if (step.fetchType === 'metadata') {
+          if ('metaPath' in step && step.metaPath) out.metaPath = step.metaPath;
+          if ('useCustomMetaPath' in step && step.useCustomMetaPath) out.useCustomMetaPath = step.useCustomMetaPath;
+        }
+      }
       if (
         NEEDS_TARGET.has(step.operator) &&
         'target' in step &&

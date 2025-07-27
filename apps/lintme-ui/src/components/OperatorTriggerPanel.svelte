@@ -1,10 +1,10 @@
 <script>
-  import { onDestroy, tick, onMount } from 'svelte';
-  import { pipeline, INTERNAL_AST_STEP } from '../stores/pipeline.js';
-  import { generateYAML, parseYAML, withIds } from '../utils/yaml.js';
+  import { onDestroy, tick, onMount } from "svelte";
+  import { pipeline, INTERNAL_AST_STEP } from "../stores/pipeline.js";
+  import { generateYAML, parseYAML, withIds } from "../utils/yaml.js";
 
-  import OperatorPalette from './OperatorPalette.svelte';
-  import PipelineEditor from '../editor/PipelineEditor.svelte';
+  import OperatorPalette from "./OperatorPalette.svelte";
+  import PipelineEditor from "../editor/PipelineEditor.svelte";
 
   export let rulesEditor;
 
@@ -20,9 +20,9 @@
     await tick();
 
     if (showPalette) {
-      document.addEventListener('click', handleClickOutside);
+      document.addEventListener("click", handleClickOutside);
     } else {
-      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
     }
   }
 
@@ -33,75 +33,104 @@
       !event.target.closest('[data-trigger="palette"]')
     ) {
       showPalette = false;
-      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
     }
   }
 
   function addOperator(opName) {
     const id = crypto.randomUUID();
 
-    pipeline.update(steps => {
+    pipeline.update((steps) => {
       switch (opName) {
-        case 'isPresent':
-          return [...steps, { id, operator: 'isPresent'}];
-        case 'compare':
-          return [...steps, { id, operator: 'compare', baseline: '', against: '' }];
-        case 'regexMatch':
-          return [...steps, { id, operator: 'regexMatch', pattern: '' }];
-        case 'sage':
-          return [...steps, { id, operator: 'sage' }];
-        case 'detectHateSpeech':
-          return [...steps, {
-            id,
-            operator: 'detectHateSpeech',
-            scope: 'document',
-            scopes: ['document']
-          }];
-        case 'calculateContrast':
-          return [...steps, {
-            id,
-            operator: 'calculateContrast'
-          }];  
-        case 'markdownRender':
-          return [...steps, {
-            id,
-            operator: 'markdownRender',
-            renderer: 'marked',      
-            output: 'html'    
-          }];  
-        case 'customCode':
-          return [...steps, {
-            id,
-            operator: 'customCode',
-            code: `export function run(ctx) {\n  // Write your custom logic here\n  return ctx;\n}`
-          }];  
+        case "isPresent":
+          return [...steps, { id, operator: "isPresent" }];
+        case "compare":
+          return [
+            ...steps,
+            { id, operator: "compare", baseline: "", against: "" },
+          ];
+        case "regexMatch":
+          return [...steps, { id, operator: "regexMatch", pattern: "" }];
+        case "sage":
+          return [...steps, { id, operator: "sage" }];
+        case "fetchFromGithub":
+          return [
+            ...steps,
+            {
+              id,
+              operator: "fetchFromGithub",
+              repo: "",
+              branch: "main",
+              fileName: "README.md",
+              fetchType: "content",
+              metaPath: "",
+              useCustomMetaPath: false,
+            },
+          ];
+        case "detectHateSpeech":
+          return [
+            ...steps,
+            {
+              id,
+              operator: "detectHateSpeech",
+              scope: "document",
+              scopes: ["document"],
+            },
+          ];
+        case "calculateContrast":
+          return [
+            ...steps,
+            {
+              id,
+              operator: "calculateContrast",
+            },
+          ];
+        case "markdownRender":
+          return [
+            ...steps,
+            {
+              id,
+              operator: "markdownRender",
+              renderer: "marked",
+              output: "html",
+            },
+          ];
+        case "customCode":
+          return [
+            ...steps,
+            {
+              id,
+              operator: "customCode",
+              code: `export function run(ctx) {\n  // Write your custom logic here\n  return ctx;\n}`,
+            },
+          ];
         default:
-          return [...steps, { id, operator: opName }];  
+          return [...steps, { id, operator: opName }];
       }
     });
 
     showPalette = false;
-    document.removeEventListener('click', handleClickOutside);
+    document.removeEventListener("click", handleClickOutside);
   }
 
   const unsub = pipeline.subscribe((steps) => {
     if (!rulesEditor || syncingFromEditor) return;
 
     syncingFromPipeline = true;
-    const yaml = generateYAML('my-rule', '', steps);
+    const yaml = generateYAML("my-rule", "", steps);
     rulesEditor.setValue(yaml);
     syncingFromPipeline = false;
   });
 
   function handleKeyboardShortcut(e) {
     const isInputFocused =
-      ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) ||
+      ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName) ||
       document.activeElement.isContentEditable;
 
     if (isInputFocused) return;
 
     const shortcutPressed =
-      (e.ctrlKey && e.key.toLowerCase() === 'k') || e.key === '/';
+      (e.ctrlKey && e.key.toLowerCase() === "k") || e.key === "/";
 
     if (shortcutPressed) {
       e.preventDefault();
@@ -110,10 +139,13 @@
   }
 
   onMount(() => {
-    window.addEventListener('keydown', handleKeyboardShortcut);
+    window.addEventListener("keydown", handleKeyboardShortcut);
   });
 
-  $: if (rulesEditor && typeof rulesEditor.onDidChangeModelContent === 'function') {
+  $: if (
+    rulesEditor &&
+    typeof rulesEditor.onDidChangeModelContent === "function"
+  ) {
     disposer?.dispose?.();
 
     const handleYamlChange = () => {
@@ -124,7 +156,7 @@
         syncingFromEditor = true;
         pipeline.set([INTERNAL_AST_STEP, ...nextSteps]);
       } catch (err) {
-        console.warn('Failed to parse YAML → pipeline', err);
+        console.warn("Failed to parse YAML → pipeline", err);
       } finally {
         syncingFromEditor = false;
       }
@@ -134,16 +166,16 @@
   }
 
   onDestroy(() => {
-    document.removeEventListener('click', handleClickOutside);
-    window.removeEventListener('keydown', handleKeyboardShortcut);
+    document.removeEventListener("click", handleClickOutside);
+    window.removeEventListener("keydown", handleKeyboardShortcut);
     unsub?.();
     disposer?.dispose?.();
   });
 </script>
 
-
-
-<div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
+<div
+  class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col gap-3"
+>
   <div class="flex gap-2">
     <div class="relative">
       <button
@@ -159,7 +191,9 @@
           class="absolute top-12 left-0 z-20 w-64 animate-fade-in"
           bind:this={paletteRef}
         >
-          <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-white"></div>
+          <div
+            class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-white"
+          ></div>
 
           <OperatorPalette
             on:select={(e) => addOperator(e.detail)}
@@ -171,7 +205,7 @@
 
     <button
       class="h-9 px-4 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-sm rounded-full"
-      on:click={() => console.log('Generate with LLM')}
+      on:click={() => console.log("Generate with LLM")}
     >
       🧠 Generate Rule (LLM)
     </button>

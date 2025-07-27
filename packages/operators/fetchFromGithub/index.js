@@ -2,12 +2,13 @@ import fetch from "node-fetch";
 
 export async function run(ctx, cfg = {}) {
   const {
-    repo      = "",
-    branch    = "main",
-    fileName  = "README.md",
-    fetchType = "content",
+    repo       = "",
+    branch     = "main",
+    fileName   = "README.md",
+    fetchType  = "content",       
+    metaPath   = "",            
+    //apiBase    = "http://localhost:5000"
     apiBase   = "https://lintme-backend.onrender.com"
-    //apiBase   = "http://localhost:5000"
   } = cfg;
 
   const endpoint = `${apiBase}/api/github-file`;
@@ -26,32 +27,42 @@ export async function run(ctx, cfg = {}) {
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ repo, branch, fileName, fetchType })
+      body: JSON.stringify({ repo, branch, fileName, fetchType, metaPath })
     });
 
-if (!res.ok) {
-  const text = await res.text();
-  let message = `fetchFromGithub: backend returned ${res.status}`;
-  try {
-    const json = JSON.parse(text);
-    if (json?.error) {
-      message = `fetchFromGithub: ${json.error}`;
+    if (!res.ok) {
+      const text = await res.text();
+      let message = `fetchFromGithub: backend returned ${res.status}`;
+      try {
+        const json = JSON.parse(text);
+        if (json?.error) {
+          message = `fetchFromGithub: ${json.error}`;
+        }
+      } catch (_) {}
+      ctx.diagnostics.push({
+        line: 1,
+        severity: "error",
+        message
+      });
+      return ctx;
     }
-  } catch (_) {
-    // do nothing
-  }
-
-  ctx.diagnostics.push({
-    line: 1,
-    severity: "error",
-    message
-  });
-  return ctx;
-}
-
 
     const payload = await res.json();
     ctx.fetchResult = payload;
+
+    if (fetchType === "metadata") {
+      ctx.internalInfo = [{
+        line: 1,
+        severity: "info",
+        message: `Fetched metadata from '${repo}' at path '${metaPath || '[root]'}'`
+      }];
+
+      return {
+        data: {
+          metadata: payload.metadata
+        }
+      };
+    }
 
     const readmes = payload.readmes || [];
     if (!readmes.length) {
@@ -114,7 +125,6 @@ if (!res.ok) {
         }
       };
     }
-
 
   } catch (err) {
     ctx.diagnostics.push({

@@ -94,14 +94,14 @@
           <h4 class="text-sm font-semibold text-gray-700">
             {step.operator} configurations
           </h4>
-          <button
-            class="text-gray-400 hover:text-red-500 text-sm"
-            on:click|stopPropagation={remove}
-            title="Delete step"
-            aria-label="Delete step"
-          >
-            ✖
-          </button>
+        <button
+          class="bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-red-500 rounded-full w-6 h-6 flex items-center justify-center text-sm transition"
+          on:click|stopPropagation={remove}
+          title="Delete step"
+          aria-label="Delete step"
+        >
+          ✖
+        </button>
         </div>
 
         {#key step.id}
