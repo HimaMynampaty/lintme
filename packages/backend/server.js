@@ -28,7 +28,19 @@ import { checkCrossPlatformDifferenceBackend } from './crossPlatformLintBackend.
 dotenv.config();
 
 const app = express();
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:5173',           // local dev
+  'https://lintme.netlify.app'       // Netlify live site
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  }
+}));
+
 app.use(express.json());
 
 const __dirname = path.resolve();
