@@ -30,7 +30,8 @@ dotenv.config();
 const app = express();
 const allowedOrigins = [
   'http://localhost:5173',           // local dev
-  'https://lintme.netlify.app'       // Netlify live site
+  'https://lintme.netlify.app',       // Netlify live site
+  'https://lintme-backend.onrender.com' 
 ];
 
 app.use(cors({

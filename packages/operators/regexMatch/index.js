@@ -1,22 +1,11 @@
 export function run(ctx, cfg = {}) {
-  if (!ctx.extracted) {
-    ctx.diagnostics.push({
-      line: 1,
-      severity: 'error',
-      message: 'regexMatch operator needs extract to run first'
-    });
-    return ctx;
-  }
-
-  console.log(ctx.extracted);
-
-  const patterns = Array.isArray(cfg.patterns) ? cfg.patterns :
-                  cfg.pattern ? [cfg.pattern] : [];
+  const patterns = Array.isArray(cfg.patterns)
+      ? cfg.patterns
+      : cfg.pattern ? [cfg.pattern] : [];
 
   if (patterns.length === 0) {
     ctx.diagnostics.push({
-      line: 1,
-      severity: 'error',
+      line: 1, severity: 'error',
       message: 'regexMatch operator missing "patterns"'
     });
     return ctx;
@@ -24,75 +13,82 @@ export function run(ctx, cfg = {}) {
 
   const regexes = [];
   for (const p of patterns) {
-    try {
-      regexes.push(new RegExp(p, 'i'));
-    } catch (err) {
-      ctx.diagnostics.push({
-        line: 1,
-        severity: 'error',
-        message: `Invalid regex "${p}": ${err.message}`
-      });
+    try { regexes.push(new RegExp(p, 'i')); }
+    catch (e) {
+      ctx.diagnostics.push({ line: 1, severity: 'error',
+        message: `Invalid regex "${p}": ${e.message}` });
     }
   }
-  if (regexes.length === 0) return ctx;
+  if (!regexes.length) return ctx;
 
-  const strOf = (entry) => {
-    if (typeof entry === 'string') return entry;
+  const mode  = cfg.mode === 'match' ? 'match' : 'unmatch';
+  const scope = cfg.scope === 'previousstepoutput'
+    ? 'previousstepoutput'
+    : 'document';
 
-    if (entry?.raw) return entry.raw;
-    if (entry?.value) return entry.value;
-    if (entry?.content) return entry.content;
+  const isHit   = txt => regexes.some(r => r.test(txt));
+  const keepHit = txt => mode === 'match'   ?  isHit(txt) : !isHit(txt);
 
-    if (entry?.children?.length) {
-      return entry.children.map(c => c.value ?? '').join('');
-    }
+  const result = { [scope]: [] };
+  const push   = (ln, txt) => result[scope].push({ line: ln, content: txt.trim() });
 
-    return JSON.stringify(entry);
-  };
+  if (scope === 'document') {
+    (ctx.markdown ?? '')
+      .split('\n')
+      .forEach((ln, i) => keepHit(ln) && push(i + 1, ln));
+  } else {
+    const prev =
+      ctx.extracted?.data ??
+      ctx.fetchResult?.data ??
+      ctx.fetchResult       ??
+      ctx.extracted         ?? {};
 
+    const walk = (node, hint = 1) => {
+      if (node == null) return;
 
-  const { scopes = [], data } = ctx.extracted;
-  let failures = 0;
+      const t = typeof node;
+      if (['string', 'number', 'boolean'].includes(t)) {
+        const txt = String(node);
+        if (keepHit(txt)) push(hint, txt);
+        return;
+      }
 
-  const test = (entry, line = 1) => {
-    const txt = strOf(entry);
-    if (!txt) return;
-    const ok = regexes.some(r => r.test(txt));
-    if (!ok) {
-      failures++;
-      ctx.diagnostics.push({
-        line,
-        severity: 'error',
-        message: `"${txt}" does not match any of: ${patterns.join(' , ')}`
-      });
-    }
-  };
+      if (Array.isArray(node)) { node.forEach((v, idx) => walk(v, idx + 1)); return; }
 
-  for (const scope of scopes) {
-    const entries = data[scope];
-    if (!entries) continue;
+      if (t === 'object') {
+        for (const [k, v] of Object.entries(node)) {
+          if (keepHit(k)) push(hint, k);
+          if (typeof v === 'string' && keepHit(v)) push(hint, `${k}: ${v}`);
+          else walk(v, hint);
+        }
+      }
+    };
 
-    if (scope === 'document' || scope === 'endoffile') {
-      entries.forEach(e => test(e, e.line ?? 1));
-    }
+    walk(prev);
 
-    else if (scope === 'paragraph') {
-      entries.forEach(p => p.matches.forEach(e => test(e, e.line ?? p.line)));
-    }
-
-    else if (scope === 'line') {
-      Object.entries(entries).forEach(([ln, arr]) =>
-        arr.forEach(e => test(e, Number(ln))));
+    if (!result[scope].length) {
+      const asJson = JSON.stringify(prev);
+      if (keepHit(asJson)) push(1, asJson);
     }
   }
 
-  if (failures === 0) {
+  if (!result[scope].length) {
     ctx.diagnostics.push({
       line: 1,
       severity: 'info',
-      message: `All entries match /${patterns.join(' | ')}/`
+      message:
+        mode === 'match'
+          ? `No text matches /${patterns.join('|')}/`
+          : `All text matches /${patterns.join('|')}/`
     });
   }
 
-  return { scopes, data: {} }; 
+  ctx.extracted = {
+    target : patterns.join(' | '),
+    scopes : [scope],
+    data   : result
+  };
+  ctx.previous = { target: ctx.extracted.target, scopes: [scope] };
+
+  return { patterns, scopes: [scope], data: result };
 }

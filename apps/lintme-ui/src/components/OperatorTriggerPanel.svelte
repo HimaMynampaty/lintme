@@ -85,6 +85,16 @@
               operator: "calculateContrast",
             },
           ];
+        case 'detectDuplicateSentences':
+          return [
+            ...steps,
+            {
+              id,
+              operator: 'detectDuplicateSentences',
+              scope: 'document',
+              scopes: ['document'],
+            },
+          ];  
         case "markdownRender":
           return [
             ...steps,

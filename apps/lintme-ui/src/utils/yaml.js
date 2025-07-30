@@ -11,7 +11,13 @@ export function parseYAML(text = '') {
       case 'extract':
         return { id, operator: 'extract', target: raw.target ?? '', scopes: raw.scopes ?? [] };
       case 'regexMatch':
-        return { id, operator: 'regexMatch', pattern: raw.pattern ?? '', patterns: raw.patterns };
+        return {
+          id,
+          operator: 'regexMatch',
+          pattern: raw.pattern ?? '',
+          patterns: raw.patterns,
+          mode: raw.mode ?? 'unmatch'
+        };
       case 'compare':
         return { id, operator: 'compare', baseline: raw.baseline ?? '', against: raw.against ?? '' };
       case 'isPresent':
@@ -52,6 +58,13 @@ export function parseYAML(text = '') {
           renderer: raw.renderer ?? 'marked',
           output: raw.output ?? 'html'
         };
+      case 'detectDuplicateSentences':
+        return {
+          id,
+          operator: 'detectDuplicateSentences',
+          scope: raw.scope ?? 'document',
+          scopes: raw.scopes ?? ['document']
+        };  
       case 'sage':
       case 'count':
       case 'length':
@@ -87,6 +100,7 @@ export function generateYAML(name = '', description = '', steps = []) {
       if (step.operator === 'regexMatch') {
         if (Array.isArray(step.patterns)) out.patterns = step.patterns;
         else if ('pattern' in step) out.pattern = step.pattern;
+        if (step.mode && step.mode !== 'unmatch') out.mode = step.mode;
       }
 
       if (step.operator === 'fixUsingLintMeCode') {
@@ -113,6 +127,7 @@ export function generateYAML(name = '', description = '', steps = []) {
         if ('baseline' in step) out.baseline = step.baseline;
         if ('against' in step) out.against = step.against;
       }
+      
       if (step.operator === 'calculateContrast') {
         if ('minContrast' in step) out.minContrast = step.minContrast;
       }

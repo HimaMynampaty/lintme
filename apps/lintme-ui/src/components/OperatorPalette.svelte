@@ -21,7 +21,8 @@
     { name: 'readmeLocationCheck', label: 'readmeLocationCheck' },
     { name: 'markdownRender', label: 'markdownRender' },
     { name: 'calculateContrast', label: 'calculateContrast' },
-    { name: 'customCode', label: 'customCode' }
+    { name: 'customCode', label: 'customCode' },
+    { name: 'detectDuplicateSentences', label: 'detectDuplicateSentences' },
   ];
 
   function choose(op) {
