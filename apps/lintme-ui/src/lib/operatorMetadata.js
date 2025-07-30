@@ -15,4 +15,5 @@ export const operatorDescriptions = {
   markdownRender: 'Render Markdown using a chosen engine (e.g., marked, puppeteer) to generate HTML, DOM, or image output.',
   customCode: 'Run user-defined JavaScript on the input data',
   detectDuplicateSentences: 'Detect repeated sentences, links, or headings across the document or from a previous extraction.',
+  evaluateUsingLLM: 'Evaluate the content using an LLM based on a rule and expected outcomes you define.',
 };

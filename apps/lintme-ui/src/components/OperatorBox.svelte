@@ -19,6 +19,7 @@
   import CalculateContrastOperator from './CalculateContrastOperator.svelte';
   import CustomCodeOperator from './CustomCodeOperator.svelte';
   import DetectDuplicateSentencesOperator from './DetectDuplicateSentencesOperator.svelte';
+  import EvaluateUsingLLMOperator from './EvaluateUsingLLMOperator.svelte';
 
   export let step;
   export let index;
@@ -142,6 +143,8 @@
             <CustomCodeOperator bind:data={step} on:input={changed} />
           {:else if step.operator === 'detectDuplicateSentences'}
             <DetectDuplicateSentencesOperator bind:data={step} {storeIndex} on:input={changed} />  
+          {:else if step.operator === 'evaluateUsingLLM'}
+            <EvaluateUsingLLMOperator bind:data={step} on:input={changed} />  
           {/if}
         {/key}
       </div>

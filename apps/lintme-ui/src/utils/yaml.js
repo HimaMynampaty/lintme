@@ -33,7 +33,13 @@ export function parseYAML(text = '') {
           metaPath: raw.metaPath ?? '',
           useCustomMetaPath: raw.useCustomMetaPath ?? false
         };
-
+      case 'evaluateUsingLLM':
+        return {
+          id,
+          operator: 'evaluateUsingLLM',
+          model: raw.model ?? 'llama-3.3-70b-versatile',
+          ruleDefinition: raw.ruleDefinition ?? '',
+        };
       case 'calculateContrast':
         return {
           id,
@@ -119,6 +125,10 @@ export function generateYAML(name = '', description = '', steps = []) {
       if (step.operator === 'markdownRender') {
         if ('renderer' in step) out.renderer = step.renderer;
         if ('output' in step) out.output = step.output;
+      }
+      if (step.operator === 'evaluateUsingLLM') {
+        if ('model' in step) out.model = step.model;
+        if ('ruleDefinition' in step) out.ruleDefinition = step.ruleDefinition;
       }
       if (step.operator === 'customCode') {
         if ('code' in step) out.code = step.code;

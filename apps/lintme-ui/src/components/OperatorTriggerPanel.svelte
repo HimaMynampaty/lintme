@@ -105,6 +105,16 @@
               output: "html",
             },
           ];
+        case "evaluateUsingLLM":
+          return [
+            ...steps,
+            {
+              id,
+              operator: "evaluateUsingLLM",
+              model: "llama-3.3-70b-versatile",
+              ruleDefinition: "Define the rule, along with criteria that indicates when the LLM should consider the rule passed or failed.",
+            },
+          ];  
         case "customCode":
           return [
             ...steps,
