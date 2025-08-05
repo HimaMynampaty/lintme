@@ -1,0 +1,46 @@
+{
+  "label": "Extract",
+  "description": "Pulls specific Markdown (MDAST) node types *or* regular‑expression matches from the source document. A successful run populates `ctx.extracted` and sets `ctx.previous` so that downstream steps (e.g. `count`, `search`, `regexMatch`) know what data they’re working with.",
+
+  "fields": {
+    "target": {
+      "type": "string",
+      "title": "Target",
+      "description": "Markdown node type (`heading`, `link`, `table` …), one of the built‑ins (`emoji`, `newline`, `date`, `internallink`, `externallink`) or a custom RegExp such as `/TODO:/i`.",
+      "required": true,
+      "enum": [
+        "emoji", "newline", "image", "internallink", "externallink",
+        "blockquote", "thematicBreak", "code", "definition", "delete",
+        "emphasis", "footnoteDefinition", "footnoteReference", "heading",
+        "html", "imageReference", "inlineCode", "link", "linkReference",
+        "list", "listItem", "paragraph", "root", "strong", "table",
+        "tableCell", "tableRow", "text", "toml", "yaml", "date"
+      ]
+    },
+
+    "scopes": {
+      "type": "array",
+      "title": "Scopes",
+      "description": "Where to perform extraction. Choose at least one.",
+      "required": true,
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": ["line", "paragraph", "document", "endoffile"]
+      }
+    }
+  },
+
+  "produces": {
+    "target": "<same value as `target` field>",
+    "scopes": "<same values as `scopes` field>",
+    "contextWrites": ["ctx.extracted", "ctx.previous"],
+    "diagnosticsSeverity": ["warning", "error"]
+  },
+
+  "example": {
+    "operator": "extract",
+    "target": "heading",
+    "scopes": ["document"]
+  }
+}

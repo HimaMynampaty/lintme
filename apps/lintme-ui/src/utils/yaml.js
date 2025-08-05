@@ -40,11 +40,14 @@ export function parseYAML(text = '') {
           model: raw.model ?? 'llama-3.3-70b-versatile',
           ruleDefinition: raw.ruleDefinition ?? '',
         };
-      case 'calculateContrast':
+      case 'calculateContrast': {
+        const { operator, ...rest } = raw;
         return {
           id,
-          operator: 'calculateContrast'
+          operator: 'calculateContrast',
+          ...rest
         };
+      }
       case 'customCode':
         return {
           id,
@@ -79,9 +82,11 @@ export function parseYAML(text = '') {
       case 'fixUsingLLM':
       case 'fixUsingLintMeCode':
         return { id, ...raw };
-      default:
-        return null;
+      default:{
+        const { operator, ...rest } = raw; 
+        return { id, operator: raw.operator, ...raw }; 
     }
+  }
   }).filter(Boolean);
 }
 
@@ -139,7 +144,6 @@ export function generateYAML(name = '', description = '', steps = []) {
       }
       
       if (step.operator === 'calculateContrast') {
-        if ('minContrast' in step) out.minContrast = step.minContrast;
       }
       if (step.operator === 'fetchFromGithub') {
         if ('repo' in step) out.repo = step.repo;

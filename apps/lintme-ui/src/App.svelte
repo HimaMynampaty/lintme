@@ -8,6 +8,8 @@
     import { db } from "./lib/firebase.js";
     import SvelteSelect from 'svelte-select';
     import './styles/lintme.css';
+    import { validatePipeline } from './lib/validatePipeline.js';
+
 
     const sharedFontSize = 14;
     let markdownText = "";
@@ -49,6 +51,7 @@
     let selectedRuleId    = ''; 
     let selectedReadme     = null;
     let ruleWarning = '';
+    let ruleValidationErrors = [];
 
     const baseURL = import.meta.env.VITE_BACKEND_URL;
 
@@ -150,6 +153,46 @@
       selectedRuleIds = selectedRuleIds.filter(id => !affectedIds.includes(id));
     }
   }
+  function lineOfStep(yaml, stepIndex) {
+    const lines = yaml.split('\n');
+    let insidePipeline = false;
+    let currentStep = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      if (/^\s*pipeline\s*:/.test(line)) {
+        insidePipeline = true;
+        continue;
+      }
+
+      if (insidePipeline && /^\s*-\s*operator\s*:/.test(line)) {
+        if (currentStep === stepIndex) {
+          return i + 1; 
+        }
+        currentStep++;
+      }
+    }
+
+    return 1; 
+  }
+
+  function updateRuleMarkers(model, errors, yamlText) {
+    const markers = errors.map(e => {
+      const line = lineOfStep(yamlText, e.step);
+      return {
+        severity: monaco.MarkerSeverity.Error,
+        startLineNumber: line,
+        endLineNumber:   line,
+        startColumn:     1,
+        endColumn:       model.getLineContent(line).length + 1,
+        message:         e.message
+      };
+    });
+
+    monaco.editor.setModelMarkers(model, 'schema-validator', markers);
+  }
+
 
     $: combinedRuleOptions = [
       ...ruleList.map(r => ({
@@ -177,6 +220,14 @@
         fixedOverflowWidgets: true,
         fontSize: sharedFontSize,
         wordWrap: 'on'
+      });
+      ruleValidationErrors = validatePipeline(rulesYaml);
+      updateRuleMarkers(rulesEditor.getModel(), ruleValidationErrors, rulesYaml);
+
+      rulesEditor.onDidChangeModelContent(() => {
+        rulesYaml = rulesEditor.getValue();
+        ruleValidationErrors = validatePipeline(rulesYaml);
+        updateRuleMarkers(rulesEditor.getModel(), ruleValidationErrors, rulesYaml);
       });
 
       markdownEditor = monaco.editor.create(markdownEditorContainer, {
@@ -800,7 +851,6 @@
                 }}
               />
               </div>
-              
                 <button on:click={saveCurrentRule}>Save Rule</button>
                     {#if selectedRule?.type === 'saved'}
                       <button class="delete-btn"
