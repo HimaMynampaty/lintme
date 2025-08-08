@@ -247,6 +247,7 @@ app.post("/api/groq-chat", async (req, res) => {
     res.status(500).json({ error: "LLM generation failed." });
   }
 });
+
 app.post("/api/github-file", async (req, res) => {
   const {
     repo,
@@ -288,20 +289,42 @@ app.post("/api/github-file", async (req, res) => {
     }
   }
 
-  const refURL = `https://api.github.com/repos/${owner}/${repoName}/branches/${encodeURIComponent(branch)}`;
-  const refResp = await fetch(refURL, { headers });
+  let commitSha;
 
-  if (!refResp.ok) {
-    return res.status(refResp.status).json({
-      error: `Branch '${branch}' not found (GitHub returned ${refResp.status})`
-    });
+  let refResp = await fetch(
+    `https://api.github.com/repos/${owner}/${repoName}/branches/${encodeURIComponent(branch)}`,
+    { headers }
+  );
+
+  if (refResp.ok) {
+    const refJson = await refResp.json();
+    commitSha = refJson?.commit?.commit?.tree?.sha;
+  } else {
+    const tagsResp = await fetch(
+      `https://api.github.com/repos/${owner}/${repoName}/tags?per_page=100`,
+      { headers }
+    );
+
+    if (!tagsResp.ok) {
+      return res.status(tagsResp.status).json({
+        error: `Failed to fetch tags (${tagsResp.status})`
+      });
+    }
+
+    const tags = await tagsResp.json();
+    const matchedTag = tags.find(t => t.name === branch);
+
+    if (!matchedTag) {
+      return res.status(404).json({
+        error: `Branch or tag '${branch}' not found.`
+      });
+    }
+
+    commitSha = matchedTag.commit.sha;
   }
 
-  const refJson = await refResp.json();
-  const commitSha = refJson?.commit?.commit?.tree?.sha;
-
   if (!commitSha) {
-    return res.status(500).json({ error: "Could not resolve commit SHA for given branch." });
+    return res.status(500).json({ error: "Could not resolve commit SHA from branch/tag." });
   }
 
   const treeURL = `https://api.github.com/repos/${owner}/${repoName}/git/trees/${commitSha}?recursive=1`;
@@ -323,7 +346,10 @@ app.post("/api/github-file", async (req, res) => {
     return res.json({ repo, branch, fileName, readmes: [] });
   }
 
-  const urls = matches.map(m => ({
+  const rootReadme = matches.find(m => !m.path.includes("/"));
+  const finalMatches = rootReadme ? [rootReadme] : matches;
+
+  const urls = finalMatches.map(m => ({
     path: m.path,
     url: `https://raw.githubusercontent.com/${repo}/${branch}/${m.path}`
   }));
@@ -352,6 +378,7 @@ app.post("/api/github-file", async (req, res) => {
 });
 
 
+
 app.get("/api/wordlist", (req, res) => {
   const absolutePath = req.query.path;
 
@@ -374,99 +401,86 @@ app.get("/api/wordlist", (req, res) => {
 });
 
 app.post("/api/compare-readmes", async (req, res) => {
-  const {
-    current,
-    historical,
-    repo,
-    versionCount = 2,
-    method = "embedding_cosine"
-  } = req.body;
+  try {
+    let { current, historical, method = "embedding_cosine" } = req.body || {};
 
-  if (!current) return res.status(400).json({ error: "Missing current README content." });
-
-  let urls = historical;
-  if ((!urls || !urls.length) && repo) {
-    try { urls = await fetchReadmeVersions(repo, versionCount); }
-    catch (err) {
-      console.error("GitHub fetch error:", err);
-      return res.status(500).json({ error: "Could not retrieve historical versions from GitHub." });
+    if (typeof current !== "string") {
+      return res.status(400).json({ error: "current must be a string" });
     }
+
+    if (typeof historical === "string") historical = [historical];
+    if (!Array.isArray(historical) || historical.length === 0) {
+      return res.status(400).json({ error: "historical must be a non-empty array of strings or a string" });
+    }
+    if (!historical.every(h => typeof h === "string")) {
+      return res.status(400).json({ error: "historical items must all be strings" });
+    }
+
+    const normalize = (s) => (s || "").replace(/\s+/g, " ").trim();
+    const cur = normalize(current);
+
+    const comparison = await Promise.all(
+      historical.map(async (hist) => {
+        const h = normalize(hist);
+        if (!h) return { similarity: 0, sectionSimilarity: [], error: "empty historical string" };
+
+        let simDoc = cur === h ? 1 : 0;
+
+        if (simDoc !== 1) {
+          switch (method) {
+            case "cosine":
+              simDoc = cosineSimilarityTFIDF(cur, h);
+              break;
+            case "embedding_cosine": {
+              const [curEmb, histEmb] = await Promise.all([getEmbedding(cur), getEmbedding(h)]);
+              simDoc = cosineSimilarity(curEmb, histEmb);
+              break;
+            }
+            case "euclidean": {
+              const [curEmb, histEmb] = await Promise.all([getEmbedding(cur), getEmbedding(h)]);
+              simDoc = euclideanSimilarity(curEmb, histEmb);
+              break;
+            }
+            case "damerau_levenshtein":
+              simDoc = damerauSimilarity(cur, h);
+              break;
+            case "sectional_embedding": {
+              const curSecs  = Object.values(extractSections(cur));
+              const histSecs = Object.values(extractSections(h));
+              if (curSecs.length && histSecs.length) {
+                const [curEmbeds, histEmbeds] = await Promise.all([
+                  Promise.all(curSecs.map(getEmbedding)),
+                  Promise.all(histSecs.map(getEmbedding)),
+                ]);
+                const N = Math.min(curEmbeds.length, histEmbeds.length);
+                const sims = Array.from({ length: N }, (_, i) => cosineSimilarity(curEmbeds[i], histEmbeds[i]));
+                simDoc = sims.length ? sims.reduce((s, v) => s + v, 0) / sims.length : 0;
+              } else {
+                const [curEmb, histEmb] = await Promise.all([getEmbedding(cur), getEmbedding(h)]);
+                simDoc = cosineSimilarity(curEmb, histEmb);
+              }
+              break;
+            }
+            default:
+              simDoc = cosineSimilarityTFIDF(cur, h);
+          }
+        }
+
+        const sectionSimilarity = await compareSectionSimilarities(cur, h, method);
+        return {
+          similarity: Math.round(simDoc * 100),
+          sectionSimilarity
+        };
+      })
+    );
+
+    res.json({ comparison });
+  } catch (err) {
+    console.error("compare-readmes error:", err);
+    res.status(500).json({ error: err.message });
   }
-  if (!urls || !urls.length) return res.status(400).json({ error: "No historical versions provided." });
-
-  let currentEmbeddingPromise = null;
-  if (["embedding_cosine", "euclidean", "sectional_embedding"].includes(method))
-    currentEmbeddingPromise = getEmbedding(current);
-
-  let currentSectionEmbeds = null;
-  if (method === "sectional_embedding") {
-    const curSecs = Object.values(extractSections(current));
-    currentSectionEmbeds = await Promise.all(curSecs.map(getEmbedding));
-  }
-
-  const docs = await Promise.all(
-    urls.map(async url => {
-      try { return { url, content: await getReadmeCached(url) }; }
-      catch (e) { return { url, error: e.message, content: "" }; }
-    })
-  );
-
-  const comparison = await Promise.all(
-    docs.map(async ({ url, content, error }) => {
-      if (!content) return { url, similarity: 0, error, sectionSimilarity: [] };
-
-      let simDoc = 0;
-
-      switch (method) {
-        case "cosine":
-          simDoc = cosineSimilarityTFIDF(current, content);
-          break;
-
-        case "embedding_cosine": {
-          const [curEmb, histEmb] = await Promise.all([
-            currentEmbeddingPromise,
-            getEmbedding(content)
-          ]);
-          simDoc = cosineSimilarity(curEmb, histEmb);
-          break;
-        }
-
-        case "euclidean": {
-          const [curEmb, histEmb] = await Promise.all([
-            currentEmbeddingPromise,
-            getEmbedding(content)
-          ]);
-          simDoc = euclideanSimilarity(curEmb, histEmb);
-          break;
-        }
-
-        case "damerau_levenshtein":
-          simDoc = damerauSimilarity(current, content);
-          break;
-
-        case "sectional_embedding": {
-          const histSecs = Object.values(extractSections(content));
-          const embHist = await Promise.all(histSecs.map(getEmbedding));
-          const sims = embHist.map((e, i) => cosineSimilarity(currentSectionEmbeds[i], e));
-          simDoc = sims.reduce((s, v) => s + v, 0) / sims.length;
-          break;
-        }
-
-        default:
-          simDoc = cosineSimilarityTFIDF(current, content);
-      }
-
-      const secSim = await compareSectionSimilarities(current, content, method);
-      return {
-        url,
-        similarity: Math.round(simDoc * 100),
-        sectionSimilarity: secSim
-      };
-    })
-  );
-
-  res.json({ comparison });
 });
+
 
 
 

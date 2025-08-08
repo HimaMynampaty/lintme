@@ -18,4 +18,5 @@ export const OPERATORS = {
   'customCode': () => import('../operators/customCode/index.js').then(m => m.run),
   'detectDuplicateSentences': () => import('../operators/detectDuplicateSentences/index.js').then(m => m.run),
   'evaluateUsingLLM':        () => import('../operators/evaluateUsingLLM/index.js').then(m => m.run),
+  'codeBlockFormatting':        () => import('../operators/codeBlockFormatting/index.js').then(m => m.run),
 };

@@ -4,8 +4,8 @@ export async function run(ctx, cfg = {}) {
     against,
     level = 'error',
     crossPlatform = false,
-    //apiBase = 'http://localhost:5000'
     apiBase = 'https://lintme-backend.onrender.com'
+    //apiBase = 'http://localhost:5000'
   } = cfg;
 
   const steps = ctx.pipelineResults ?? [];
@@ -58,9 +58,7 @@ export async function run(ctx, cfg = {}) {
 
         return {
           scopes: ['image_diff'],
-          data: {
-            image_diff: diffResult
-          }
+          data: { image_diff: diffResult }
         };
       } catch (err) {
         ctx.diagnostics.push({
@@ -73,18 +71,16 @@ export async function run(ctx, cfg = {}) {
     }
   }
 
-  const shouldCrossPlatform =
-    crossPlatform ||
-    (isHtmlLike(renderMetaA) && isHtmlLike(renderMetaB));
+  const shouldCrossPlatform = crossPlatform || (isHtmlLike(renderMetaA) && isHtmlLike(renderMetaB));
 
   if (shouldCrossPlatform && ctx.markdown) {
     try {
       const body = {
         markdown: ctx.markdown,
-        compare : {
-          first : renderMetaA?.renderer || 'marked',
+        compare: {
+          first: renderMetaA?.renderer || 'marked',
           second: renderMetaB?.renderer || 'puppeteer',
-          image : { enabled: false }
+          image: { enabled: false }
         }
       };
 
@@ -157,6 +153,81 @@ export async function run(ctx, cfg = {}) {
     }
   }
 
+  if (cfg.comparison_mode === 'similarity') {
+    const method = cfg.similarity_method || 'embedding_cosine';
+    const threshold = Number(cfg.threshold ?? 80);
+
+    const markdownA = extractMarkdown(dataA);
+    const markdownB = extractMarkdown(dataB);
+
+    if (!markdownA || !markdownB) {
+      ctx.diagnostics.push({
+        line: 1,
+        severity: 'error',
+        message: 'Similarity requested, but one or both inputs are not text-like. Ensure steps produce markdown/text or extend extractMarkdown for this shape.'
+      });
+      return {};
+    }
+
+    try {
+      const resp = await fetch(`${apiBase}/api/compare-readmes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current: markdownA,
+          historical: [markdownB],
+          method
+        })
+      });
+
+      if (!resp.ok) {
+        const txt = await safeText(resp);
+        ctx.diagnostics.push({
+          line: 1,
+          severity: 'error',
+          message: `README similarity backend error (${resp.status}) ${txt}`
+        });
+        return {};
+      }
+
+      const { comparison } = await resp.json();
+      const result = comparison?.[0];
+
+      if (!result) {
+        ctx.diagnostics.push({
+          line: 1,
+          severity: 'error',
+          message: `No comparison result returned from backend.`
+        });
+        return {};
+      }
+
+      const sev = result.similarity < threshold ? 'error' : 'info';
+
+      ctx.diagnostics.push({
+        line: 1,
+        severity: sev,
+        message: `Similarity: ${result.similarity}% using ${method}`
+      });
+
+      return {
+        scopes: ['readme_similarity'],
+        data: {
+          similarity_score: result.similarity,
+          sectionSimilarity: result.sectionSimilarity,
+          method
+        }
+      };
+    } catch (err) {
+      ctx.diagnostics.push({
+        line: 1,
+        severity: 'error',
+        message: `README similarity call failed: ${err.message}`
+      });
+      return {};
+    }
+  }
+
   return classicObjectCompare(dataA, dataB, ctx, level);
 }
 
@@ -178,8 +249,57 @@ function extractImageURL(data) {
   return null;
 }
 
+function extractMarkdown(data) {
+  if (!data) return null;
+  if (typeof data === 'string') return normalizeMd(data);
+  if (typeof data !== 'object') return null;
+
+  let content = null;
+
+  if (Array.isArray(data.files) && data.files[0]?.content) {
+    content = data.files[0].content;
+  } else if (typeof data.markdown === 'string') {
+    content = data.markdown;
+  } else if (typeof data.content === 'string') {
+    content = data.content;
+  } else if (typeof data.text === 'string') {
+    content = data.text;
+  } else if (data.data) {
+    const inner = extractMarkdown(data.data);
+    if (inner) return inner;
+  } else if (Array.isArray(data.document)) {
+    const pieces = data.document
+      .map((x) => (x?.text ?? x?.content ?? x?.title ?? x?.href ?? x?.url ?? x?.slug ?? ''))
+      .filter(Boolean)
+      .map(String);
+    if (pieces.length) content = pieces.join('\n');
+  } else if (Array.isArray(data)) {
+    const pieces = data
+      .map((x) => (x?.text ?? x?.content ?? x?.title ?? x?.href ?? x?.url ?? x?.slug ?? ''))
+      .filter(Boolean)
+      .map(String);
+    if (pieces.length) content = pieces.join('\n');
+  }
+
+  if (!content) return null;
+  return normalizeMd(content);
+}
+
+function normalizeMd(s) {
+  return String(s)
+    .replace(/<[^>]+>/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\!\[[^\]]*\]\([^)]+\)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 async function safeText(resp) {
-  try { return await resp.text(); } catch { return '<no-body>'; }
+  try {
+    return await resp.text();
+  } catch {
+    return '<no-body>';
+  }
 }
 
 function truncate(str, n) {
@@ -187,28 +307,24 @@ function truncate(str, n) {
 }
 
 function classicObjectCompare(A, B, ctx, severity) {
-  const scope = (A.document && B.document) ? 'document'
-    : Object.keys(A)[0] || 'document';
-
+  const scope = (A.document && B.document) ? 'document' : Object.keys(A)[0] || 'document';
   const aVal = A[scope] ?? [];
   const bVal = B[scope] ?? [];
 
   const keyOf = (x) => {
     if (typeof x === 'string') return x.toLowerCase();
     if (x && typeof x === 'object') {
-      return (
-        x.url ?? x.slug ?? x.content ?? JSON.stringify(x)
-      ).toLowerCase();
+      return (x.url ?? x.slug ?? x.content ?? x.text ?? x.title ?? JSON.stringify(x)).toLowerCase();
     }
     return String(x);
   };
 
   const setA = new Set(aVal.map(keyOf));
   const setB = new Set(bVal.map(keyOf));
-  const missing = aVal.filter(x => !setB.has(keyOf(x)));
-  const extra   = bVal.filter(x => !setA.has(keyOf(x)));
+  const missing = aVal.filter((x) => !setB.has(keyOf(x)));
+  const extra = bVal.filter((x) => !setA.has(keyOf(x)));
 
-  missing.forEach(item => {
+  missing.forEach((item) => {
     ctx.diagnostics.push({
       line: item?.line ?? 1,
       severity,
@@ -216,7 +332,7 @@ function classicObjectCompare(A, B, ctx, severity) {
     });
   });
 
-  extra.forEach(item => {
+  extra.forEach((item) => {
     ctx.diagnostics.push({
       line: item?.line ?? 1,
       severity,
@@ -229,7 +345,7 @@ function classicObjectCompare(A, B, ctx, severity) {
     data: {
       [scope]: {
         missing: missing.map(pretty),
-        extra:   extra.map(pretty)
+        extra: extra.map(pretty)
       }
     }
   };
@@ -237,6 +353,6 @@ function classicObjectCompare(A, B, ctx, severity) {
   function pretty(x) {
     return typeof x === 'string'
       ? x
-      : x.content ?? x.url ?? x.slug ?? JSON.stringify(x);
+      : x.content ?? x.text ?? x.title ?? x.url ?? x.slug ?? JSON.stringify(x);
   }
 }

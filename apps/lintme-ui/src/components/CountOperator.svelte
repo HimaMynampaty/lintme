@@ -1,6 +1,6 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
-  import { pipeline } from '../stores/pipeline.js';
+  import { createEventDispatcher } from "svelte";
+  import { pipeline } from "../stores/pipeline.js";
 
   export let data;
   export let storeIndex;
@@ -14,20 +14,27 @@
     let changed = false;
 
     const implicitTarget =
-      prev.target ?? (prev.operator === 'search' ? 'query' : undefined);
-
+      prev.target ??
+      (prev.operator === "search"
+        ? "query"
+        : prev.operator === "regexMatch"
+          ? prev.patterns?.join(" | ") || "regex"
+          : undefined);
     if (implicitTarget && !data.target) {
-      data.target = implicitTarget;        
+      data.target = implicitTarget;
       changed = true;
     }
 
-    if (Array.isArray(prev.scopes) && prev.scopes.length &&
-        (!data.scopes || !data.scopes.length)) {
+    if (
+      Array.isArray(prev.scopes) &&
+      prev.scopes.length &&
+      (!data.scopes || !data.scopes.length)
+    ) {
       data.scopes = [...prev.scopes];
       changed = true;
     }
 
-    if (changed) dispatch('input');
+    if (changed) dispatch("input");
   }
 
   $: {
@@ -41,7 +48,7 @@
       if (!prev) continue;
 
       const hasImplicitTarget =
-        prev.target || (prev.operator === 'search');
+        prev.target || ["search", "regexMatch"].includes(prev.operator);
 
       if (hasImplicitTarget) {
         hasStep = true;
@@ -57,8 +64,9 @@
   <slot />
 {:else if !hasStep}
   <p class="text-sm text-red-500 my-1 max-w-xs break-words">
-    ⚠ This step requires a previous step with a <code>target</code>,
-    like <code>extract</code> or <code>search</code>.
+    ⚠ This step requires a previous step with a <code>target</code>, like
+    <code>extract</code>
+    or <code>search</code>.
   </p>
 {:else if !isValidSource}
   <p class="text-sm text-red-500 my-1 max-w-xs break-words">

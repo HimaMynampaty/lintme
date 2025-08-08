@@ -20,6 +20,7 @@
   import CustomCodeOperator from './CustomCodeOperator.svelte';
   import DetectDuplicateSentencesOperator from './DetectDuplicateSentencesOperator.svelte';
   import EvaluateUsingLLMOperator from './EvaluateUsingLLMOperator.svelte';
+  import CodeBlockFormattingOperator from './CodeBlockFormattingOperator.svelte';
 
   export let step;
   export let index;
@@ -145,6 +146,8 @@
             <DetectDuplicateSentencesOperator bind:data={step} {storeIndex} on:input={changed} />  
           {:else if step.operator === 'evaluateUsingLLM'}
             <EvaluateUsingLLMOperator bind:data={step} on:input={changed} />  
+          {:else if step.operator === 'codeBlockFormatting'}
+            <CodeBlockFormattingOperator bind:data={step} on:input={changed} />  
           {/if}
         {/key}
       </div>

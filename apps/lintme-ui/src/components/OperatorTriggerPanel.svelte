@@ -47,10 +47,18 @@
         case "compare":
           return [
             ...steps,
-            { id, operator: "compare", baseline: "", against: "" },
+            {
+              id,
+              operator: "compare",
+              baseline: "",
+              against: "",
+              comparison_mode: "structural",
+              similarity_method: "embedding_cosine",
+              threshold: 80
+            },
           ];
         case "regexMatch":
-          return [...steps, { id, operator: "regexMatch", pattern: "" }];
+          return [...steps, { id, operator: "regexMatch", pattern: "", mode: "match"}];
         case "sage":
           return [...steps, { id, operator: "sage" }];
         case "fetchFromGithub":
@@ -65,6 +73,16 @@
               fetchType: "content",
               metaPath: "",
               useCustomMetaPath: false,
+            },
+          ];
+        case "codeBlockFormatting":
+          return [
+            ...steps,
+            {
+              id,
+              operator: "codeBlockFormatting",
+              allowedLanguages: [],
+              allowedFormats: ["fenced"]
             },
           ];
         case "detectHateSpeech":

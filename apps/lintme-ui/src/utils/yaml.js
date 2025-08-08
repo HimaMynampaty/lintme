@@ -16,10 +16,25 @@ export function parseYAML(text = '') {
           operator: 'regexMatch',
           pattern: raw.pattern ?? '',
           patterns: raw.patterns,
-          mode: raw.mode ?? 'unmatch'
+          mode: raw.mode ?? 'match'
         };
+      case 'codeBlockFormatting':
+        return {
+          id,
+          operator: 'codeBlockFormatting',
+          allowedLanguages: raw.language ?? [],
+          allowedFormats: raw.formats ?? ['fenced'],
+        };  
       case 'compare':
-        return { id, operator: 'compare', baseline: raw.baseline ?? '', against: raw.against ?? '' };
+        return {
+          id,
+          operator: 'compare',
+          baseline: raw.baseline ?? '',
+          against: raw.against ?? '',
+          comparison_mode: raw.comparison_mode ?? 'structural',
+          similarity_method: raw.similarity_method ?? '',
+          threshold: raw.threshold ?? 80
+        };
       case 'isPresent':
         return { id, operator: 'isPresent', target: raw.target ?? '' };
       case 'fetchFromGithub':
@@ -111,7 +126,7 @@ export function generateYAML(name = '', description = '', steps = []) {
       if (step.operator === 'regexMatch') {
         if (Array.isArray(step.patterns)) out.patterns = step.patterns;
         else if ('pattern' in step) out.pattern = step.pattern;
-        if (step.mode && step.mode !== 'unmatch') out.mode = step.mode;
+        if (step.mode) out.mode = step.mode;
       }
 
       if (step.operator === 'fixUsingLintMeCode') {
@@ -131,6 +146,10 @@ export function generateYAML(name = '', description = '', steps = []) {
         if ('renderer' in step) out.renderer = step.renderer;
         if ('output' in step) out.output = step.output;
       }
+      if (step.operator === 'codeBlockFormatting') {
+        if (Array.isArray(step.allowedLanguages)) out.allowedLanguages = step.allowedLanguages;
+        if (Array.isArray(step.allowedFormats)) out.allowedFormats = step.allowedFormats;
+      }
       if (step.operator === 'evaluateUsingLLM') {
         if ('model' in step) out.model = step.model;
         if ('ruleDefinition' in step) out.ruleDefinition = step.ruleDefinition;
@@ -141,7 +160,18 @@ export function generateYAML(name = '', description = '', steps = []) {
       if (step.operator === 'compare') {
         if ('baseline' in step) out.baseline = step.baseline;
         if ('against' in step) out.against = step.against;
+
+        if (step.comparison_mode) out.comparison_mode = step.comparison_mode;
+
+        if (step.similarity_method && step.comparison_mode === 'similarity') {
+          out.similarity_method = step.similarity_method;
+        }
+
+        if (step.comparison_mode === 'similarity' && typeof step.threshold === 'number') {
+          out.threshold = step.threshold;
+        }
       }
+
       
       if (step.operator === 'calculateContrast') {
       }

@@ -23,7 +23,8 @@
     { name: 'calculateContrast', label: 'calculateContrast' },
     { name: 'customCode', label: 'customCode' },
     { name: 'detectDuplicateSentences', label: 'detectDuplicateSentences' },
-    { name: 'evaluateUsingLLM', label: 'evaluateUsingLLM' }
+    { name: 'evaluateUsingLLM', label: 'evaluateUsingLLM' },
+    { name: 'codeBlockFormatting', label: 'codeBlockFormatting' },
   ];
 
   function choose(op) {
