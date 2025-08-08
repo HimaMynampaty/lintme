@@ -3,7 +3,7 @@ import { toString } from 'mdast-util-to-string';
 
 const EMOJI_REGEX = /:[\w+-]+:|[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{FE0F}\u{1F1E6}-\u{1F1FF}]/gu;
 const DATE_REGEX  = /\b(?:\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}|\d{4}[\/-]\d{1,2}[\/-]\d{1,2})\b/g;
-const BUILTIN_RX = { emoji: EMOJI_REGEX, newline: /\r?\n/g,  date: DATE_REGEX };
+const BUILTIN_RX = { emoji: EMOJI_REGEX, newline: /\r?\n/g, date: DATE_REGEX };
 
 const escapeRE = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const toRegExp = t => BUILTIN_RX[t] || new RegExp(escapeRE(t), 'gi');
@@ -15,6 +15,8 @@ export function run(ctx, cfg = {}) {
   if (!scopes || scopes.length === 0) return pushErr(ctx, 'extract operator missing "scopes"');
 
   const md = ctx.markdown ?? '';
+  const mdLines = md.split('\n');
+
   const isRegex = target in BUILTIN_RX || /^[./].*[./]$/.test(target);
   const re = isRegex ? toRegExp(target) : null;
 
@@ -24,12 +26,8 @@ export function run(ctx, cfg = {}) {
   if (!isRegex && !['internallink', 'externallink'].includes(target)) {
     let found = false;
     visit(ctx.ast, n => {
-      if (n.type === target) {
-        found = true;
-        return EXIT;
-      }
+      if (n.type === target) { found = true; return EXIT; }
     });
-
     if (!found) {
       ctx.diagnostics.push({
         line: 1,
@@ -44,20 +42,16 @@ export function run(ctx, cfg = {}) {
 
   const checkLinkFormatting = markdown => {
     const RX = {
-      missingCloseParen: [/\[[^\]]*\]\([^\)]*$/, "Malformed link: missing closing parenthesis ')'."],
-      missingCloseBracket: [/\[[^\]]*$/, "Malformed link: missing closing bracket ']'."],
-      missingOpenBracket: [/^[^\[]+\][^\(]*\([^\)]*\)/, "Malformed link: missing opening bracket '['."],
-      missingOpenParen: [/\[[^\]]*\][^\(]*[^)]$/, "Malformed link: missing opening parenthesis '('."],
-      emptyLinkPattern: [/\[\s*\]\(\s*\)/, "Empty link: both text and URL are missing."],
+      missingCloseParen:   [/\[[^\]]*\]\([^\)]*$/, "Malformed link: missing closing parenthesis ')'."],
+      missingCloseBracket: [/\[[^\]]*$/,           "Malformed link: missing closing bracket ']'."],
+      missingOpenBracket:  [/^[^\[]+\][^\(]*\([^\)]*\)/, "Malformed link: missing opening bracket '['."],
+      missingOpenParen:    [/\[[^\]]*\][^\(]*[^)]$/, "Malformed link: missing opening parenthesis '('."],
+      emptyLinkPattern:    [/\[\s*\]\(\s*\)/, "Empty link: both text and URL are missing."],
     };
-
     const out = [];
     markdown.split('\n').forEach((ln, i) => {
       for (const [_k, [rx, msg]] of Object.entries(RX)) {
-        if (rx.test(ln)) {
-          out.push({ line: i + 1, content: ln.trim(), message: msg });
-          break;
-        }
+        if (rx.test(ln)) { out.push({ line: i + 1, content: ln.trim(), message: msg }); break; }
       }
     });
     return out;
@@ -68,29 +62,17 @@ export function run(ctx, cfg = {}) {
 
     if (target === 'link') {
       if (n.type !== 'link') return false;
-
       const child = n.children?.[0];
-      if (
-        n.title == null &&
-        child?.type === 'text' &&
-        n.url === child.value
-      ) {
-        return false; 
-      }
+      if (n.title == null && child?.type === 'text' && n.url === child.value) return false;
       return true;
     }
 
     if (target === 'internallink' || target === 'externallink') {
       if (n.type !== 'link') return false;
-
-      if (
-        n.title == null &&
-        n.children?.length === 1 &&
-        n.children[0].type === 'text' &&
-        n.url === n.children[0].value
-      ) {
-        return false;
-      }
+      if (n.title == null &&
+          n.children?.length === 1 &&
+          n.children[0].type === 'text' &&
+          n.url === n.children[0].value) return false;
 
       return target === 'internallink'
         ? isInternal(n.url || '')
@@ -109,27 +91,38 @@ export function run(ctx, cfg = {}) {
 
   const serializeNode = n => {
     if (ctx.markdown && n.position?.start && n.position?.end) {
-      const lines = ctx.markdown.split('\n');
       const { start, end } = n.position;
-
       if (start.line === end.line) {
-        return lines[start.line - 1].slice(start.column - 1, end.column - 1);
+        return mdLines[start.line - 1].slice(start.column - 1, end.column - 1);
       }
-
-      const snippet = [lines[start.line - 1].slice(start.column - 1)];
-      for (let i = start.line; i < end.line - 1; i++) {
-        snippet.push(lines[i]);
-      }
-      snippet.push(lines[end.line - 1].slice(0, end.column - 1));
+      const snippet = [mdLines[start.line - 1].slice(start.column - 1)];
+      for (let i = start.line; i < end.line - 1; i++) snippet.push(mdLines[i]);
+      snippet.push(mdLines[end.line - 1].slice(0, end.column - 1));
       return snippet.join('\n');
     }
-
     if (typeof n.value === 'string') return n.value;
     return toString(n);
   };
 
   const malformed = checkLinkFormatting(md);
   const result = { document: [], paragraph: [], line: {}, endoffile: [] };
+
+  const attachRawExtras = (n, base) => {
+    const ln = n.position?.start?.line;
+    const rawLine = typeof ln === 'number' ? (mdLines[ln - 1] ?? '') : '';
+
+    let bullet = null;
+    if (n.type === 'listItem' && rawLine) {
+      const m = rawLine.match(/^\s*([-*+])\s+/);
+      bullet = m?.[1] ?? null;
+    }
+
+    return {
+      ...base,
+      ...(rawLine ? { raw: rawLine } : {}),
+      ...(bullet ? { bullet } : {}),
+    };
+  };
 
   const handlers = {
     document() {
@@ -153,11 +146,13 @@ export function run(ctx, cfg = {}) {
             n.url === n.children[0].value
           ) return;
 
-          result.document.push({
+          const base = {
             ...n,
             line: n.position?.start?.line ?? 1,
             content: serializeNode(n),
-          });
+          };
+
+          result.document.push(attachRawExtras(n, base));
         });
 
         if (target === 'internallink' || target === 'externallink') {
@@ -184,11 +179,11 @@ export function run(ctx, cfg = {}) {
 
         if (matches.length) {
           decorated.push(
-            ...matches.map(m =>
-              typeof m === 'string'
-                ? { content: m }
-                : { ...m, content: serializeNode(m) }
-            )
+            ...matches.map(m => {
+              if (typeof m === 'string') return { content: m };
+              const base = { ...m, content: serializeNode(m) };
+              return attachRawExtras(m, base);
+            })
           );
         }
 
@@ -235,10 +230,11 @@ export function run(ctx, cfg = {}) {
           ) return;
 
           const ln = n.position?.start?.line;
-          (result.line[ln] ??= []).push({
+          const base = {
             ...n,
             content: serializeNode(n),
-          });
+          };
+          (result.line[ln] ??= []).push(attachRawExtras(n, base));
         });
 
         if (target === 'internallink' || target === 'externallink') {
@@ -258,28 +254,26 @@ export function run(ctx, cfg = {}) {
 
     endoffile() {
       if (isRegex) {
-          const endsWithNewline = /\r?\n$/.test(md);
-          if (endsWithNewline) {
-            const line = md.split('\n').length;
-            result.endoffile.push({
-              content: '\\n',
-              line
-            });
-          }
+        const endsWithNewline = /\r?\n$/.test(md);
+        if (endsWithNewline) {
+          const line = md.split('\n').length;
+          result.endoffile.push({ content: '\\n', line });
         }
-      else {
+      } else {
         const endLine = md.split('\n').length;
         visit(ctx.ast, n => {
           if (n.position?.start?.line === endLine && matchNode(n)) {
-            result.endoffile.push({
+            const base = {
               ...n,
               line: endLine,
               content: serializeNode(n),
-            });
+            };
+            result.endoffile.push(attachRawExtras(n, base));
           }
         });
 
         if (target === 'internallink' || target === 'externallink') {
+          const malformed = checkLinkFormatting(md);
           malformed.forEach(iss => {
             if (iss.line !== endLine) return;
             const urlMatch = iss.content.match(/\(([^()\s]*)/);

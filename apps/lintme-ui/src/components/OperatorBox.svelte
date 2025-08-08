@@ -18,6 +18,11 @@
   import MarkdownRenderOperator from './MarkdownRenderOperator.svelte';
   import CalculateContrastOperator from './CalculateContrastOperator.svelte';
   import CustomCodeOperator from './CustomCodeOperator.svelte';
+  import DetectDuplicateSentencesOperator from './DetectDuplicateSentencesOperator.svelte';
+  import EvaluateUsingLLMOperator from './EvaluateUsingLLMOperator.svelte';
+  import CodeBlockFormattingOperator from './CodeBlockFormattingOperator.svelte';
+  import LinkAliveOperator from './LinkAliveOperator.svelte';
+  import ExecuteOperator from './ExecuteOperator.svelte';
 
   export let step;
   export let index;
@@ -94,14 +99,14 @@
           <h4 class="text-sm font-semibold text-gray-700">
             {step.operator} configurations
           </h4>
-          <button
-            class="text-gray-400 hover:text-red-500 text-sm"
-            on:click|stopPropagation={remove}
-            title="Delete step"
-            aria-label="Delete step"
-          >
-            ✖
-          </button>
+        <button
+          class="bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-red-500 rounded-full w-6 h-6 flex items-center justify-center text-sm transition"
+          on:click|stopPropagation={remove}
+          title="Delete step"
+          aria-label="Delete step"
+        >
+          ✖
+        </button>
         </div>
 
         {#key step.id}
@@ -139,6 +144,16 @@
             <CalculateContrastOperator bind:data={step} {storeIndex} on:input={changed} />
           {:else if step.operator === 'customCode'}
             <CustomCodeOperator bind:data={step} on:input={changed} />
+          {:else if step.operator === 'detectDuplicateSentences'}
+            <DetectDuplicateSentencesOperator bind:data={step} {storeIndex} on:input={changed} />  
+          {:else if step.operator === 'evaluateUsingLLM'}
+            <EvaluateUsingLLMOperator bind:data={step} on:input={changed} />  
+          {:else if step.operator === 'codeBlockFormatting'}
+            <CodeBlockFormattingOperator bind:data={step} on:input={changed} />  
+          {:else if step.operator === 'isLinkAlive'}
+            <LinkAliveOperator bind:data={step} on:input={changed} />
+          {:else if step.operator === 'execute'}
+            <ExecuteOperator bind:data={step} on:input={changed} /> 
           {/if}
         {/key}
       </div>

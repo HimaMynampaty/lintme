@@ -6,8 +6,7 @@
   "private": true,
   "scripts": {
     "test": "vitest run",
-    "dev": "concurrently -n backend -c blue \"yarn workspace backend start\"",
-    "build:functions": "esbuild netlify/functions-src/runPipeline.js --bundle --platform=node --format=esm --outdir=netlify/functions --external:retext-equality --external:retext-profanities --packages=external --out-extension:.js=.mjs"
+    "dev": "concurrently -n backend -c blue \"yarn workspace backend start\""
   },
   "type": "module",
   "workspaces": [
@@ -27,6 +26,7 @@
   },
   "dependencies": {
     "acron": "^1.0.5",
+    "ajv": "^8.17.1",
     "canvas": "^3.1.2",
     "firebase": "^11.10.0",
     "idb": "^8.0.3",
@@ -37,6 +37,7 @@
     "retext": "^9.0.0",
     "retext-equality": "^7.1.0",
     "retext-profanities": "^8.0.0",
+    "svelte-portal": "^2.2.1",
     "svelte-select": "^5.8.3"
   }
 }

@@ -16,4 +16,9 @@ export const OPERATORS = {
   'markdownRender': () => import('../operators/markdownRender/index.js').then(m => m.run),
   'calculateContrast': () => import('../operators/calculateContrast/index.js').then(m => m.run),
   'customCode': () => import('../operators/customCode/index.js').then(m => m.run),
+  'detectDuplicateSentences': () => import('../operators/detectDuplicateSentences/index.js').then(m => m.run),
+  'evaluateUsingLLM':        () => import('../operators/evaluateUsingLLM/index.js').then(m => m.run),
+  'codeBlockFormatting':        () => import('../operators/codeBlockFormatting/index.js').then(m => m.run),
+  'isLinkAlive':        () => import('../operators/isLinkAlive/index.js').then(m => m.run),
+  'execute':        () => import('../operators/execute/index.js').then(m => m.run),
 };

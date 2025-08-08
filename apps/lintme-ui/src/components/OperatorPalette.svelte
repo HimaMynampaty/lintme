@@ -21,7 +21,12 @@
     { name: 'readmeLocationCheck', label: 'readmeLocationCheck' },
     { name: 'markdownRender', label: 'markdownRender' },
     { name: 'calculateContrast', label: 'calculateContrast' },
-    { name: 'customCode', label: 'customCode' }
+    { name: 'customCode', label: 'customCode' },
+    { name: 'detectDuplicateSentences', label: 'detectDuplicateSentences' },
+    { name: 'evaluateUsingLLM', label: 'evaluateUsingLLM' },
+    { name: 'codeBlockFormatting', label: 'codeBlockFormatting' },
+    { name: 'isLinkAlive', label: 'isLinkAlive' },
+    { name: 'execute', label: 'execute' },
   ];
 
   function choose(op) {

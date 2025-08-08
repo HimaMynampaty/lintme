@@ -8,10 +8,13 @@ export const operatorDescriptions = {
   regexMatch: 'Match values using a regular expression.',
   sage: 'Run a custom Sage rule (Turn markdown headings into TOC links).',
   search: 'Search for specific words or phrases.',
-  compare: 'Compare values from different steps.',
+  compare: 'Compare values from different steps. Supports both structural (DOM/image) and similarity (meaning-level, embedding, edit distance) comparisons.',
   detectHateSpeech: 'Detect potentially hateful, biased, or offensive language using Retext.',
-  fetchFromGithub: 'Access GitHub to fetch file path, content, metadata.',
+  fetchFromGithub: 'Access GitHub to fetch file path, file content, or repository metadata like languages, contributors, and more.',
   readmeLocationCheck: 'Validates presence and location of README.md files',
   markdownRender: 'Render Markdown using a chosen engine (e.g., marked, puppeteer) to generate HTML, DOM, or image output.',
-  customCode: 'Run user-defined JavaScript on the input data'
+  customCode: 'Run user-defined JavaScript on the input data',
+  detectDuplicateSentences: 'Detect repeated sentences, links, or headings across the document or from a previous extraction.',
+  evaluateUsingLLM: 'Evaluate the content using an LLM based on a rule and expected outcomes you define.',
+  codeBlockFormatting: 'Validate code block language tags and formatting consistency',
 };

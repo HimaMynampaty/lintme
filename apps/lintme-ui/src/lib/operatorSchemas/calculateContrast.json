@@ -1,0 +1,20 @@
+{
+  "label": "Calculate Contrast",
+  "description": "For every HTML snippet extracted from Markdown, computes the WCAG contrast ratio between the element’s foreground (`color`) and background (`background-color`). Adds line-level diagnostics and a `contrast` dataset to the pipeline context.",
+  "requiresPrevious": {
+    "operator": "extract",
+    "target": "html",
+    "message": "The previous step must be `extract` with `target: html`."
+  },
+  "fields": {},
+  "additionalProperties": false,  
+  "produces": {
+    "target": "contrast",
+    "scopes": ["line"],
+    "contextWrites": ["ctx.contrast", "ctx.count.contrast"],
+    "diagnosticsSeverity": ["warning", "error"]
+  },
+  "example": {
+    "operator": "calculateContrast"
+  }
+}
