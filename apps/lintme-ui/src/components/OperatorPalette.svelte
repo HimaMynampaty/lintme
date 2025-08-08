@@ -25,6 +25,8 @@
     { name: 'detectDuplicateSentences', label: 'detectDuplicateSentences' },
     { name: 'evaluateUsingLLM', label: 'evaluateUsingLLM' },
     { name: 'codeBlockFormatting', label: 'codeBlockFormatting' },
+    { name: 'isLinkAlive', label: 'isLinkAlive' },
+    { name: 'execute', label: 'execute' },
   ];
 
   function choose(op) {

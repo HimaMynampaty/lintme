@@ -57,6 +57,25 @@
               threshold: 80
             },
           ];
+        case 'isLinkAlive':
+          return [
+            ...steps,
+            {
+              id,
+              operator: 'isLinkAlive',
+              timeout: 5000,
+              allowed_status_codes: [200, 301, 302, 308, 204]
+            },
+          ];  
+        case 'execute':
+          return [
+            ...steps,
+            {
+              id,
+              operator: 'execute',
+              timeout: 5000
+            }
+          ];
         case "regexMatch":
           return [...steps, { id, operator: "regexMatch", pattern: "", mode: "match"}];
         case "sage":

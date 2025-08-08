@@ -21,6 +21,8 @@
   import DetectDuplicateSentencesOperator from './DetectDuplicateSentencesOperator.svelte';
   import EvaluateUsingLLMOperator from './EvaluateUsingLLMOperator.svelte';
   import CodeBlockFormattingOperator from './CodeBlockFormattingOperator.svelte';
+  import LinkAliveOperator from './LinkAliveOperator.svelte';
+  import ExecuteOperator from './ExecuteOperator.svelte';
 
   export let step;
   export let index;
@@ -148,6 +150,10 @@
             <EvaluateUsingLLMOperator bind:data={step} on:input={changed} />  
           {:else if step.operator === 'codeBlockFormatting'}
             <CodeBlockFormattingOperator bind:data={step} on:input={changed} />  
+          {:else if step.operator === 'isLinkAlive'}
+            <LinkAliveOperator bind:data={step} on:input={changed} />
+          {:else if step.operator === 'execute'}
+            <ExecuteOperator bind:data={step} on:input={changed} /> 
           {/if}
         {/key}
       </div>
