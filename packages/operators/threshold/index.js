@@ -1,5 +1,16 @@
 export function run(ctx, cfg = {}) {
-  let { target, conditions = {}, level = 'warning', label } = cfg;
+  let {
+    target,
+    conditions = {},
+    level = 'warning',
+    label,
+    enforceOnEmpty = false,
+    silenceOnPass = {
+      severities: ['warning'],
+      codes: ['extract/no-nodes'], 
+      patterns: []               
+    }
+  } = cfg;
 
   if (!target) {
     if (ctx.previous?.target) {
@@ -27,21 +38,25 @@ export function run(ctx, cfg = {}) {
 
   const counts = ctx.count?.[target];
   if (!counts) {
-    pushErr(
-      ctx,
-      `No counts found for "${target}". Ensure a prior step (like 'count' or 'length') ran first.`
-    );
+    pushErr(ctx, `No counts found for "${target}". Ensure a prior step (like 'count' or 'length') ran first.`);
     return ctx;
   }
 
   const prevScopes = ctx.previous?.scopes ?? [];
 
   const adapters = {
-    document: () => [{ line: 1, actual: counts.document ?? 0 }],
-    endoffile: () => [{ line: 1, actual: counts.endoffile ?? 0 }],
-    previousstepoutput: () => [{ line: 1, actual: counts.previousstepoutput ?? 0 }],
-    line: () => Object.entries(counts.line ?? {}).map(([ln, c]) => ({ line: +ln, actual: c })),
-    paragraph: () => (counts.paragraph ?? []).map(p => ({ line: p.line, actual: p.count ?? p.length ?? 0 }))
+    document: () => (counts.document == null ? [] : [{ line: 1, actual: counts.document }]),
+    endoffile: () => (counts.endoffile == null ? [] : [{ line: 1, actual: counts.endoffile }]),
+    previousstepoutput: () => (counts.previousstepoutput == null ? [] : [{ line: 1, actual: counts.previousstepoutput }]),
+    line: () => {
+      const m = counts.line ?? {};
+      const entries = Object.entries(m);
+      return entries.length ? entries.map(([ln, c]) => ({ line: +ln, actual: c })) : [];
+    },
+    paragraph: () => {
+      const arr = counts.paragraph ?? [];
+      return arr.length ? arr.map(p => ({ line: p.line, actual: p.count ?? p.length ?? 0 })) : [];
+    }
   };
 
   const exampleSources = {
@@ -79,6 +94,10 @@ export function run(ctx, cfg = {}) {
       }
     }
 
+    if (rows.length === 0) {
+      if (!enforceOnEmpty) continue;
+    }
+
     const { type, value } = normalizeRule(rule);
 
     const violations = [];
@@ -95,13 +114,7 @@ export function run(ctx, cfg = {}) {
         });
 
         ctx.diagnostics.push({ line, severity: level, message });
-        violations.push({
-          line,
-          actual,
-          scope: effectiveScope,
-          expected: { type, value },
-          message
-        });
+        violations.push({ line, actual, scope: effectiveScope, expected: { type, value }, message });
       }
     }
 
@@ -109,6 +122,22 @@ export function run(ctx, cfg = {}) {
       allViolations[effectiveScope] ??= [];
       allViolations[effectiveScope].push(...violations);
     }
+  }
+
+  const hasViolations = Object.values(allViolations).some(v => Array.isArray(v) && v.length > 0);
+  if (!hasViolations && Array.isArray(ctx.diagnostics) && silenceOnPass) {
+    const severities = (silenceOnPass.severities || ['warning']).map(s => String(s).toLowerCase());
+    const codeSet = Array.isArray(silenceOnPass.codes) ? new Set(silenceOnPass.codes) : null;
+    const regexes = (silenceOnPass.patterns || [])
+      .map(p => { try { return new RegExp(p, 'i'); } catch { return null; } })
+      .filter(Boolean);
+
+    ctx.diagnostics = ctx.diagnostics.filter(d => {
+      const sevMatch = severities.includes(String(d.severity || '').toLowerCase());
+      const codeMatch = codeSet ? codeSet.has(d.code) : false;
+      const patMatch = regexes.length ? regexes.some(rx => rx.test(String(d.message || ''))) : false;
+      return !(sevMatch && (codeMatch || patMatch));
+    });
   }
 
   return { target, data: { violations: allViolations } };

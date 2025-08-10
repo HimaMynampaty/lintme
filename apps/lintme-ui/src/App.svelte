@@ -540,7 +540,7 @@
       diagnostics   = ctx.diagnostics || [];
       fixedMarkdown = ctx.fixedMarkdown || originalText;
 
-      const judgmentOperators = new Set(['threshold', 'isPresent', 'compare', 'fixUsingLLM', 'detectHateSpeech', 'readmeLocationCheck', 'detectDuplicateSentences']);
+      const judgmentOperators = new Set(['threshold', 'isPresent', 'compare', 'fixUsingLLM', 'detectHateSpeech', 'readmeLocationCheck', 'detectDuplicateSentences', 'codeBlockFormatting']);
 
       if (diagnostics.length > 0) {
         const errorCount = diagnostics.filter(d => d.severity === 'error').length;

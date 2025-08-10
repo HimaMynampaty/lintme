@@ -1,18 +1,21 @@
 {
   "label": "Calculate Contrast",
-  "description": "For every HTML snippet extracted from Markdown, computes the WCAG contrast ratio between the element’s foreground (`color`) and background (`background-color`). Adds line-level diagnostics and a `contrast` dataset to the pipeline context.",
+  "description": "Measures foreground/background contrast for inline HTML extracted from Markdown and records the lowest ratio per line. Flags insufficient contrast to support WCAG compliance.",
+  "rationale": "Improves visual clarity and accessibility by highlighting text that fails contrast guidelines.",
+  "improves": ["accessibility", "visual-clarity", "wcag-compliance"],
+  "version": "1.0.0",
   "requiresPrevious": {
     "operator": "extract",
     "target": "html",
-    "message": "The previous step must be `extract` with `target: html`."
+    "scopes": ["document"],
+    "message": "The previous step must be `extract` with `target: html` and scope `document`."
   },
   "fields": {},
   "additionalProperties": false,  
   "produces": {
     "target": "contrast",
     "scopes": ["line"],
-    "contextWrites": ["ctx.contrast", "ctx.count.contrast"],
-    "diagnosticsSeverity": ["warning", "error"]
+    "contextWrites": ["ctx.contrast", "ctx.count.contrast"]
   },
   "example": {
     "operator": "calculateContrast"

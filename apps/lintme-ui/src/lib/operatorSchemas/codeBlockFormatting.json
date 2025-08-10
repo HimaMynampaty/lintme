@@ -1,0 +1,52 @@
+{
+  "label": "Code Block Formatting",
+  "description": "Ensures Markdown code blocks follow consistent style(fenced, indented) and allowed language tags, helping maintain a uniform and readable document structure.",
+  "rationale": "Maintains consistent code block style and language tagging so examples are consistent",
+  "improves": ["consistency", "structure"],
+  "version": "1.0.0",
+  "fields": {
+    "allowedLanguages": {
+      "type": "array",
+      "description": "Allowed language tags for fenced code blocks. Empty means no restriction.",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_+\\-]+$"
+      },
+      "uniqueItems": true,
+      "default": [],
+      "required": false
+    },
+    "allowedFormats": {
+      "type": "array",
+      "description": "Allowed code block formats. If empty/omitted, both formats are allowed.",
+      "items": {
+        "type": "string",
+        "enum": ["fenced", "indented"]
+      },
+      "uniqueItems": true,
+      "default": ["fenced"],
+      "required": false
+    }
+  },
+
+  "additionalProperties": false,
+
+  "produces": {
+    "target": "codeblockformatting",
+    "scopes": ["line"],
+    "contextWrites": ["ctx.diagnostics"]
+  },
+
+    "example": {
+        "operator": "codeBlockFormatting",
+        "allowedLanguages": [
+            "javascript",
+            "js"
+        ],
+        "allowedFormats": [
+            "fenced",
+            "indented"
+        ]
+    }
+}

@@ -3,12 +3,11 @@ import { parseYAML } from '../utils/yaml.js';
 import { operatorSchemas } from './operatorSchemaIndex.js';
 import { buildAjvSchema } from './buildAjvSchema.js';
 
-const ajv = new Ajv({ allErrors: true, strict: false });
+const ajv = new Ajv({ allErrors: true, strict: false, useDefaults: true });
 
 export function validatePipeline(ruleYaml) {
-  const steps = parseYAML(ruleYaml); 
+  const steps = parseYAML(ruleYaml);
   const errors = [];
-  const writes = new Set();      
 
   steps.forEach((step, i) => {
     const schema = operatorSchemas[step.operator];
@@ -24,48 +23,56 @@ export function validatePipeline(ruleYaml) {
     const stepSchema = buildAjvSchema(schema, step.operator);
     const validate = ajv.compile(stepSchema);
     if (!validate(step)) {
-    for (const err of validate.errors) {
+      for (const err of validate.errors) {
         if (err.keyword === 'additionalProperties') {
-        const extra = err.params?.additionalProperty;
-        errors.push({
+          const extra = err.params?.additionalProperty;
+          errors.push({
             step: i,
             message: `Unknown property \`${extra}\``
-        });
+          });
         } else {
-        errors.push({
+          errors.push({
             step: i,
             message: `Field error ${err.instancePath || ''} – ${err.message}`
-        });
+          });
         }
-    }
+      }
     }
 
     if (schema.requiresPrevious) {
       const prev = steps[i - 1];
-      const allowed = Array.isArray(schema.requiresPrevious.operator)
-        ? schema.requiresPrevious.operator
-        : [schema.requiresPrevious.operator];
 
-      if (!prev || !allowed.includes(prev.operator)) {
+      const okOperator = (() => {
+        const allowed = Array.isArray(schema.requiresPrevious.operator)
+          ? schema.requiresPrevious.operator
+          : [schema.requiresPrevious.operator];
+        return !!prev && allowed.includes(prev.operator);
+      })();
+
+      const okTarget = (() => {
+        if (!schema.requiresPrevious.target) return true;
+        const allowed = Array.isArray(schema.requiresPrevious.target)
+          ? schema.requiresPrevious.target
+          : [schema.requiresPrevious.target];
+        return !!prev && allowed.includes(prev.target);
+      })();
+
+      const okScopes = (() => {
+        if (!schema.requiresPrevious.scopes) return true;
+        const required = Array.isArray(schema.requiresPrevious.scopes)
+          ? schema.requiresPrevious.scopes
+          : [schema.requiresPrevious.scopes];
+        const prevScopes = prev?.scopes ?? (prev?.scope ? [prev.scope] : []);
+        return required.every(s => prevScopes.includes(s));
+      })();
+
+      if (!okOperator || !okTarget || !okScopes) {
         errors.push({
           step: i,
           message: schema.requiresPrevious.message
         });
       }
     }
-
-    (schema.produces?.contextWrites || []).forEach(p => writes.add(p));
-
-        if (
-        schema.requiresContext &&
-        ![...writes].some(w => w.startsWith(schema.requiresContext.path))
-        ) {
-        errors.push({
-            step: i,
-            message: schema.requiresContext.message
-        });
-        }
-
   });
 
   return errors;

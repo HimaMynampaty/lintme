@@ -5,6 +5,14 @@ const EMOJI_REGEX = /:[\w+-]+:|[\p{Emoji_Presentation}\p{Extended_Pictographic}\
 const DATE_REGEX  = /\b(?:\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}|\d{4}[\/-]\d{1,2}[\/-]\d{1,2})\b/g;
 const BUILTIN_RX = { emoji: EMOJI_REGEX, newline: /\r?\n/g, date: DATE_REGEX };
 
+// Known mdast node types (used to distinguish "no nodes" vs "invalid target")
+const MDAST_KNOWN_TYPES = new Set([
+  'root','paragraph','text','heading','thematicBreak','blockquote','list','listItem',
+  'table','tableRow','tableCell','html','code','yaml','definition','footnoteDefinition',
+  'break','emphasis','strong','delete','link','image','linkReference','imageReference',
+  'footnote','footnoteReference'
+]);
+
 const escapeRE = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const toRegExp = t => BUILTIN_RX[t] || new RegExp(escapeRE(t), 'gi');
 
@@ -23,22 +31,7 @@ export function run(ctx, cfg = {}) {
   const isExternal = url => /^https?:\/\//i.test(url);
   const isInternal = url => !isExternal(url);
 
-  if (!isRegex && !['internallink', 'externallink'].includes(target)) {
-    let found = false;
-    visit(ctx.ast, n => {
-      if (n.type === target) { found = true; return EXIT; }
-    });
-    if (!found) {
-      ctx.diagnostics.push({
-        line: 1,
-        severity: 'warning',
-        message:
-          `extract: no “${target}” nodes found. ` +
-          `Either this markdown doesn’t contain that node type ` +
-          `or “${target}” isn’t a valid mdast node type.`
-      });
-    }
-  }
+  // NOTE: Removed early “no nodes found” warning. We'll decide after collecting results.
 
   const checkLinkFormatting = markdown => {
     const RX = {
@@ -288,6 +281,7 @@ export function run(ctx, cfg = {}) {
     }
   };
 
+  // de-duplicate document + paragraph
   for (const scope of ['document', 'paragraph']) {
     const seen = new Set();
     result[scope] = result[scope].filter(item => {
@@ -298,6 +292,7 @@ export function run(ctx, cfg = {}) {
     });
   }
 
+  // de-duplicate line items
   const lineSeen = new Set();
   for (const [ln, entries] of Object.entries(result.line)) {
     result.line[ln] = entries.filter(e => {
@@ -308,8 +303,39 @@ export function run(ctx, cfg = {}) {
     });
   }
 
+  // run requested scopes
   for (const s of scopes) handlers[s]?.();
-  ctx.extracted = { target, scopes, data: result };
+
+  // === Post-collection: decide whether to warn and tag the warning with a code ===
+  const hasAny =
+    result.document.length ||
+    result.paragraph.length ||
+    Object.keys(result.line).length ||
+    result.endoffile.length;
+
+  const isSpecial = ['internallink','externallink'].includes(target);
+  const isKnownMdast = isRegex || isSpecial ? true : MDAST_KNOWN_TYPES.has(target);
+
+  if (!hasAny) {
+    if (!isKnownMdast) {
+      ctx.diagnostics.push({
+        line: 1,
+        severity: 'warning',
+        code: 'extract/invalid-target',
+        message: `extract: unknown node type “${target}”. This does not match any known mdast node type.`
+      });
+    } else {
+      ctx.diagnostics.push({
+        line: 1,
+        severity: 'warning',
+        code: 'extract/no-nodes',
+        message: `extract: no “${target}” nodes found in ${scopes.join(', ')}.`
+      });
+    }
+  }
+
+  // Provide meta for downstream operators (optional)
+  ctx.extracted = { target, scopes, data: result, meta: { empty: !hasAny, isKnownMdast } };
   return { target, scopes, data: result };
 }
 
