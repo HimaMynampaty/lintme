@@ -112,7 +112,7 @@ async function run() {
     await fs.writeFile(README_PATH, next, 'utf8');
     console.log('Operators table updated:', README_PATH);
   } else {
-    console.log('Operators table already up to date.');
+    console.log('Operators table is already up to date.');
   }
 }
 
