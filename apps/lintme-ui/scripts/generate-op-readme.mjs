@@ -49,11 +49,11 @@ async function makeTable(operatorSchemas) {
   const rows = [];
   for (const [name, s] of Object.entries(operatorSchemas).sort((a, b) => a[0].localeCompare(b[0]))) {
     const schemaAbs = path.join(SCHEMAS_DIR, `${name}.json`);
-    const schemaLink = (await exists(schemaAbs)) ? mdLink('Schema', rel(README_PATH, schemaAbs)) : '—';
+    const schemaLink = (await exists(schemaAbs)) ? mdLink('Json Schema', rel(README_PATH, schemaAbs)) : '—';
 
     const compFile = componentOverrides[name] || `${pascal(name)}Operator.svelte`;
     const compAbs = path.join(COMPONENTS_DIR, compFile);
-    const compLink = (await exists(compAbs)) ? mdLink('Component', rel(README_PATH, compAbs)) : '—';
+    const compLink = (await exists(compAbs)) ? mdLink('Svelte Component', rel(README_PATH, compAbs)) : '—';
 
     const implAbs = path.join(BACKEND_OPS_DIR, name, 'index.js');
     const implLink = (await exists(implAbs)) ? mdLink('Implementation', rel(README_PATH, implAbs)) : '—';
