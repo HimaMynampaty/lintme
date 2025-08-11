@@ -1,0 +1,86 @@
+{
+    "label": "Regex Match",
+    "description": "Flags lines that DO match (mode: \"match\") or do NOT match (mode: \"unmatch\") one or more regular expressions. Can run on the whole document or on the previous step's structured output.",
+    "rationale": "Detects patterns (e.g., URLs, dates, secrets) or enforces formatting by matching/unmatching lines.",
+    "improves": [
+        "content-quality",
+        "pattern-matching",
+        "consistency",
+        "validation"
+    ],
+    "version": "1.0.0",
+    "usedByRules": [
+        "consistentExternalLinkFormat",
+        "consistentHeadingFormat",
+        "consistentListFormat",
+        "dateValidationLint",
+        "detectSensitiveSecrets",
+        "disallowConsecutiveDuplicateWords",
+        "validateLinkFormatting"
+    ],
+    "fields": {
+        "patterns": {
+            "type": "array",
+            "description": "List of regex patterns (strings). Case-insensitive; at least one required.",
+            "items": {
+                "type": "string",
+                "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true,
+            "required": true
+        },
+        "mode": {
+            "type": "string",
+            "description": "How to flag lines: 'match' = lines that match; 'unmatch' = lines that don't match.",
+            "enum": [
+                "match",
+                "unmatch"
+            ],
+            "default": "match",
+            "required": false
+        },
+        "scope": {
+            "type": "string",
+            "description": "Where to search. 'document' scans the markdown text. 'previousstepoutput' walks the previous step's result like extract .",
+            "enum": [
+                "document",
+                "previousstepoutput"
+            ],
+            "default": "document",
+            "required": false
+        }
+    },
+    "additionalProperties": false,
+    "unevaluatedProperties": false,
+    "produces": {
+        "target": "regexMatch",
+        "scopes": [
+            "document",
+            "previousstepoutput"
+        ],
+        "contextWrites": [
+            "ctx.extracted",
+            "ctx.previous",
+            "ctx.metricLabel",
+            "ctx.diagnostics"
+        ]
+    },
+    "examples": [
+        {
+            "operator": "regexMatch",
+            "mode": "match",
+            "scope": "document",
+            "patterns": [
+                "https:\\/\\/[^\\s)]+",
+                "\\[[^\\]]+\\]\\([^\\)]+\\)"
+            ]
+        },
+        {
+            "operator": "regexMatch",
+            "mode": "unmatch",
+            "scope": "previousstepoutput",
+            "pattern": "^\\s*-\\s+"
+        }
+    ]
+}

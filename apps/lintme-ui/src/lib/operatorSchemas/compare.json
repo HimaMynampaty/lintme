@@ -8,7 +8,9 @@
     ],
     "version": "1.0.0",
     "usedByRules": [
-        "compareMarkdownRenderings"
+        "compareMarkdownRenderings",
+        "compareReadmeSimilarity",
+        "validateInternalLinksToHeadings"
     ],
     "fields": {
         "baseline": {

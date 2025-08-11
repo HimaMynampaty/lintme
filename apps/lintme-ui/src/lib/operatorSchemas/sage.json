@@ -1,0 +1,41 @@
+{
+    "label": "Sage (Slugify Headings)",
+    "description": "Converts headings from the previous extract step into GitHub-style slug anchors (e.g., \"My Title\" → \"#my-title\"). No configuration required.",
+    "rationale": "Generates stable anchors so downstream checks can validate intra-doc links and navigation.",
+    "improves": [
+        "navigation",
+        "linkability",
+        "validation",
+        "accuracy"
+    ],
+    "version": "1.0.0",
+    "usedByRules": [
+        "validateInternalLinksToHeadings"
+    ],
+    "requiresPrevious": {
+        "operator": "extract",
+        "target": "heading",
+        "scopes": [
+            "document"
+        ],
+        "message": "sage must follow an extract step with target: heading."
+    },
+    "fields": {},
+    "additionalProperties": false,
+    "unevaluatedProperties": false,
+    "produces": {
+        "target": "sage",
+        "scopes": [
+            "document"
+        ],
+        "contextWrites": [
+            "ctx.slugs",
+            "ctx.diagnostics"
+        ]
+    },
+    "examples": [
+        {
+            "operator": "sage"
+        }
+    ]
+}

@@ -7,7 +7,7 @@ const ajv = new Ajv({
   allErrors: true,
   strict: false,
   useDefaults: true,
-  allowUnionTypes: true 
+  allowUnionTypes: true
 });
 
 function priority(kw) {
@@ -78,8 +78,18 @@ export function validatePipeline(ruleYaml) {
         const required = Array.isArray(req) ? req : [req];
         return required.every(s => prevScopes.includes(s));
       })();
-
-      if (!okOperator || !okTarget || !okScopes) {
+      const okFields = (() => {
+        const req = reqPrev.fields;
+        if (!req) return true;
+        if (!prev) return false;
+        return Object.entries(req).every(([k, expected]) => {
+          const val = prev?.[k];
+          if (expected === '*') return val !== undefined && val !== null;
+          const allowed = Array.isArray(expected) ? expected : [expected];
+          return allowed.includes(val);
+        });
+      })()
+      if (!okOperator || !okTarget || !okScopes || !okFields || !okFields) {
         errors.push({ step: i, message: reqPrev.message });
       }
     }

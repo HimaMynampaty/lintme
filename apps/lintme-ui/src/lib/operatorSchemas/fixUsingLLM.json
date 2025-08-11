@@ -10,10 +10,13 @@
     ],
     "version": "1.0.0",
     "usedByRules": [
+        "ambiguityUnderstandabilityCheck(LLM)",
+        "detectHateSpeechLint(LLM)",
         "ensureNeutralTone(LLM)",
         "fixSpellingAndGrammar(LLM)",
         "objectivityCheck(LLM)",
-        "terminologyConsistency(LLM)"
+        "terminologyConsistency(LLM)",
+        "jargonExplanationCheck(LLM)"
     ],
     "fields": {
         "model": {

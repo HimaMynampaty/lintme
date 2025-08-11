@@ -15,6 +15,10 @@ import isPresent from './operatorSchemas/isPresent.json';
 import length from './operatorSchemas/length.json';
 import isLinkAlive from './operatorSchemas/isLinkAlive.json';
 import markdownRender from './operatorSchemas/markdownRender.json';
+import readmeLocationCheck from './operatorSchemas/readmeLocationCheck.json';
+import regexMatch from './operatorSchemas/regexMatch.json';
+import sage from './operatorSchemas/sage.json';
+import search from './operatorSchemas/search.json';
 
 export const operatorSchemas = {
   calculateContrast,
@@ -33,5 +37,9 @@ export const operatorSchemas = {
   length,
   isLinkAlive,
   markdownRender,
+  readmeLocationCheck,
+  regexMatch,
+  sage,
+  search,
   threshold,
 };

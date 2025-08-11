@@ -2,20 +2,36 @@
   "label": "Markdown Render",
   "description": "Renders Markdown using a selected renderer and returns HTML, a serialized DOM snippet, or a URL to a rendered image.",
   "rationale": "Enables downstream rules to compare rendered output (HTML/DOM/image), diff visual changes, or analyze the produced markup.",
-  "improves": ["render-accuracy", "visual-regression", "content-verification"],
+  "improves": [
+    "accessibility",
+    "cross-platform",
+    "content-verification"
+  ],
   "version": "1.0.0",
+  "usedByRules": [
+    "compareMarkdownRenderings"
+  ],
   "fields": {
     "renderer": {
       "type": "string",
       "description": "Markdown renderer to use.",
-      "enum": ["marked", "markdown-it", "puppeteer", "playwright"],
+      "enum": [
+        "marked",
+        "markdown-it",
+        "puppeteer",
+        "playwright"
+      ],
       "default": "marked",
       "required": true
     },
     "output": {
       "type": "string",
       "description": "Output format to produce.",
-      "enum": ["html", "dom", "image"],
+      "enum": [
+        "html",
+        "dom",
+        "image"
+      ],
       "default": "html",
       "required": true
     }
@@ -24,7 +40,9 @@
   "unevaluatedProperties": false,
   "produces": {
     "target": "markdownRender",
-    "scopes": ["document"],
+    "scopes": [
+      "document"
+    ],
     "contextWrites": [
       "ctx.output",
       "ctx.markdownRender",
