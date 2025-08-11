@@ -1,4 +1,19 @@
   <script>
+    import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+    import YamlWorker   from 'monaco-yaml/yaml.worker?worker';
+    if (typeof self !== 'undefined') {
+      self.require = undefined;
+      self.define  = undefined;
+    }
+
+    if (typeof window !== 'undefined') {
+      window.MonacoEnvironment = {
+        getWorker(_id, label) {
+          if (label === 'yaml') return new YamlWorker();
+          return new EditorWorker();
+        }
+      };
+    }
     import { onMount, tick } from 'svelte';
     import * as monaco from 'monaco-editor';
     import OperatorTriggerPanel from './components/OperatorTriggerPanel.svelte';
@@ -9,7 +24,8 @@
     import SvelteSelect from 'svelte-select';
     import './styles/lintme.css';
     import { validatePipeline } from './lib/validatePipeline.js';
-
+    import { configureMonacoYaml } from 'monaco-yaml';
+    import { buildMonacoYamlSchema } from './lib/buildMonacoYamlSchema.js';
 
     const sharedFontSize = 14;
     let markdownText = "";
@@ -212,17 +228,38 @@
     }
 
     onMount(async () => {
+      const rulesModelUri = monaco.Uri.parse('file:///rules.yaml');
+      const initialRulesText = rulesYaml || 'rule: my-rule\ndescription: ""\npipeline: []\n';
+      const rulesModel = monaco.editor.createModel(initialRulesText, 'yaml', rulesModelUri);
+
       rulesEditor = monaco.editor.create(rulesEditorContainer, {
-        value: rulesYaml,
-        language: 'yaml',
+        model: rulesModel,
         automaticLayout: true,
         minimap: { enabled: false },
         fixedOverflowWidgets: true,
         fontSize: sharedFontSize,
         wordWrap: 'on'
       });
-      ruleValidationErrors = validatePipeline(rulesYaml);
-      updateRuleMarkers(rulesEditor.getModel(), ruleValidationErrors, rulesYaml);
+
+      const yamlSchema = buildMonacoYamlSchema();
+
+      configureMonacoYaml(monaco, {
+        enableSchemaRequest: false,
+        validate: true,
+        completion: true,
+        hover: true,
+        format: true,
+        schemas: [
+          {
+            uri: 'schema://lintme/rules',
+            fileMatch: [rulesModelUri.toString()],
+            schema: yamlSchema
+          }
+        ]
+      });
+
+      ruleValidationErrors = validatePipeline(rulesEditor.getValue());
+      updateRuleMarkers(rulesEditor.getModel(), ruleValidationErrors, rulesEditor.getValue());
 
       rulesEditor.onDidChangeModelContent(() => {
         rulesYaml = rulesEditor.getValue();
@@ -243,6 +280,7 @@
       markdownEditor.onDidChangeModelContent(() => {
         markdownText = markdownEditor.getValue();
       });
+
       diffEditor = monaco.editor.createDiffEditor(diffEditorContainer, {
         readOnly: true,
         automaticLayout: true,
@@ -252,7 +290,6 @@
         renderSideBySide: false,
         wordWrap: 'on'
       });
-      
 
       outputEditor = monaco.editor.create(outputEditorContainer, {
         value: lintResults || 'No lint results to display yet.',
@@ -265,11 +302,9 @@
         scrollBeyondLastLine: false
       });
 
-      
       readmeFiles = await loadReadmesFromFirestore();
       ruleList = await loadRulesFromFirestore();
     });
-
 
   async function saveCurrentRule() {
     const yamlContent = rulesEditor.getValue();

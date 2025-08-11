@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher, onDestroy, tick } from 'svelte';
-  import { operatorDescriptions } from '../lib/operatorMetadata.js';
+  import { getOperatorDescription } from '../lib/buildMonacoYamlSchema.js';
+  
 
   import ExtractOperator     from './ExtractOperator.svelte';
   import CountOperator       from './CountOperator.svelte';
@@ -75,7 +76,7 @@
       data-step={step?.id ? `step-${step.id}` : ''}
       aria-haspopup="dialog"
       aria-expanded={showPopup}
-      title={operatorDescriptions[step.operator] ?? ''}
+      title={getOperatorDescription(step.operator)}
     >
       <span>Step {index}: {step.operator}</span>
       <span class="sr-only">Edit {step.operator}</span>
