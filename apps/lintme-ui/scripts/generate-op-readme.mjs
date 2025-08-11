@@ -27,6 +27,10 @@ const requiredList = (fields = {}) => {
 
 const escapeNewlines = (s = '') => String(s).replaceAll('\n', ' ');
 
+const componentOverrides = {
+  isLinkAlive: 'LinkAliveOperator.svelte'
+};
+
 const pascal = (name) => {
   if (!name) return '';
   if (/[-_\s]/.test(name)) {
@@ -47,7 +51,8 @@ async function makeTable(operatorSchemas) {
     const schemaAbs = path.join(SCHEMAS_DIR, `${name}.json`);
     const schemaLink = (await exists(schemaAbs)) ? mdLink('Schema', rel(README_PATH, schemaAbs)) : '—';
 
-    const compAbs = path.join(COMPONENTS_DIR, `${pascal(name)}Operator.svelte`);
+    const compFile = componentOverrides[name] || `${pascal(name)}Operator.svelte`;
+    const compAbs = path.join(COMPONENTS_DIR, compFile);
     const compLink = (await exists(compAbs)) ? mdLink('Component', rel(README_PATH, compAbs)) : '—';
 
     const implAbs = path.join(BACKEND_OPS_DIR, name, 'index.js');
@@ -105,9 +110,9 @@ async function run() {
 
   if (next !== current) {
     await fs.writeFile(README_PATH, next, 'utf8');
-    console.log('✅ Operators table updated:', README_PATH);
+    console.log('Operators table updated:', README_PATH);
   } else {
-    console.log('ℹ️  Operators table already up to date.');
+    console.log('Operators table already up to date.');
   }
 }
 
