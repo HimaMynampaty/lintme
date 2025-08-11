@@ -1,0 +1,57 @@
+{
+    "label": "Evaluate Using LLM",
+    "description": "Evaluates the current document against a provided rule definition using an LLM and returns PASS or FAIL with diagnostics.",
+    "rationale": "Allows flexible, AI-powered evaluation of markdown documents against custom rule definitions, leveraging intermediate pipeline outputs and diagnostics.",
+    "improves": [
+        "automation",
+        "flexibility",
+        "customization"
+    ],
+    "version": "1.0.0",
+    "usedByRules": [
+        "bestPracticesGuidelines(LLM)",
+        "codeBlockExecution(LLM)",
+        "sectionCompleteness(LLM)",
+        "timelinessCheckVersionUpdate(LLM)"
+    ],
+    "fields": {
+        "model": {
+            "type": "string",
+            "enum": [
+                "llama-3.3-70b-versatile",
+                "gemma2-9b-it"
+            ],
+            "default": "llama-3.3-70b-versatile",
+            "description": "The LLM model to use for evaluation."
+        },
+        "ruleDefinition": {
+            "type": "string",
+            "minLength": 10,
+            "default": "Evaluate the content based on the following rule:",
+            "description": "The natural language description of the rule to check the document against."
+        }
+    },
+    "additionalProperties": false,
+    "produces": {
+        "target": "llm_evaluation",
+        "scopes": [
+            "document"
+        ],
+        "contextWrites": [
+            "ctx.llmResponse",
+            "ctx.diagnostics"
+        ]
+    },
+    "examples": [
+        {
+            "operator": "evaluateUsingLLM",
+            "model": "llama-3.3-70b-versatile",
+            "ruleDefinition": "All headings must be in title case."
+        },
+        {
+            "operator": "evaluateUsingLLM",
+            "model": "gemma2-9b-it",
+            "ruleDefinition": "Avoid passive voice in the document."
+        }
+    ]
+}

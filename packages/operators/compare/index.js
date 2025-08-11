@@ -1,4 +1,5 @@
 export async function run(ctx, cfg = {}) {
+  ctx.diagnostics ??= []; 
   const {
     baseline,
     against,

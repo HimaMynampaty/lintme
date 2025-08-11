@@ -1,0 +1,47 @@
+{
+    "label": "Detect Hate Speech",
+    "description": "Flags potentially offensive, biased, or hateful language within the chosen scope and annotates findings with line numbers.",
+    "rationale": "Prevents harmful or exclusionary language and improves tone and inclusivity.",
+    "improves": [
+        "inclusivity",
+        "tone",
+        "reputation"
+    ],
+    "version": "1.0.0",
+    "usedByRules": [
+        "detectHateSpeechLint"
+    ],
+    "fields": {
+        "scope": {
+            "type": "string",
+            "enum": [
+                "document",
+                "previousstepoutput"
+            ],
+            "default": "document",
+            "description": "Analyze the whole document or the previous step’s output."
+        }
+    },
+    "additionalProperties": false,
+    "produces": {
+        "target": "hate_speech",
+        "scopes": [
+            "document",
+            "previousstepoutput"
+        ],
+        "contextWrites": [
+            "ctx.diagnostics",
+            "ctx.extracted"
+        ]
+    },
+    "examples": [
+        {
+            "operator": "detectHateSpeech",
+            "scope": "document"
+        },
+        {
+            "operator": "detectHateSpeech",
+            "scope": "previousstepoutput"
+        }
+    ]
+}

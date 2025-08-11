@@ -1,0 +1,46 @@
+{
+    "label": "Detect Duplicate Sentences",
+    "description": "Finds repeated sentences within the chosen scope and reports duplicates with line references.",
+    "rationale": "Prevents redundancy and improves clarity by flagging repeated sentences.",
+    "improves": [
+        "clarity",
+        "repetition"
+    ],
+    "version": "1.0.0",
+    "usedByRules": [
+        "detectDuplicateSentences"
+    ],
+    "fields": {
+        "scope": {
+            "type": "string",
+            "enum": [
+                "document",
+                "previousstepoutput"
+            ],
+            "default": "document",
+            "description": "Search the whole document or the previous step’s output."
+        }
+    },
+    "additionalProperties": false,
+    "produces": {
+        "target": "duplicateSentences",
+        "scopes": [
+            "document",
+            "previousstepoutput"
+        ],
+        "contextWrites": [
+            "ctx.diagnostics",
+            "ctx.duplicateSentences"
+        ]
+    },
+    "examples": [
+        {
+            "operator": "detectDuplicateSentences",
+            "scope": "document"
+        },
+        {
+            "operator": "detectDuplicateSentences",
+            "scope": "previousstepoutput"
+        }
+    ]
+}

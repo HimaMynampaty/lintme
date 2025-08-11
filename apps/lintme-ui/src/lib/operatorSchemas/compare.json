@@ -1,0 +1,109 @@
+{
+    "label": "Compare",
+    "description": "Compares outputs from two earlier steps either structurally (missing/extra items) or by similarity scoring.",
+    "rationale": "Helps catch differences and enforce consistency between two pipeline results.",
+    "improves": [
+        "consistency",
+        "compatibility"
+    ],
+    "version": "1.0.0",
+    "usedByRules": [
+        "compareMarkdownRenderings"
+    ],
+    "fields": {
+        "baseline": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based index of the earlier step to use as the baseline.",
+            "required": true
+        },
+        "against": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based index of the earlier step to compare against the baseline.",
+            "required": true
+        },
+        "comparison_mode": {
+            "type": "string",
+            "enum": [
+                "structural",
+                "similarity"
+            ],
+            "default": "structural",
+            "description": "Structural: detect missing/extra items; Similarity: compute a similarity score."
+        },
+        "similarity_method": {
+            "type": "string",
+            "enum": [
+                "embedding_cosine",
+                "cosine",
+                "sectional_embedding",
+                "euclidean",
+                "damerau_levenshtein"
+            ],
+            "description": "Method to use when comparison_mode is 'similarity'.",
+            "required": false
+        },
+        "threshold": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 80,
+            "description": "Minimum similarity percentage required to pass (only for 'similarity' mode).",
+            "required": false
+        }
+    },
+    "additionalProperties": false,
+    "produces": {
+        "target": "compare",
+        "scopes": [
+            "dom_diff",
+            "raw_html_diff",
+            "image_diff",
+            "readme_similarity",
+            "document"
+        ],
+        "contextWrites": [
+            "ctx.diagnostics"
+        ]
+    },
+    "examples": [
+        {
+            "operator": "compare",
+            "baseline": 1,
+            "against": 2,
+            "comparison_mode": "similarity",
+            "similarity_method": "embedding_cosine",
+            "threshold": 80
+        },
+        {
+            "operator": "compare",
+            "baseline": 1,
+            "against": 2,
+            "comparison_mode": "structural"
+        }
+    ],
+    "allOf": [
+        {
+            "if": {
+                "properties": {
+                    "comparison_mode": {
+                        "const": "similarity"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "similarity_method"
+                ],
+                "properties": {
+                    "threshold": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                    }
+                }
+            }
+        }
+    ]
+}
