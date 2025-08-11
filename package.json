@@ -6,7 +6,8 @@
   "private": true,
   "scripts": {
     "test": "vitest run",
-    "dev": "concurrently -n backend -c blue \"yarn workspace backend start\""
+    "dev": "concurrently -n backend -c blue \"yarn workspace backend start\"",
+    "gen:ops-md": "node apps/lintme-ui/scripts/generate-op-readme.mjs"
   },
   "type": "module",
   "workspaces": [
