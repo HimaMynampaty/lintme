@@ -1,27 +1,29 @@
-// apps/lintme-ui/scripts/gen-operators-readme.mjs
+// apps/lintme-ui/scripts/generate-op-readme.mjs
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Path to output README file
-const README_PATH = path.resolve(
-  __dirname,
-  '../src/components/OPERATORS_README.md'
-);
+/** OUTPUT file */
+const README_PATH = path.resolve(__dirname, '../src/components/README.md');
 
-// Path to directory containing all operator schema JSON files
-const SCHEMAS_DIR = path.resolve(
-  __dirname,
-  '../src/lib/operatorSchemas'
-);
+/** Sources */
+const SCHEMAS_DIR       = path.resolve(__dirname, '../src/lib/operatorSchemas');
+const COMPONENTS_DIR    = path.resolve(__dirname, '../src/components');
+const SCHEMA_INDEX_FILE = path.resolve(__dirname, '../src/lib/operatorSchemaIndex.js');
+const BACKEND_OPS_DIR   = path.resolve(__dirname, '../../packages/backend/operators');
 
-// Markers so we can update only the table part
+/** Markers to safely replace only the table */
 const START = '<!-- BEGIN:OPS-TABLE -->';
-const END = '<!-- END:OPS-TABLE -->';
+const END   = '<!-- END:OPS-TABLE -->';
 
-// Helpers to format table
+/* ---------------- helpers ---------------- */
+
+async function exists(p) {
+  try { await fs.access(p); return true; } catch { return false; }
+}
+
 function fieldList(fields = {}) {
   return Object.keys(fields).map(n => `\`${n}\``).join(', ') || '—';
 }
@@ -37,26 +39,75 @@ function escapeNewlines(s = '') {
   return String(s).replaceAll('\n', ' ');
 }
 
-// Build Markdown table from schemas
-function makeTable(operatorSchemas) {
-  const rows = Object.entries(operatorSchemas)
-    .map(([name, s]) => ({
-      name,
-      desc: s?.description ?? s?.label ?? '',
-      fieldsTxt: fieldList(s?.fields),
-      reqTxt: requiredList(s?.fields)
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map(r => `| \`${r.name}\` | ${escapeNewlines(r.desc)} | ${r.fieldsTxt} | ${r.reqTxt} |`)
-    .join('\n');
+/** Convert operator name to PascalCase */
+function toPascalCase(name) {
+  return String(name)
+    .replace(/[-_ ]+([a-zA-Z0-9])/g, (_, c) => c.toUpperCase())
+    .replace(/^[a-z]/, c => c.toUpperCase());
+}
 
-  return `| Operator | Description | Fields | Required |
-|---|---|---|---|
-${rows}
+/** Component file name, with a few overrides that don’t match straight PascalCase */
+function componentFileForOperator(op) {
+  const overrides = {
+    isLinkAlive: 'LinkAliveOperator.svelte',
+    readmeLocationCheck: 'ReadmeLocationCheckOperator.svelte',
+  };
+  if (overrides[op]) return overrides[op];
+  return `${toPascalCase(op)}Operator.svelte`;
+}
+
+/** Markdown link builder (relative links for the repo) */
+function mdLink(label, relFromReadme) {
+  return `[${label}](${relFromReadme})`;
+}
+
+function rel(fromAbs, toAbs) {
+  return path.relative(path.dirname(fromAbs), toAbs).split(path.sep).join('/');
+}
+
+/* --------------- core builders --------------- */
+
+async function makeTable(operatorSchemas) {
+  const rows = [];
+
+  for (const [name, s] of Object.entries(operatorSchemas).sort((a, b) => a[0].localeCompare(b[0]))) {
+    const desc      = s?.description ?? s?.label ?? '';
+    const fieldsTxt = fieldList(s?.fields);
+    const reqTxt    = requiredList(s?.fields);
+
+    // schema.json
+    const schemaAbs = path.join(SCHEMAS_DIR, `${name}.json`);
+    const schemaRel = rel(README_PATH, schemaAbs);
+    const schemaLink = (await exists(schemaAbs)) ? mdLink('Schema', schemaRel) : 'Schema: —';
+
+    // svelte component
+    const compAbs = path.join(COMPONENTS_DIR, componentFileForOperator(name));
+    const compRel = rel(README_PATH, compAbs);
+    const compLink = (await exists(compAbs)) ? mdLink('Component', compRel) : 'Component: —';
+
+    // schema index
+    const indexRel = rel(README_PATH, SCHEMA_INDEX_FILE);
+    const indexLink = (await exists(SCHEMA_INDEX_FILE)) ? mdLink('Schema Index', indexRel) : 'Schema Index: —';
+
+    // backend operator implementation (packages/backend/operators/<op>/index.js)
+    const implDir  = path.join(BACKEND_OPS_DIR, name);
+    const implAbs  = path.join(implDir, 'index.js');
+    const implRel  = rel(README_PATH, implAbs);
+    const implLink = (await exists(implAbs)) ? mdLink('Implementation', implRel) : 'Implementation: —';
+
+    // single “Links” column (all links separated by ·)
+    const links = [schemaLink, compLink, indexLink, implLink].join(' · ');
+
+    rows.push(`| \`${name}\` | ${escapeNewlines(desc)} | ${fieldsTxt} | ${reqTxt} | ${links} |`);
+  }
+
+  return `| Operator | Description | Fields | Required | Links |
+|---|---|---|---|---|
+${rows.join('\n')}
 `;
 }
 
-// Read all JSON schemas from folder into an object
+/** Read all JSON files from the schemas dir into an object */
 async function loadOperatorSchemas() {
   const files = (await fs.readdir(SCHEMAS_DIR)).filter(f => f.endsWith('.json'));
   const map = {};
@@ -67,45 +118,35 @@ async function loadOperatorSchemas() {
   return map;
 }
 
-// Create README skeleton if it doesn't exist
+/** Create the README skeleton on first run */
 async function ensureReadmeSkeleton() {
-  try {
-    const exists = await fs.readFile(README_PATH, 'utf8').then(() => true).catch(() => false);
-    if (!exists) {
-      const skeleton = `# LintMe Operators
+  const has = await fs.readFile(README_PATH, 'utf8').then(() => true).catch(() => false);
+  if (!has) {
+    const skeleton = `# LintMe Operators
 
 This file is generated from the JSON schemas in \`src/lib/operatorSchemas/*\`.
+Edit above/below the markers freely; the table between them is auto-generated.
 
 ${START}
 ${END}
 `;
-      await fs.mkdir(path.dirname(README_PATH), { recursive: true });
-      await fs.writeFile(README_PATH, skeleton, 'utf8');
-    }
-  } catch (e) {
-    console.error('Failed to create README skeleton:', e);
-    throw e;
+    await fs.mkdir(path.dirname(README_PATH), { recursive: true });
+    await fs.writeFile(README_PATH, skeleton, 'utf8');
   }
 }
 
-// Main run
 async function run() {
   await ensureReadmeSkeleton();
 
   const operatorSchemas = await loadOperatorSchemas();
-  const table = makeTable(operatorSchemas);
+  const table = await makeTable(operatorSchemas);
 
   const current = await fs.readFile(README_PATH, 'utf8');
-  const hasMarkers = current.includes(START) && current.includes(END);
-
   const block = `${START}\n\n${table}\n${END}`;
 
   let next;
-  if (hasMarkers) {
-    next = current.replace(
-      new RegExp(`${START}[\\s\\S]*?${END}`, 'm'),
-      block
-    );
+  if (current.includes(START) && current.includes(END)) {
+    next = current.replace(new RegExp(`${START}[\\s\\S]*?${END}`, 'm'), block);
   } else {
     next = `${current.trim()}\n\n${block}\n`;
   }
