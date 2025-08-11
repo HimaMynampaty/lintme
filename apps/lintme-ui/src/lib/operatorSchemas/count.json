@@ -1,0 +1,49 @@
+{
+    "label": "Count",
+    "description": "Aggregates counts from the previous step’s extracted results and summarizes them by scope (e.g., per line, per paragraph, or per collection).",
+    "rationale": "Provides quick quantitative summaries from earlier operators so rules can assert thresholds or trends.",
+    "improves": [
+        "content variety",
+        "measurability",
+        "enforce limits"
+    ],
+    "version": "1.0.0",
+    "usedByRules": [
+        "checkBackToTopLinkPresence",
+        "consistentHeadingFormat",
+        "consistentListFormat",
+        "demoLinkRequiredLint",
+        "detectSensitiveSecrets",
+        "disallowConsecutiveDuplicateWords",
+        "enforceEmojiLimit",
+        "enforceNewLineAtEOF",
+        "githubContributorCheck",
+        "limitWordRepetition",
+        "quickStartSectionCheck",
+        "richContentCheck",
+        "tableOfContentsCheck",
+        "validateLinkFormatting",
+        "valueAddedLint"
+    ],
+    "requiresPrevious": {
+        "operator": "*",
+        "message": "The previous step must output `ctx.extracted` with target, scopes, and data (and markdown for line scope)        This operator aggregates counts from the previous step’s results."
+    },
+    "fields": {},
+    "additionalProperties": false,
+    "produces": {
+        "target": "(*uses previous step’s target*)",
+        "scopes": [
+            "line",
+            "paragraph",
+            "*"
+        ],
+        "contextWrites": [
+            "ctx.counted",
+            "ctx.count"
+        ]
+    },
+    "example": {
+        "operator": "count"
+    }
+}

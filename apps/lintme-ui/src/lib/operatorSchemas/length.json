@@ -1,0 +1,44 @@
+{
+    "label": "Length",
+    "description": "Calculates the total text length for extracted nodes in the given scopes (document, paragraph, line, or endoffile).",
+    "rationale": "Allows rules to check minimum/maximum character counts for content at different granularities.",
+    "improves": [
+        "content-length",
+        "readability",
+        "conciseness"
+    ],
+    "version": "1.0.0",
+    "usedByRules": [
+        "minimumReadmeLength",
+        "sentenceLengthLimit"
+    ],
+    "requiresPrevious": {
+        "operator": "*",
+        "scopes": "*",
+        "message": "The previous step must provide extracted data (e.g., an extract operator)."
+    },
+    "fields": {},
+    "additionalProperties": false,
+    "unevaluatedProperties": false,
+    "produces": {
+        "target": "length",
+        "scopes": [
+            "document",
+            "paragraph",
+            "line",
+            "endoffile"
+        ],
+        "contextWrites": [
+            "ctx.lengths",
+            "ctx.counts",
+            "ctx.count",
+            "ctx.previous",
+            "ctx.diagnostics"
+        ]
+    },
+    "examples": [
+        {
+            "operator": "length"
+        }
+    ]
+}

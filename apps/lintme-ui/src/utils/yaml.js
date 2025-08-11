@@ -1,3 +1,4 @@
+// yaml.js
 import yaml from 'js-yaml';
 
 export function parseYAML(text = '') {
@@ -7,112 +8,92 @@ export function parseYAML(text = '') {
   return doc.pipeline
     .map((raw) => {
       const id = crypto.randomUUID();
-      switch (raw.operator) {
-      case 'execute':
-        return {
-          id,
-          operator: 'execute',
-          timeout: Number(raw.timeout ?? 5000)
-        };
-        case 'regexMatch':
-          return {
-            id,
-            operator: 'regexMatch',
-            pattern: raw.pattern ?? '',
-            patterns: raw.patterns,
-            mode: raw.mode ?? 'unmatch',
-            scope: raw.scope ?? 'document'
-          };
+      const op = raw?.operator;
 
-        case 'codeBlockFormatting':
-          return {
-            id,
-            operator: 'codeBlockFormatting',
-            allowedLanguages: raw.allowedLanguages ?? [],
-            allowedFormats: raw.allowedFormats ?? ['fenced'],
-          };
-
-        case 'compare':
-          return {
-            id,
-            operator: 'compare',
-            baseline: raw.baseline ?? '',
-            against: raw.against ?? '',
-            comparison_mode: raw.comparison_mode ?? 'structural',
-            similarity_method: raw.similarity_method ?? '',
-            threshold: raw.threshold ?? 80
-          };
-
-        case 'isPresent':
-          return { id, operator: 'isPresent', target: raw.target ?? '' };
-
-        case 'fetchFromGithub':
-          return {
-            id,
-            operator: 'fetchFromGithub',
-            repo: raw.repo ?? '',
-            branch: raw.branch ?? 'main',
-            fileName: raw.fileName ?? 'README.md',
-            fetchType: raw.fetchType ?? 'content',
-            metaPath: raw.metaPath ?? '',
-            useCustomMetaPath: raw.useCustomMetaPath ?? false
-          };
-        case 'execute':
-          return {
-            id,
-            operator: 'execute',
-            required: raw.required ?? true,
-            timeout: Number(raw.timeout ?? 5000),
-            safe_mode: raw.safe_mode ?? true,
-            level: raw.level ?? 'warning',
-            scope: raw.scope ?? 'previousstepoutput',
-          };
-
-        case 'evaluateUsingLLM':
-          return {
-            id,
-            operator: 'evaluateUsingLLM',
-            model: raw.model ?? 'llama-3.3-70b-versatile',
-            ruleDefinition: raw.ruleDefinition ?? '',
-          };
-
-        case 'calculateContrast': {
-          const { operator, ...rest } = raw;
-          return { id, operator: 'calculateContrast', ...rest };
+      switch (op) {
+        case 'execute': {
+          const out = { id, ...raw, operator: 'execute' };
+          if (out.timeout == null) out.timeout = 5000;
+          return out;
         }
 
-        case 'customCode':
-          return { id, operator: 'customCode', code: raw.code ?? '' };
+        case 'regexMatch': {
+          const out = { id, ...raw, operator: 'regexMatch' };
+          if (out.mode == null) out.mode = 'unmatch';
+          if (out.scope == null) out.scope = 'document';
+          return out;
+        }
 
-        case 'readmeLocationCheck':
-          return { id, operator: 'readmeLocationCheck', paths: raw.paths ?? [] };
+        case 'codeBlockFormatting': {
+          const out = { id, ...raw, operator: 'codeBlockFormatting' };
+          if (!Array.isArray(out.allowedFormats)) out.allowedFormats = ['fenced'];
+          if (!Array.isArray(out.allowedLanguages)) out.allowedLanguages = [];
+          return out;
+        }
 
-        case 'markdownRender':
-          return {
-            id,
-            operator: 'markdownRender',
-            renderer: raw.renderer ?? 'marked',
-            output: raw.output ?? 'html'
-          };
+        case 'compare': {
+          const out = { id, ...raw, operator: 'compare' };
+          if (out.comparison_mode == null) out.comparison_mode = 'structural';
+          return out;
+        }
 
-        case 'detectDuplicateSentences':
-          return {
-            id,
-            operator: 'detectDuplicateSentences',
-            scope: raw.scope ?? 'document',
-            scopes: raw.scopes ?? ['document']
-          };
+        case 'isPresent': {
+          const out = { id, ...raw, operator: 'isPresent' };
+          return out;
+        }
 
-        case 'isLinkAlive':
-          return {
-            id,
-            operator: 'isLinkAlive',
-            timeout: Number(raw.timeout ?? 5000),
-            allowed_status_codes: Array.isArray(raw.allowed_status_codes)
-              ? raw.allowed_status_codes
-              : [200, 301, 302, 307, 308],
-            scope: raw.scope ?? 'document'
-          };
+        case 'fetchFromGithub': {
+          const out = { id, ...raw, operator: 'fetchFromGithub' };
+          if (out.branch == null) out.branch = 'main';
+          if (out.fileName == null) out.fileName = 'README.md';
+          if (out.fetchType == null) out.fetchType = 'content';
+          if (out.metaPath == null) out.metaPath = '';
+          if (out.useCustomMetaPath == null) out.useCustomMetaPath = false;
+          return out;
+        }
+
+        case 'evaluateUsingLLM': {
+          const out = { id, ...raw, operator: 'evaluateUsingLLM' };
+          if (out.model == null) out.model = 'llama-3.3-70b-versatile';
+          if (out.ruleDefinition == null) out.ruleDefinition = '';
+          return out;
+        }
+
+        case 'calculateContrast': {
+          return { id, ...raw, operator: 'calculateContrast' };
+        }
+
+        case 'customCode': {
+          const out = { id, ...raw, operator: 'customCode' };
+          if (out.code == null) out.code = '';
+          return out;
+        }
+
+        case 'readmeLocationCheck': {
+          return { id, ...raw, operator: 'readmeLocationCheck' };
+        }
+
+        case 'markdownRender': {
+          const out = { id, ...raw, operator: 'markdownRender' };
+          if (out.renderer == null) out.renderer = 'marked';
+          if (out.output == null) out.output = 'html';
+          return out;
+        }
+
+        case 'detectDuplicateSentences': {
+          const out = { id, ...raw, operator: 'detectDuplicateSentences' };
+          if (out.scope == null) out.scope = 'document';
+          return out;
+        }
+
+        case 'isLinkAlive': {
+          const out = { id, ...raw, operator: 'isLinkAlive' };
+          if (out.timeout == null) out.timeout = 5000;
+          if (!Array.isArray(out.allowed_status_codes)) {
+            out.allowed_status_codes = [200, 301, 302, 307, 308];
+          }
+          return out;
+        }
 
         case 'sage':
         case 'count':
@@ -120,12 +101,12 @@ export function parseYAML(text = '') {
         case 'search':
         case 'threshold':
         case 'fixUsingLLM':
-        case 'fixUsingLintMeCode':
+        case 'fixUsingLintMeCode': {
           return { id, ...raw };
+        }
 
         default: {
-          const { operator, ...rest } = raw;
-          return { id, operator: raw.operator, ...rest };
+          return { id, ...raw };
         }
       }
     })
@@ -134,7 +115,6 @@ export function parseYAML(text = '') {
 
 export function generateYAML(name = '', description = '', steps = []) {
   const NEEDS_TARGET = new Set(['extract', 'isPresent', 'compare']);
-
 
   const pipeline = steps
     .filter(step => step.operator !== 'generateAST')
@@ -180,6 +160,7 @@ export function generateYAML(name = '', description = '', steps = []) {
         if ('model' in step) out.model = step.model;
         if ('ruleDefinition' in step) out.ruleDefinition = step.ruleDefinition;
       }
+
       if (step.operator === 'execute') {
         if (typeof step.timeout === 'number') out.timeout = step.timeout;
       }
@@ -193,15 +174,13 @@ export function generateYAML(name = '', description = '', steps = []) {
         if ('against' in step) out.against = step.against;
         if (step.comparison_mode) out.comparison_mode = step.comparison_mode;
 
-        if (step.similarity_method && step.comparison_mode === 'similarity') {
+        if (step.comparison_mode === 'similarity' && step.similarity_method) {
           out.similarity_method = step.similarity_method;
         }
         if (step.comparison_mode === 'similarity' && typeof step.threshold === 'number') {
           out.threshold = step.threshold;
         }
       }
-
-      if (step.operator === 'calculateContrast') { }
 
       if (step.operator === 'fetchFromGithub') {
         if ('repo' in step) out.repo = step.repo;
@@ -218,7 +197,6 @@ export function generateYAML(name = '', description = '', steps = []) {
       if (step.operator === 'isLinkAlive') {
         if (typeof step.timeout === 'number') out.timeout = step.timeout;
         if (Array.isArray(step.allowed_status_codes)) out.allowed_status_codes = step.allowed_status_codes;
-        if (step.scope) out.scope = step.scope;
       }
 
       if (

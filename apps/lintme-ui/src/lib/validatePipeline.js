@@ -3,69 +3,96 @@ import { parseYAML } from '../utils/yaml.js';
 import { operatorSchemas } from './operatorSchemaIndex.js';
 import { buildAjvSchema } from './buildAjvSchema.js';
 
-const ajv = new Ajv({ allErrors: true, strict: false });
+const ajv = new Ajv({
+  allErrors: true,
+  strict: false,
+  useDefaults: true,
+  allowUnionTypes: true
+});
+
+function priority(kw) {
+  if (kw === 'unevaluatedProperties' || kw === 'additionalProperties' || kw === 'propertyNames') return 0;
+  if (kw === 'required') return 1;
+  return 2;
+}
 
 export function validatePipeline(ruleYaml) {
-  const steps = parseYAML(ruleYaml); 
+  const steps = parseYAML(ruleYaml);
   const errors = [];
-  const writes = new Set();      
 
   steps.forEach((step, i) => {
     const schema = operatorSchemas[step.operator];
-
     if (!schema) {
-      errors.push({
-        step: i,
-        message: `Unknown operator "${step.operator}".`
-      });
+      errors.push({ step: i, message: `Unknown operator "${step.operator}".` });
       return;
     }
 
     const stepSchema = buildAjvSchema(schema, step.operator);
     const validate = ajv.compile(stepSchema);
+
     if (!validate(step)) {
-    for (const err of validate.errors) {
-        if (err.keyword === 'additionalProperties') {
-        const extra = err.params?.additionalProperty;
-        errors.push({
-            step: i,
-            message: `Unknown property \`${extra}\``
-        });
+      const sorted = [...validate.errors].sort((a, b) => priority(a.keyword) - priority(b.keyword));
+      for (const err of sorted) {
+        if (err.keyword === 'unevaluatedProperties' || err.keyword === 'additionalProperties' || err.keyword === 'propertyNames') {
+          const extra =
+            err.params?.additionalProperty ??
+            err.params?.unevaluatedProperty ??
+            err.params?.propertyName;
+          errors.push({ step: i, message: `Unknown property \`${extra}\`` });
+        } else if (err.keyword === 'required') {
+          errors.push({ step: i, message: `Missing required property \`${err.params?.missingProperty}\`` });
         } else {
-        errors.push({
-            step: i,
-            message: `Field error ${err.instancePath || ''} – ${err.message}`
-        });
+          const path = err.instancePath || '';
+          errors.push({ step: i, message: `Field error ${path} – ${err.message}` });
         }
-    }
+      }
     }
 
     if (schema.requiresPrevious) {
       const prev = steps[i - 1];
-      const allowed = Array.isArray(schema.requiresPrevious.operator)
-        ? schema.requiresPrevious.operator
-        : [schema.requiresPrevious.operator];
+      const reqPrev = schema.requiresPrevious;
 
-      if (!prev || !allowed.includes(prev.operator)) {
-        errors.push({
-          step: i,
-          message: schema.requiresPrevious.message
+      const okOperator = (() => {
+        if (!prev) return false;
+        const req = reqPrev.operator;
+        if (!req || req === '*') return true;
+        const allowed = Array.isArray(req) ? req : [req];
+        return allowed.includes(prev.operator);
+      })();
+
+      const okTarget = (() => {
+        const req = reqPrev.target;
+        if (!req) return true;
+        if (!prev) return false;
+        if (req === '*') return !!prev.target;
+        const allowed = Array.isArray(req) ? req : [req];
+        return allowed.includes(prev.target);
+      })();
+
+      const okScopes = (() => {
+        const req = reqPrev.scopes;
+        if (!req) return true;
+        if (!prev) return false;
+        const prevScopes = prev?.scopes ?? (prev?.scope ? [prev.scope] : []);
+        if (req === '*') return Array.isArray(prevScopes) && prevScopes.length > 0;
+        const required = Array.isArray(req) ? req : [req];
+        return required.every(s => prevScopes.includes(s));
+      })();
+      const okFields = (() => {
+        const req = reqPrev.fields;
+        if (!req) return true;
+        if (!prev) return false;
+        return Object.entries(req).every(([k, expected]) => {
+          const val = prev?.[k];
+          if (expected === '*') return val !== undefined && val !== null;
+          const allowed = Array.isArray(expected) ? expected : [expected];
+          return allowed.includes(val);
         });
+      })()
+      if (!okOperator || !okTarget || !okScopes || !okFields || !okFields) {
+        errors.push({ step: i, message: reqPrev.message });
       }
     }
-
-    (schema.produces?.contextWrites || []).forEach(p => writes.add(p));
-
-        if (
-        schema.requiresContext &&
-        ![...writes].some(w => w.startsWith(schema.requiresContext.path))
-        ) {
-        errors.push({
-            step: i,
-            message: schema.requiresContext.message
-        });
-        }
-
   });
 
   return errors;

@@ -1,46 +1,119 @@
 {
   "label": "Extract",
-  "description": "Pulls specific Markdown (MDAST) node types *or* regular‑expression matches from the source document. A successful run populates `ctx.extracted` and sets `ctx.previous` so that downstream steps (e.g. `count`, `search`, `regexMatch`) know what data they’re working with.",
-
+  "description": "Finds Markdown nodes or text matches (including built-ins like emoji/newline/date and regex patterns) and returns them grouped by requested scopes.",
+  "rationale": "Provides a flexible foundation for downstream operators by isolating exactly what to analyze (nodes, links, regex hits) and where (line/paragraph/document/EOF).",
+  "improves": [
+    "measurability",
+    "structure",
+    "consistency",
+    "filtering"
+  ],
+  "version": "1.0.0",
+  "usedByRules": [
+    "checkBackToTopLinkPresence",
+    "codeBlockLanguageCheck",
+    "consistentExternalLinkFormat",
+    "consistentHeadingFormat",
+    "consistentListFormat",
+    "dateValidationLint",
+    "demoLinkRequiredLint",
+    "disallowConsecutiveDuplicateWords",
+    "enforceEmojiLimit",
+    "enforceNewLineAtEOF",
+    "minimumReadmeLength",
+    "noUnreachableLinks",
+    "quickStartSectionCheck",
+    "requireAltTextForImages",
+    "richContentCheck",
+    "sentenceLengthLimit",
+    "tableOfContentsCheck",
+    "textContrastCompliance",
+    "validateInlineCommands",
+    "validateInternalLinksToHeadings",
+    "validateLinkFormatting"
+  ],
   "fields": {
     "target": {
       "type": "string",
-      "title": "Target",
-      "description": "Markdown node type (`heading`, `link`, `table` …), one of the built‑ins (`emoji`, `newline`, `date`, `internallink`, `externallink`) or a custom RegExp such as `/TODO:/i`.",
-      "required": true,
-      "enum": [
-        "emoji", "newline", "image", "internallink", "externallink",
-        "blockquote", "thematicBreak", "code", "definition", "delete",
-        "emphasis", "footnoteDefinition", "footnoteReference", "heading",
-        "html", "imageReference", "inlineCode", "link", "linkReference",
-        "list", "listItem", "paragraph", "root", "strong", "table",
-        "tableCell", "tableRow", "text", "toml", "yaml", "date"
+      "description": "What to extract. May be a known mdast node, a special link category (internal/external), a built-in token (emoji/newline/date), or a regex-like pattern (e.g., /foo|bar/ or .foo.).",
+      "oneOf": [
+        {
+          "enum": [
+            "emoji",
+            "newline",
+            "image",
+            "internallink",
+            "externallink",
+            "blockquote",
+            "thematicBreak",
+            "code",
+            "definition",
+            "delete",
+            "emphasis",
+            "footnoteDefinition",
+            "footnoteReference",
+            "heading",
+            "html",
+            "imageReference",
+            "inlineCode",
+            "link",
+            "linkReference",
+            "list",
+            "listItem",
+            "paragraph",
+            "root",
+            "strong",
+            "table",
+            "tableCell",
+            "tableRow",
+            "text",
+            "toml",
+            "yaml",
+            "date"
+          ]
+        },
+        {
+          "type": "string",
+          "description": "Regex-like selector. Must start and end with '.' or '/', e.g. \"/\\\\bTODO\\\\b/\" or \".secret.\"",
+          "pattern": "^[./].*[./]$"
+        }
       ]
     },
-
     "scopes": {
       "type": "array",
-      "title": "Scopes",
-      "description": "Where to perform extraction. Choose at least one.",
-      "required": true,
-      "minItems": 1,
+      "description": "Where to extract from.",
       "items": {
         "type": "string",
-        "enum": ["line", "paragraph", "document", "endoffile"]
-      }
+        "enum": [
+          "line",
+          "paragraph",
+          "document",
+          "endoffile"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
     }
   },
-
+  "additionalProperties": false,
   "produces": {
-    "target": "<same value as `target` field>",
-    "scopes": "<same values as `scopes` field>",
-    "contextWrites": ["ctx.extracted", "ctx.previous"],
-    "diagnosticsSeverity": ["warning", "error"]
+    "target": "(the requested target)",
+    "scopes": [
+      "line",
+      "paragraph",
+      "document",
+      "endoffile"
+    ],
+    "contextWrites": [
+      "ctx.extracted",
+      "ctx.diagnostics"
+    ]
   },
-
   "example": {
     "operator": "extract",
     "target": "heading",
-    "scopes": ["document"]
+    "scopes": [
+      "document"
+    ]
   }
 }

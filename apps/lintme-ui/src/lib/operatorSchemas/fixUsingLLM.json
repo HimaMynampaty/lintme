@@ -1,0 +1,65 @@
+{
+    "label": "Fix Using LLM",
+    "description": "Calls an LLM with a rule-aware prompt to produce a fixed version of the Markdown when the rule is violated.",
+    "rationale": "Lets a rule automatically suggest or apply fixes using a controlled LLM prompt.",
+    "improves": [
+        "automation",
+        "usability",
+        "customization",
+        "fixing"
+    ],
+    "version": "1.0.0",
+    "usedByRules": [
+        "ambiguityUnderstandabilityCheck(LLM)",
+        "detectHateSpeechLint(LLM)",
+        "ensureNeutralTone(LLM)",
+        "fixSpellingAndGrammar(LLM)",
+        "objectivityCheck(LLM)",
+        "terminologyConsistency(LLM)",
+        "jargonExplanationCheck(LLM)"
+    ],
+    "fields": {
+        "model": {
+            "type": "string",
+            "description": "Backend model id to use for the request.",
+            "enum": [
+                "llama-3.3-70b-versatile",
+                "gemma2-9b-it"
+            ],
+            "default": "llama-3.3-70b-versatile",
+            "required": false
+        },
+        "prompt": {
+            "type": "string",
+            "description": "Operator-specific instruction describing exactly what to fix according to the rule.",
+            "minLength": 1,
+            "required": true
+        }
+    },
+    "additionalProperties": false,
+    "unevaluatedProperties": false,
+    "produces": {
+        "target": "fixUsingLLM",
+        "scopes": [
+            "document"
+        ],
+        "contextWrites": [
+            "ctx.fixedMarkdown",
+            "ctx.llmResponse",
+            "ctx.rawLLMFallback",
+            "ctx.diagnostics"
+        ]
+    },
+    "examples": [
+        {
+            "operator": "fixUsingLLM",
+            "model": "llama-3.3-70b-versatile",
+            "prompt": "Fix lines that violate the heading capitalization rule; do not rewrite other text."
+        },
+        {
+            "operator": "fixUsingLLM",
+            "model": "gemma2-9b-it",
+            "prompt": "Remove trailing whitespace from all lines; preserve content and spacing elsewhere."
+        }
+    ]
+}

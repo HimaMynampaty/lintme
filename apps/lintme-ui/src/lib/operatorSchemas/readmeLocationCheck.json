@@ -1,0 +1,58 @@
+{
+    "label": "README Location Check",
+    "description": "Validates that README.md files exist in expected locations of a repository. Uses README paths discovered by a previous fetchFromGithub step (fetchType: \"path\"). You can optionally supply expected paths or patterns (exact paths or regex-like patterns) to enforce specific locations.",
+    "rationale": "Ensures projects are documented in discoverable, conventional locations (root/docs/packages/apps/src).",
+    "improves": [
+        "documentation-coverage",
+        "discoverability",
+        "repo-consistency",
+        "availability"
+    ],
+    "version": "1.0.0",
+    "usedByRules": [
+        "ensureReadmeIsPresent"
+    ],
+    "requiresPrevious": {
+        "operator": "fetchFromGithub",
+        "fields": {
+            "fetchType": "path"
+        },
+        "message": "This operator must follow fetchFromGithub with fetchType: \"path\" so README paths are available."
+    },
+    "fields": {
+        "paths": {
+            "type": "array",
+            "description": "Optional list of expected README locations. Each item can be an exact path (e.g., \"README.md\", \"docs/README.md\") or a regex-like pattern (e.g., \"packages/.*/README.md\", \".*/README.md\").",
+            "items": {
+                "type": "string",
+                "minLength": 1
+            },
+            "uniqueItems": true,
+            "required": false
+        }
+    },
+    "additionalProperties": false,
+    "unevaluatedProperties": false,
+    "produces": {
+        "target": "readmeLocationCheck",
+        "scopes": [
+            "document"
+        ],
+        "contextWrites": [
+            "ctx.diagnostics"
+        ]
+    },
+    "examples": [
+        {
+            "operator": "readmeLocationCheck"
+        },
+        {
+            "operator": "readmeLocationCheck",
+            "paths": [
+                "README.md",
+                "docs/README.md",
+                "packages/.*/README.md"
+            ]
+        }
+    ]
+}

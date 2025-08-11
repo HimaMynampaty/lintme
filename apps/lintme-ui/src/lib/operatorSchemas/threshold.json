@@ -1,91 +1,203 @@
 {
-    "label": "Threshold",
-    "description": "Evaluates counts produced by an earlier step like `count` or `length` (or by operators that expose `ctx.count`). For each chosen scope it compares the actual count against a user-defined numeric threshold and reports diagnostics when the rule is violated.",
-    "requiresContext": {
-        "path": "ctx.count",
-        "message": "A previous step must populate `ctx.count`. This is usually done by `count`, `length`, or a custom operator."
-    },
-    "fields": {
-        "target": {
-            "type": "string",
-            "title": "Count target",
-            "description": "Which counted entity to evaluate. If omitted, the operator tries to infer the target from the previous step or from the only key inside `ctx.count`.",
-            "required": false
-        },
-        "conditions": {
-            "type": "object",
-            "title": "Per-scope conditions",
-            "description": "Object whose keys are scopes (`line`, `paragraph`, `document`, `endoffile`, `previousstepoutput`) and whose values are comparison rules.",
-            "patternProperties": {
-                "^(line|paragraph|document|endoffile|previousstepoutput)$": {
-                    "type": "object",
-                    "properties": {
-                        "type": {
-                            "type": "string",
-                            "enum": [
-                                "lessthan",
-                                "lessthanequalto",
-                                "greaterthan",
-                                "greaterthanequalto",
-                                "equalto"
-                            ],
-                            "description": "Comparison operator"
-                        },
-                        "value": {
-                            "type": "number",
-                            "minimum": 0,
-                            "description": "Numeric threshold value"
-                        }
-                    },
-                    "required": [
-                        "type",
-                        "value"
-                    ],
-                    "additionalProperties": false
-                }
+  "label": "Threshold",
+  "description": "Compares computed metrics from a previous step (e.g., count or length) against threshold rules per scope and reports violations.",
+  "rationale": "Lets rules assert minimum/maximum counts or lengths (per document/paragraph/line) to enforce style and quality bars.",
+  "improves": [
+    "limiting",
+    "content-quality",
+    "rule-compliance"
+  ],
+  "version": "1.0.0",
+  "usedByRules": [
+    "checkBackToTopLinkPresence",
+    "consistentHeadingFormat",
+    "consistentListFormat",
+    "demoLinkRequiredLint",
+    "detectSensitiveSecrets",
+    "disallowConsecutiveDuplicateWords",
+    "enforceEmojiLimit",
+    "enforceNewLineAtEOF",
+    "githubContributorCheck",
+    "limitWordRepetition",
+    "minimumReadmeLength",
+    "quickStartSectionCheck",
+    "richContentCheck",
+    "sentenceLengthLimit",
+    "tableOfContentsCheck",
+    "textContrastCompliance",
+    "validateLinkFormatting",
+    "valueAddedLint"
+  ],
+  "requiresPrevious": {
+    "operator": [
+      "count",
+      "length"
+    ],
+    "message": "Add a count or length step before threshold so metrics are available."
+  },
+  "fields": {
+    "conditions": {
+      "type": "object",
+      "description": "Threshold rules keyed by scope. Each rule compares the actual metric against a value using the selected comparison type.",
+      "minProperties": 1,
+      "required": true,
+      "properties": {
+        "document": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "lessthan",
+                "lessthanequalto",
+                "greaterthan",
+                "greaterthanequalto",
+                "equalto"
+              ]
             },
-            "minProperties": 1,
-            "required": true,
-            "additionalProperties": false
-        },
-        "level": {
-            "type": "string",
-            "title": "Severity",
-            "description": "Diagnostics severity emitted when the threshold is violated.",
-            "enum": [
-                "warning",
-                "error"
-            ],
-            "default": "warning",
-            "required": false
-        }
-    },
-    "produces": {
-        "target": "<same value as `target` field>",
-        "data": {
-            "violations": "Object with scope keys and per-scope violation arrays"
-        },
-        "contextWrites": [
-            "ctx.diagnostics"
-        ],
-        "diagnosticsSeverity": [
-            "warning",
-            "error"
-        ]
-    },
-    "example": {
-        "operator": "threshold",
-        "target": "heading",
-        "conditions": {
-            "document": {
-                "type": "lessthan",
-                "value": 10
-            },
-            "line": {
-                "type": "greaterthan",
-                "value": 0
+            "value": {
+              "type": "number"
             }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
         },
-        "level": "warning"
+        "paragraph": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "lessthan",
+                "lessthanequalto",
+                "greaterthan",
+                "greaterthanequalto",
+                "equalto"
+              ]
+            },
+            "value": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        "line": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "lessthan",
+                "lessthanequalto",
+                "greaterthan",
+                "greaterthanequalto",
+                "equalto"
+              ]
+            },
+            "value": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        "endoffile": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "lessthan",
+                "lessthanequalto",
+                "greaterthan",
+                "greaterthanequalto",
+                "equalto"
+              ]
+            },
+            "value": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        "previousstepoutput": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "lessthan",
+                "lessthanequalto",
+                "greaterthan",
+                "greaterthanequalto",
+                "equalto"
+              ]
+            },
+            "value": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
+  },
+  "additionalProperties": false,
+  "unevaluatedProperties": false,
+  "produces": {
+    "target": "threshold",
+    "scopes": [
+      "document",
+      "paragraph",
+      "line",
+      "endoffile",
+      "previousstepoutput"
+    ],
+    "contextWrites": [
+      "ctx.diagnostics"
+    ]
+  },
+  "examples": [
+    {
+      "operator": "threshold",
+      "conditions": {
+        "document": {
+          "type": "greaterthanequalto",
+          "value": 3
+        }
+      }
+    },
+    {
+      "operator": "threshold",
+      "conditions": {
+        "paragraph": {
+          "type": "lessthan",
+          "value": 280
+        },
+        "line": {
+          "type": "lessthanequalto",
+          "value": 120
+        }
+      }
+    }
+  ]
 }

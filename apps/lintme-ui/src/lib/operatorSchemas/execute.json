@@ -1,0 +1,48 @@
+{
+    "label": "Execute Inline Commands",
+    "description": "Runs inline commands found in the README. Prefers the previous `extract` (target: inlineCode) output when available; otherwise scans backtick code spans.",
+    "rationale": "Automates validation of inline CLI/code snippets so docs stay runnable and accurate.",
+    "improves": [
+        "reliability",
+        "validation",
+        "accuracy",
+        "accuracy"
+    ],
+    "version": "1.0.0",
+    "usedByRules": [
+        "validateInlineCommands"
+    ],
+    "requiresPrevious": {
+        "operator": "extract",
+        "target": "inlineCode",
+        "scopes": [
+            "document"
+        ],
+        "message": "The previous step must be `extract` with `target: inlineCode` and scope `document`."
+    },
+    "fields": {
+        "timeout": {
+            "type": "number",
+            "minimum": 0,
+            "default": 5000,
+            "description": "Per-command timeout in milliseconds."
+        }
+    },
+    "additionalProperties": false,
+    "produces": {
+        "target": "execute",
+        "scopes": [
+            "document"
+        ],
+        "contextWrites": [
+            "ctx.execute",
+            "ctx.diagnostics"
+        ]
+    },
+    "examples": [
+        {
+            "operator": "execute",
+            "timeout": 5000
+        }
+    ]
+}

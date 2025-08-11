@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import { operatorDescriptions } from '../lib/operatorMetadata.js';
+  import { operatorList, getOperatorDescription } from '../lib/buildMonacoYamlSchema.js';
   const dispatch = createEventDispatcher();
 
   let search = '';
@@ -33,7 +33,7 @@
     dispatch('select', op);
   }
 
-  $: filtered = availableOperators
+  $: filtered = operatorList
     .filter(op => op.label.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => a.label.localeCompare(b.label));
 </script>
@@ -56,7 +56,7 @@
       <button
         class="op-btn"
         on:click={() => choose(op.name)}
-        title={operatorDescriptions[op.name] ?? ''}
+        title={getOperatorDescription(op.name)}
       >
         ➕ {op.label}
       </button>

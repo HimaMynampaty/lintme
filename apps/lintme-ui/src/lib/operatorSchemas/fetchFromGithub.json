@@ -1,0 +1,147 @@
+{
+  "label": "Fetch From GitHub",
+  "description": "Fetches README files (paths or content) or repository metadata from a GitHub repo via a backend endpoint.",
+  "rationale": "Lets rules operate on real repository data without hardcoding it, supporting path discovery, content loading, or metadata inspection.",
+  "improves": [
+    "coverage",
+    "automation",
+    "consistency",
+    "availability",
+    "timeliness"
+  ],
+  "version": "1.0.0",
+  "usedByRules": [
+    "compareReadmeSimilarity",
+    "ensureReadmeIsPresent",
+    "githubContributorCheck",
+    "timelinessCheckVersionUpdate"
+  ],
+  "fields": {
+    "repo": {
+      "type": "string",
+      "description": "Repository in owner/repo form (e.g., openai/gpt-4).",
+      "pattern": "^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$",
+      "minLength": 3,
+      "required": true
+    },
+    "branch": {
+      "type": "string",
+      "description": "Branch or tag to fetch from.",
+      "default": "main",
+      "minLength": 1,
+      "required": false
+    },
+    "fileName": {
+      "type": "string",
+      "description": "File name to look for when fetching paths or content (ignored for metadata).",
+      "default": "README.md",
+      "minLength": 1,
+      "required": false
+    },
+    "fetchType": {
+      "type": "string",
+      "description": "What to fetch: paths to README files, full README content, or repository metadata.",
+      "enum": [
+        "path",
+        "content",
+        "metadata"
+      ],
+      "default": "content",
+      "required": false
+    },
+    "metaPath": {
+      "type": "string",
+      "description": "Metadata subpath (e.g., languages, contributors, releases). Empty string means repository root metadata.",
+      "default": "",
+      "required": false
+    },
+    "useCustomMetaPath": {
+      "type": "boolean",
+      "description": "UI hint: if true, use the custom metaPath instead of presets. Not used by the operator logic.",
+      "default": false,
+      "required": false
+    }
+  },
+  "additionalProperties": false,
+  "unevaluatedProperties": false,
+  "produces": {
+    "target": "fetchFromGithub",
+    "scopes": [
+      "document",
+      "metadata",
+      "paths"
+    ],
+    "contextWrites": [
+      "ctx.markdown",
+      "ctx.fetchResult",
+      "ctx.internalInfo",
+      "ctx.debug",
+      "ctx.diagnostics"
+    ]
+  },
+  "examples": [
+    {
+      "operator": "fetchFromGithub",
+      "repo": "openai/openai-cookbook",
+      "fetchType": "path",
+      "fileName": "README.md"
+    },
+    {
+      "operator": "fetchFromGithub",
+      "repo": "openai/openai-cookbook",
+      "fetchType": "content",
+      "branch": "main",
+      "fileName": "README.md"
+    },
+    {
+      "operator": "fetchFromGithub",
+      "repo": "openai/openai-cookbook",
+      "fetchType": "metadata",
+      "metaPath": "languages"
+    }
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "fetchType": {
+            "const": "metadata"
+          }
+        },
+        "required": [
+          "fetchType"
+        ]
+      },
+      "then": {
+        "properties": {
+          "fileName": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "fetchType": {
+            "enum": [
+              "path",
+              "content"
+            ]
+          }
+        },
+        "required": [
+          "fetchType"
+        ]
+      },
+      "then": {
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  ]
+}

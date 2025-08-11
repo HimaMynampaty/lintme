@@ -8,7 +8,6 @@
   const dispatch = createEventDispatcher();
 
   let hasStep = false;
-  let isValidSource = false;
 
   function maybeHydrate(prev) {
     let changed = false;
@@ -39,8 +38,6 @@
 
   $: {
     hasStep = false;
-    isValidSource = false;
-
     const steps = $pipeline;
 
     for (let i = storeIndex - 1; i >= 0; i--) {
@@ -52,7 +49,6 @@
 
       if (hasImplicitTarget) {
         hasStep = true;
-        isValidSource = true;
         maybeHydrate(prev);
         break;
       }
@@ -63,13 +59,10 @@
 {#if $$slots.default}
   <slot />
 {:else if !hasStep}
-  <p class="text-sm text-red-500 my-1 max-w-xs break-words">
-    ⚠ This step requires a previous step with a <code>target</code>, like
+  <p class="text-sm text-red-500" role="alert" aria-live="polite">
+     This step requires a previous step with a <code>target</code>, like
     <code>extract</code>
     or <code>search</code>.
   </p>
-{:else if !isValidSource}
-  <p class="text-sm text-red-500 my-1 max-w-xs break-words">
-    ⚠ The upstream step lacks the data needed to count.
-  </p>
+
 {/if}

@@ -52,11 +52,10 @@
               operator: "compare",
               baseline: "",
               against: "",
-              comparison_mode: "structural",
-              similarity_method: "embedding_cosine",
-              threshold: 80
+              comparison_mode: "structural"
             },
           ];
+
         case 'isLinkAlive':
           return [
             ...steps,

@@ -1,0 +1,43 @@
+{
+    "label": "Custom Code",
+    "description": "Executes user-provided JavaScript that defines `run(ctx)`. Useful for bespoke checks or quick experiments that don’t fit a built-in operator.",
+    "rationale": "Allows extensions and one-off logic without changing the core operator set.",
+    "improves": [
+        "extensibility",
+        "flexibility"
+    ],
+    "usedByRules": [
+        "customCodeHateSpeech",
+        "customCodeSentenceLength",
+        "headingListFormattingChecks"
+    ],
+    "version": "1.0.0",
+    "fields": {
+        "code": {
+            "type": "string",
+            "minLength": 20,
+            "description": "JavaScript source that defines `export function run(ctx) { ... }` (or `function run(ctx) { ... }`).",
+            "required": true
+        }
+    },
+    "additionalProperties": false,
+    "produces": {
+        "target": "customCode",
+        "scopes": [
+            "*"
+        ],
+        "contextWrites": [
+            "ctx.diagnostics"
+        ]
+    },
+    "examples": [
+        {
+            "operator": "customCode",
+            "code": "export function run(ctx){ ctx.diagnostics ??= []; ctx.diagnostics.push({ line:1, severity:'info', message:'Hello from custom code' }); return ctx; }"
+        },
+        {
+            "operator": "customCode",
+            "code": "export function run(ctx){ return { target:'example', scopes:['document'], data:{ document:['ok'] } }; }"
+        }
+    ]
+}

@@ -1,0 +1,64 @@
+{
+    "label": "Search",
+    "description": "Finds lines or values containing one or more comma-separated terms. Can scan the whole Markdown document or walk the previous step’s structured output.",
+    "rationale": "Quickly locates TODOs, URLs, hostnames, or other keywords for downstream checks.",
+    "improves": [
+        "content-variety",
+        "accessibility",
+        "consistency",
+        "appeal",
+        "repetition"
+    ],
+    "version": "1.0.0",
+    "usedByRules": [
+        "checkBackToTopLinkPresence",
+        "demoLinkRequiredLint",
+        "githubContributorCheck",
+        "limitWordRepetition",
+        "quickStartSectionCheck",
+        "tableOfContentsCheck",
+        "valueAddedLint"
+    ],
+    "fields": {
+        "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated search terms (case-insensitive), e.g. \"TODO, localhost, production\".",
+            "required": true
+        },
+        "scope": {
+            "type": "string",
+            "enum": [
+                "document",
+                "previousstepoutput"
+            ],
+            "default": "document",
+            "description": "Where to search: the raw Markdown text (document) or the previous step’s output (previousstepoutput).",
+            "required": false
+        }
+    },
+    "additionalProperties": false,
+    "unevaluatedProperties": false,
+    "produces": {
+        "target": "search",
+        "scopes": [
+            "document",
+            "previousstepoutput"
+        ],
+        "contextWrites": [
+            "ctx.extracted",
+            "ctx.diagnostics"
+        ]
+    },
+    "examples": [
+        {
+            "operator": "search",
+            "query": "TODO, localhost"
+        },
+        {
+            "operator": "search",
+            "query": "http, https",
+            "scope": "previousstepoutput"
+        }
+    ]
+}

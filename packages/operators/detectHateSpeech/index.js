@@ -2,10 +2,11 @@ const { retext } = await import("retext");
 const retextEquality = (await import("retext-equality")).default;
 const retextProfanities = (await import("retext-profanities")).default;
 
-
 export async function run(ctx, cfg = {}) {
   const markdown = ctx.markdown ?? '';
-  if (!markdown.trim()) {
+  const usingPrev = cfg.scope === 'previousstepoutput' && ctx.extracted;
+
+  if (!usingPrev && !markdown.trim()) {
     ctx.diagnostics.push({
       line: 1,
       severity: 'error',
@@ -14,17 +15,16 @@ export async function run(ctx, cfg = {}) {
     return ctx;
   }
 
-  const scope =
-    cfg.scope === 'previousstepoutput' && ctx.extracted
-      ? 'previousstepoutput'
-      : 'document';
+  const scope = usingPrev ? 'previousstepoutput' : 'document';
+
+  const textToAnalyze = usingPrev ? collectTextFromExtracted(ctx.extracted) : markdown;
 
   const file = await retext()
     .use(retextEquality)
     .use(retextProfanities)
-    .process(markdown);
+    .process(textToAnalyze);
 
-  const lines = markdown.split('\n');
+  const lines = textToAnalyze.split('\n');
   const results = [];
   const seen = new Set();
   const level = 'warning';
@@ -77,4 +77,34 @@ export async function run(ctx, cfg = {}) {
     scopes: [scope],
     data
   };
+}
+
+function collectTextFromExtracted(extracted) {
+  const root = extracted?.data ?? extracted ?? {};
+  const pieces = [];
+
+  const walk = (node) => {
+    if (node == null) return;
+    if (typeof node === 'string') {
+      pieces.push(node);
+    } else if (Array.isArray(node)) {
+      node.forEach(walk);
+    } else if (typeof node === 'object') {
+      for (const v of Object.values(node)) {
+        if (typeof v === 'string') {
+          pieces.push(v);
+        } else if (Array.isArray(v)) {
+          v.forEach(walk);
+        } else if (v && typeof v === 'object') {
+          const texty =
+            v.content ?? v.text ?? v.title ?? v.value ?? v.href ?? v.url ?? v.slug ?? null;
+          if (typeof texty === 'string') pieces.push(texty);
+          else walk(v);
+        }
+      }
+    }
+  };
+
+  walk(root);
+  return pieces.join('\n');
 }

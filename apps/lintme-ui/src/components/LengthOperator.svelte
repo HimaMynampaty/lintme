@@ -34,5 +34,5 @@
 </script>
 
 {#if !hasExtract}
-  <p class="text-sm text-red-500">⚠ Add any step like <code>extract</code> before this one.</p>
+  <p class="text-sm text-red-500" role="alert" aria-live="polite">Add any step like <code>extract</code> before this one.</p>
 {/if}
