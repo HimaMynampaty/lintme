@@ -9,10 +9,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const README_PATH = path.resolve(__dirname, '../src/components/README.md');
 
 /** Sources */
-const SCHEMAS_DIR       = path.resolve(__dirname, '../src/lib/operatorSchemas');
-const COMPONENTS_DIR    = path.resolve(__dirname, '../src/components');
-const SCHEMA_INDEX_FILE = path.resolve(__dirname, '../src/lib/operatorSchemaIndex.js');
-const BACKEND_OPS_DIR   = path.resolve(__dirname, '../../packages/backend/operators');
+const SCHEMAS_DIR     = path.resolve(__dirname, '../src/lib/operatorSchemas');
+const COMPONENTS_DIR  = path.resolve(__dirname, '../src/components');
+// NOTE: from apps/lintme-ui/scripts -> up to repo root -> packages/backend/operators
+const BACKEND_OPS_DIR = path.resolve(__dirname, '../../../packages/backend/operators');
 
 /** Markers to safely replace only the table */
 const START = '<!-- BEGIN:OPS-TABLE -->';
@@ -85,18 +85,13 @@ async function makeTable(operatorSchemas) {
     const compRel = rel(README_PATH, compAbs);
     const compLink = (await exists(compAbs)) ? mdLink('Component', compRel) : 'Component: —';
 
-    // schema index
-    const indexRel = rel(README_PATH, SCHEMA_INDEX_FILE);
-    const indexLink = (await exists(SCHEMA_INDEX_FILE)) ? mdLink('Schema Index', indexRel) : 'Schema Index: —';
-
-    // backend operator implementation (packages/backend/operators/<op>/index.js)
-    const implDir  = path.join(BACKEND_OPS_DIR, name);
-    const implAbs  = path.join(implDir, 'index.js');
-    const implRel  = rel(README_PATH, implAbs);
+    // backend operator implementation (…/packages/backend/operators/<op>/index.js)
+    const implAbs = path.join(BACKEND_OPS_DIR, name, 'index.js');
+    const implRel = rel(README_PATH, implAbs);
     const implLink = (await exists(implAbs)) ? mdLink('Implementation', implRel) : 'Implementation: —';
 
-    // single “Links” column (all links separated by ·)
-    const links = [schemaLink, compLink, indexLink, implLink].join(' · ');
+    // single “Links” column (no Schema Index)
+    const links = [schemaLink, compLink, implLink].join(' · ');
 
     rows.push(`| \`${name}\` | ${escapeNewlines(desc)} | ${fieldsTxt} | ${reqTxt} | ${links} |`);
   }
