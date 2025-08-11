@@ -51,11 +51,13 @@ export async function run(ctx, cfg = {}) {
         }
 
         const diffResult = await resp.json();
-        ctx.diagnostics.push({
-          line: 1,
-          severity: diffResult.changedPixels ? level : 'info',
-          message: `Image diff: ${diffResult.changedPixels} pixels changed · [diff](${diffResult.diff})`
-        });
+      const failThreshold = 50; 
+      const sev = diffResult.changedPixels > failThreshold ? level : 'info';
+      ctx.diagnostics.push({
+        line: 1,
+        severity: sev,
+        message: `Image diff: ${diffResult.changedPixels} pixels changed (fail if > ${failThreshold}) · [diff](${diffResult.diff})`
+      });
 
         return {
           scopes: ['image_diff'],

@@ -1,0 +1,52 @@
+{
+    "label": "Is Present",
+    "description": "Checks that a specific attribute is present on each extracted node. Supported attributes depend on the extracted target type: image (alt, title, url), link (title, url), code (lang), listItem (checked), paragraph (content), heading (depth). You can also specify any custom field name extracted earlier in the pipeline.",
+    "rationale": "Prevents missing required attributes on extracted elements.",
+    "improves": [
+        "completeness",
+        "reputation",
+        "accessibility"
+    ],
+    "version": "1.0.0",
+    "usedByRules": [
+        "codeBlockLanguageCheck",
+        "requireAltTextForImages"
+    ],
+    "fields": {
+        "target": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field name to require on each extracted node (e.g., alt, title, url).",
+            "required": true
+        }
+    },
+    "additionalProperties": false,
+    "unevaluatedProperties": false,
+    "produces": {
+        "target": "isPresent",
+        "scopes": [
+            "document",
+            "paragraph",
+            "line",
+            "endoffile"
+        ],
+        "contextWrites": [
+            "ctx.diagnostics"
+        ]
+    },
+    "requiresPrevious": {
+        "operator": "extract",
+        "scopes": "*",
+        "message": "isPresent needs a previous extract step."
+    },
+    "examples": [
+        {
+            "operator": "isPresent",
+            "target": "alt"
+        },
+        {
+            "operator": "isPresent",
+            "target": "title"
+        }
+    ]
+}

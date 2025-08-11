@@ -92,7 +92,6 @@ export function parseYAML(text = '') {
           if (!Array.isArray(out.allowed_status_codes)) {
             out.allowed_status_codes = [200, 301, 302, 307, 308];
           }
-          if (out.scope == null) out.scope = 'document';
           return out;
         }
 
@@ -198,7 +197,6 @@ export function generateYAML(name = '', description = '', steps = []) {
       if (step.operator === 'isLinkAlive') {
         if (typeof step.timeout === 'number') out.timeout = step.timeout;
         if (Array.isArray(step.allowed_status_codes)) out.allowed_status_codes = step.allowed_status_codes;
-        if (step.scope) out.scope = step.scope;
       }
 
       if (

@@ -10,6 +10,11 @@ import execute from './operatorSchemas/execute.json';
 import extract from './operatorSchemas/extract.json';
 import threshold from './operatorSchemas/threshold.json';
 import fetchFromGithub from './operatorSchemas/fetchFromGithub.json';
+import fixUsingLLM from './operatorSchemas/fixUsingLLM.json';
+import isPresent from './operatorSchemas/isPresent.json';
+import length from './operatorSchemas/length.json';
+import isLinkAlive from './operatorSchemas/isLinkAlive.json';
+import markdownRender from './operatorSchemas/markdownRender.json';
 
 export const operatorSchemas = {
   calculateContrast,
@@ -23,5 +28,10 @@ export const operatorSchemas = {
   execute,
   extract,
   fetchFromGithub,
+  fixUsingLLM,
+  isPresent,
+  length,
+  isLinkAlive,
+  markdownRender,
   threshold,
 };

@@ -4,7 +4,10 @@
   "rationale": "Lets rules operate on real repository data without hardcoding it, supporting path discovery, content loading, or metadata inspection.",
   "improves": [
     "coverage",
-    "automation"
+    "automation",
+    "consistency",
+    "availability",
+    "timeliness"
   ],
   "version": "1.0.0",
   "usedByRules": [

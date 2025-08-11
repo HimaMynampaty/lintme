@@ -1,0 +1,71 @@
+{
+  "label": "Is Link Alive",
+  "description": "Checks all external links found in the Markdown content to verify they are reachable and return an allowed HTTP status code.",
+  "rationale": "Ensures that external references remain valid, preventing broken or outdated links that reduce credibility and user experience.",
+  "improves": [
+    "reliability",
+    "user-experience",
+    "content-quality",
+    "accuracy"
+  ],
+  "version": "1.0.0",
+  "usedByRules": [
+    "noUnreachableLinks"
+  ],
+  "requiresPrevious": {
+    "operator": [
+      "extract"
+    ],
+    "target": "externallink",
+    "scopes": [
+      "document"
+    ],
+    "message": "The previous step must extract externallink from Markdown content at document scope so that links can be checked."
+  },
+  "fields": {
+    "timeout": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 5000,
+      "description": "Request timeout in milliseconds for each link check."
+    },
+    "allowed_status_codes": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "default": [
+        200,
+        204,
+        301,
+        302,
+        307,
+        308
+      ],
+      "description": "List of acceptable HTTP status codes for a link to be considered alive."
+    }
+  },
+  "additionalProperties": false,
+  "produces": {
+    "target": "linkAvailability",
+    "scopes": [
+      "document"
+    ],
+    "contextWrites": [
+      "ctx.linkAvailability",
+      "ctx.diagnostics"
+    ]
+  },
+  "examples": [
+    {
+      "operator": "isLinkAlive",
+      "timeout": 3000,
+      "allowed_status_codes": [
+        200,
+        301,
+        302
+      ]
+    }
+  ]
+}
