@@ -383,19 +383,37 @@
       }
       return readmeFiles;
     }
-  
+
+    async function toggleDescription(rule) {
+      if (!rule.description || rule.description === "(No description provided)") {
+        const snap = await getDoc(doc(db, "rules", rule.id));
+        if (snap.exists()) {
+          const data = snap.data();
+          rule.description = data.description || getDescriptionFromYaml(data.yaml);
+        }
+      }
+
+      rule.showDescription = !rule.showDescription;
+
+      ruleList = [...ruleList];
+    }
 
     async function loadRulesFromFirestore() {
       const querySnapshot = await getDocs(collection(db, "rules"));
-      const rules = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const rules = querySnapshot.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data, 
+          description: data.description || getDescriptionFromYaml(data.yaml),
+          showDescription: false
+        };
+      });
       rules.sort((a, b) => a.name.localeCompare(b.name));
-
       ruleList = rules;
       return rules;
     }
+
 
     onMount(() => {
       loadRulesFromFirestore();
@@ -428,6 +446,12 @@
         console.warn("Rule not found in Firestore", id);
       }
     }
+
+    function getDescriptionFromYaml(yamlText = "") {
+      const m = yamlText.match(/^\s*description\s*:\s*["']?([^"'\n]+)["']?/m);
+      return m ? m[1].trim() : "(No description provided)";
+    }
+
 
     async function handleCombinedRuleSelection(opt) {
       if (!opt) return;           
@@ -962,56 +986,66 @@
           {#if expandedCategories.has(cat.name)}
             <div class="ml-4 mt-2 flex flex-col gap-1">
               {#each ruleList.filter(r => r.category === cat.name) as rule (rule.id)}
-                <div
-                  class="flex items-center gap-2 text-sm rule-item"
-                  tabindex="0"
-                  role="button"
-                  on:click={async () => {
-                    selectedRule = { label: rule.name, value: rule.id, type: 'saved' };
-                    selectedRuleId = rule.id;
-                    mode = 'runner';
-                    await loadRuleFromDB(rule.id);
-                    await tick();
-
-                    if (rulesEditorContainer) {
-                      rulesEditorContainer.classList.add('flash-border');
-                      setTimeout(() => {
-                        rulesEditorContainer.classList.remove('flash-border');
-                      }, 1000);
-                    }
-                  }}
-                  on:keydown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      selectedRule = { label: rule.name, value: rule.id, type: 'saved' };
-                      selectedRuleId = rule.id;
-                      mode = 'runner';
-                      loadRuleFromDB(rule.id).then(() => {
-                        if (rulesEditorContainer) {
-                          rulesEditorContainer.classList.add('flash-border');
-                          setTimeout(() => {
-                            rulesEditorContainer.classList.remove('flash-border');
-                          }, 1000);
+                <div class="rule-item">
+                  <div class="rule-row">
+                    <input
+                      type="checkbox"
+                      bind:group={selectedRuleIds}
+                      value={rule.id}
+                      on:click|stopPropagation
+                    />
+                    <span
+                      class="rule-name"
+                      role="button"
+                      tabindex="0"
+                      title="View description"
+                      on:click={() => toggleDescription(rule)}
+                      on:keydown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          toggleDescription(rule);
                         }
-                      });
-                    }
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    bind:group={selectedRuleIds}
-                    value={rule.id}
-                    on:click|stopPropagation
-                  />
-                  <span title="Click to open this rule in the Rule Editor">
-                    {rule.name}
-                  </span>
-                  {#if ruleStatus[rule.id] === 'running'}
-                    <span class="loader-spinner"></span>
-                  {:else if ruleStatus[rule.id] === 'pass'}
-                    ✅
-                  {:else if ruleStatus[rule.id] === 'fail'}
-                    ❌
+                      }}
+                    >
+                      {rule.name}
+                    </span>
+
+                    <div class="rule-actions">
+                      {#if ruleStatus[rule.id] === 'running'}
+                        <span class="loader-spinner"></span>
+                      {:else if ruleStatus[rule.id] === 'pass'}
+                        ✅
+                      {:else if ruleStatus[rule.id] === 'fail'}
+                        ❌
+                      {/if}
+
+                      <button
+                        class="edit-btn"
+                        title="Edit rule"
+                        on:click={async (e) => {
+                          e.stopPropagation();
+                          selectedRule = { label: rule.name, value: rule.id, type: 'saved' };
+                          selectedRuleId = rule.id;
+                          mode = 'runner';               
+                          await loadRuleFromDB(rule.id); 
+                          await tick();
+                          if (rulesEditorContainer) {
+                            rulesEditorContainer.classList.add('flash-border');
+                            setTimeout(() => {
+                              rulesEditorContainer.classList.remove('flash-border');
+                            }, 1000);
+                          }
+                        }}
+                      >
+                        ✏️
+                      </button>
+                    </div>
+                  </div>
+
+                  {#if rule.showDescription}
+                    <div class="rule-description">
+                      {rule.description || "(No description provided)"}
+                    </div>
                   {/if}
                 </div>
               {/each}
