@@ -1,15 +1,23 @@
 <script>
   import { onDestroy, tick, onMount } from "svelte";
+  import { createEventDispatcher } from "svelte";
   import { pipeline, INTERNAL_AST_STEP } from "../stores/pipeline.js";
   import { generateYAML, parseYAML, withIds } from "../utils/yaml.js";
 
   import OperatorPalette from "./OperatorPalette.svelte";
   import PipelineEditor from "../editor/PipelineEditor.svelte";
+  import LlmRuleGenerator from "./LlmRuleGenerator.svelte";
 
   export let rulesEditor;
 
+  const dispatch = createEventDispatcher();
+
   let showPalette = false;
   let paletteRef;
+
+  // LLM UI state
+  let showLLM = false;
+  let llmConfig = { model: "llama-3.3-70b-versatile", prompt: "" };
 
   let syncingFromPipeline = false;
   let syncingFromEditor = false;
@@ -52,31 +60,26 @@
               operator: "compare",
               baseline: "",
               against: "",
-              comparison_mode: "structural"
+              comparison_mode: "structural",
             },
           ];
-
-        case 'isLinkAlive':
+        case "isLinkAlive":
           return [
             ...steps,
             {
               id,
-              operator: 'isLinkAlive',
+              operator: "isLinkAlive",
               timeout: 5000,
-              allowed_status_codes: [200, 301, 302, 308, 204]
+              allowed_status_codes: [200, 301, 302, 308, 204],
             },
-          ];  
-        case 'execute':
+          ];
+        case "execute":
+          return [...steps, { id, operator: "execute", timeout: 5000 }];
+        case "regexMatch":
           return [
             ...steps,
-            {
-              id,
-              operator: 'execute',
-              timeout: 5000
-            }
+            { id, operator: "regexMatch", pattern: "", mode: "match" },
           ];
-        case "regexMatch":
-          return [...steps, { id, operator: "regexMatch", pattern: "", mode: "match"}];
         case "sage":
           return [...steps, { id, operator: "sage" }];
         case "fetchFromGithub":
@@ -100,7 +103,7 @@
               id,
               operator: "codeBlockFormatting",
               allowedLanguages: [],
-              allowedFormats: ["fenced"]
+              allowedFormats: ["fenced"],
             },
           ];
         case "detectHateSpeech":
@@ -114,23 +117,17 @@
             },
           ];
         case "calculateContrast":
+          return [...steps, { id, operator: "calculateContrast" }];
+        case "detectDuplicateSentences":
           return [
             ...steps,
             {
               id,
-              operator: "calculateContrast",
+              operator: "detectDuplicateSentences",
+              scope: "document",
+              scopes: ["document"],
             },
           ];
-        case 'detectDuplicateSentences':
-          return [
-            ...steps,
-            {
-              id,
-              operator: 'detectDuplicateSentences',
-              scope: 'document',
-              scopes: ['document'],
-            },
-          ];  
         case "markdownRender":
           return [
             ...steps,
@@ -148,9 +145,10 @@
               id,
               operator: "evaluateUsingLLM",
               model: "llama-3.3-70b-versatile",
-              ruleDefinition: "Define the rule, along with criteria that indicates when the LLM should consider the rule passed or failed.",
+              ruleDefinition:
+                "Define the rule, along with criteria that indicates when the LLM should consider the rule passed or failed.",
             },
-          ];  
+          ];
         case "customCode":
           return [
             ...steps,
@@ -206,7 +204,6 @@
 
     const handleYamlChange = () => {
       if (syncingFromPipeline) return;
-
       try {
         const nextSteps = withIds(parseYAML(rulesEditor.getValue()));
         syncingFromEditor = true;
@@ -250,7 +247,6 @@
           <div
             class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-white"
           ></div>
-
           <OperatorPalette
             on:select={(e) => addOperator(e.detail)}
             on:close={() => (showPalette = false)}
@@ -261,11 +257,26 @@
 
     <button
       class="h-9 px-4 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-sm rounded-full"
-      on:click={() => console.log("Generate with LLM")}
+      on:click={() => (showLLM = !showLLM)}
     >
       🧠 Generate Rule (LLM)
     </button>
   </div>
+
+  {#if showLLM}
+    <div class="mt-2">
+      <LlmRuleGenerator
+        bind:data={llmConfig}
+        on:generated={({ detail }) => {
+          const { yaml, errors } = detail;
+
+          rulesEditor?.setValue(yaml);
+
+          dispatch("llmGenerated", { yaml, errors });
+        }}
+      />
+    </div>
+  {/if}
 
   <div class="flex flex-col gap-3">
     <PipelineEditor />
