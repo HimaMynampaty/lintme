@@ -36,9 +36,7 @@
   import { validatePipeline } from "./lib/validatePipeline.js";
   import { configureMonacoYaml } from "monaco-yaml";
   import { buildMonacoYamlSchema } from "./lib/buildMonacoYamlSchema.js";
-  let llmConfig = { model: "llama-3.3-70b-versatile", prompt: "" };
-  import { parseYAML, withIds } from "./utils/yaml.js";
-  import { pipeline, INTERNAL_AST_STEP } from "./stores/pipeline.js";
+
 
   const sharedFontSize = 14;
   let markdownText = "";
