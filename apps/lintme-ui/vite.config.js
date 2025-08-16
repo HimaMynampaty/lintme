@@ -1,12 +1,15 @@
-// vite.config.js
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
-import monaco from 'vite-plugin-monaco-editor';
+
+import monacoPkg from 'vite-plugin-monaco-editor';
+const monacoEditorPlugin = monacoPkg.default || monacoPkg;
 
 export default defineConfig({
   plugins: [
     svelte(),
-    monaco({ languages: ['yaml', 'markdown'] }),
+    monacoEditorPlugin({
+      languages: ['yaml', 'markdown'],
+    }),
   ],
 
   server: { port: 5173 },
@@ -18,12 +21,10 @@ export default defineConfig({
     },
   },
 
-  // keep only what you truly need here
   define: {
     'process.env': {},
   },
 
-  // put the global shim ONLY in esbuild prebundle so it doesn't touch your source
   optimizeDeps: {
     include: ['monaco-editor', 'monaco-yaml', 'path-browserify'],
     exclude: ['dictionary-en'],
