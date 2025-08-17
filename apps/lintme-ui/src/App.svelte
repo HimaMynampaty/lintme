@@ -36,7 +36,7 @@
   import { validatePipeline } from "./lib/validatePipeline.js";
   import { configureMonacoYaml } from "monaco-yaml";
   import { buildMonacoYamlSchema } from "./lib/buildMonacoYamlSchema.js";
-
+  import { rulePresets } from "./lib/rulePresets.js";
 
   const sharedFontSize = 14;
   let markdownText = "";
@@ -79,12 +79,19 @@
   let selectedReadme = null;
   let ruleWarning = "";
   let ruleValidationErrors = [];
-
+  let selectedPreset = "";
   const baseURL = import.meta.env.VITE_BACKEND_URL;
 
   function setRuleStatus(id, status) {
     ruleStatus[id] = status;
     ruleStatus = { ...ruleStatus };
+  }
+
+  $: if (ruleList.length) {
+    recomputeCategorySelection();
+  }
+  $: if (selectedPreset && ruleList.length) {
+    applyPreset(selectedPreset);
   }
 
   $: {
@@ -103,6 +110,17 @@
     }
   }
 
+  async function setOutput(text) {
+    lintResults = text || "No lint results to display yet.";
+    await tick();
+    if (outputEditor) {
+      const model = outputEditor.getModel?.();
+      if (model?.setValue) model.setValue(lintResults);
+      else outputEditor.setValue(lintResults);
+      outputEditor.layout?.();
+    }
+  }
+
   function getParticipantId() {
     let id = localStorage.getItem("participantId");
     if (!id) {
@@ -111,6 +129,55 @@
     }
     return id;
   }
+
+  function recomputeCategorySelection() {
+    const selectedSet = new Set(selectedRuleIds);
+    for (const cat of categoriesMeta.map((c) => c.name)) {
+      const idsInCat = ruleList
+        .filter((r) => r.category === cat)
+        .map((r) => r.id);
+      categorySelection[cat] =
+        idsInCat.length > 0 && idsInCat.every((id) => selectedSet.has(id));
+    }
+    categorySelection = { ...categorySelection };
+  }
+
+  function handlePresetChange(e) {
+    const key = e.target.value;
+    selectedPreset = key;
+
+    if (!key) {
+      clearSelections();
+      return;
+    }
+
+    applyPreset(key);
+  }
+
+  function applyPreset(presetKey) {
+    const preset = rulePresets[presetKey];
+    if (!preset) return;
+
+    expandedCategories = new Set();
+
+    selectedRuleIds = [];
+    ruleStatus = {};
+
+    for (const c of categoriesMeta.map((x) => x.name)) {
+      categorySelection[c] = false;
+    }
+    categorySelection = { ...categorySelection };
+
+    const want = new Set(preset.rulesByName.map((n) => n.toLowerCase().trim()));
+    const matchedIds = ruleList
+      .filter((r) => want.has((r.name || "").toLowerCase().trim()))
+      .map((r) => String(r.id));
+
+    selectedRuleIds = matchedIds;
+
+    recomputeCategorySelection();
+  }
+
   const participantId = getParticipantId();
 
   async function logRuleRun(
@@ -170,22 +237,23 @@
     }
     expandedCategories = new Set(expandedCategories);
   }
-
   function toggleCategoryCheckbox(category, checked) {
     categorySelection[category] = checked;
 
     const affectedIds = ruleList
       .filter((r) => r.category === category)
-      .map((r) => r.id);
+      .map((r) => String(r.id));
 
     if (checked) {
-      selectedRuleIds = [...new Set([...selectedRuleIds, ...affectedIds])];
+      const set = new Set(selectedRuleIds.map(String));
+      affectedIds.forEach((id) => set.add(id));
+      selectedRuleIds = Array.from(set);
     } else {
-      selectedRuleIds = selectedRuleIds.filter(
-        (id) => !affectedIds.includes(id),
-      );
+      const remove = new Set(affectedIds);
+      selectedRuleIds = selectedRuleIds.filter((id) => !remove.has(String(id)));
     }
   }
+
   function lineOfStep(yaml, stepIndex) {
     const lines = yaml.split("\n");
     let insidePipeline = false;
@@ -457,16 +525,27 @@
     loadRulesFromFirestore();
   });
 
+  let diffOriginalModel;
+  let diffModifiedModel;
+
   function updateDiffModels() {
-    const current = diffEditor.getModel();
+    const originalUri = monaco.Uri.parse("inmemory://lintme/diff/original.md");
+    const modifiedUri = monaco.Uri.parse("inmemory://lintme/diff/modified.md");
 
-    if (current?.original) current.original.dispose();
-    if (current?.modified) current.modified.dispose();
+    diffOriginalModel =
+      monaco.editor.getModel(originalUri) ||
+      monaco.editor.createModel(originalText || "", "markdown", originalUri);
+    diffModifiedModel =
+      monaco.editor.getModel(modifiedUri) ||
+      monaco.editor.createModel(fixedMarkdown || "", "markdown", modifiedUri);
 
-    const originalModel = monaco.editor.createModel(originalText, "markdown");
-    const modifiedModel = monaco.editor.createModel(fixedMarkdown, "markdown");
+    diffOriginalModel.setValue(originalText || "");
+    diffModifiedModel.setValue(fixedMarkdown || "");
 
-    diffEditor.setModel({ original: originalModel, modified: modifiedModel });
+    diffEditor.setModel({
+      original: diffOriginalModel,
+      modified: diffModifiedModel,
+    });
   }
 
   async function loadRuleFromDB(id) {
@@ -488,6 +567,17 @@
   function getDescriptionFromYaml(yamlText = "") {
     const m = yamlText.match(/^\s*description\s*:\s*["']?([^"'\n]+)["']?/m);
     return m ? m[1].trim() : "(No description provided)";
+  }
+
+  function clearSelections() {
+    expandedCategories = new Set();
+
+    selectedRuleIds = [];
+    ruleStatus = {};
+
+    const blank = {};
+    for (const c of categoriesMeta.map((x) => x.name)) blank[c] = false;
+    categorySelection = blank;
   }
 
   async function handleCombinedRuleSelection(opt) {
@@ -574,25 +664,40 @@
     return result;
   }
 
-  function applyDiagnosticsToEditor(diags) {
-    const model = markdownEditor.getModel();
-    monaco.editor.setModelMarkers(
-      model,
-      "my-linter",
-      diags.map((d) => ({
-        startLineNumber: d.line,
-        endLineNumber: d.line,
-        startColumn: 1,
-        endColumn: model.getLineContent(d.line).length + 1,
-        message: d.message,
-        severity:
-          d.severity === "error"
-            ? monaco.MarkerSeverity.Error
-            : d.severity === "warning"
-              ? monaco.MarkerSeverity.Warning
-              : monaco.MarkerSeverity.Info,
-      })),
-    );
+  function applyDiagnosticsToEditor(diags = []) {
+    const model = markdownEditor?.getModel?.();
+    if (!model) return;
+
+    const lineCount = model.getLineCount();
+    const markers = (diags || []).map((d) => {
+      const rawLine = Number(d?.line);
+      const safeLine = Number.isFinite(rawLine)
+        ? Math.min(Math.max(1, rawLine), lineCount)
+        : 1;
+
+      const rawCol = Number(d?.column);
+      const safeStartCol = Number.isFinite(rawCol) && rawCol > 0 ? rawCol : 1;
+      const lineLen = model.getLineContent(safeLine).length;
+      const safeEndCol = Math.max(safeStartCol, lineLen + 1);
+
+      const sev =
+        d?.severity === "error"
+          ? monaco.MarkerSeverity.Error
+          : d?.severity === "warning"
+            ? monaco.MarkerSeverity.Warning
+            : monaco.MarkerSeverity.Info;
+
+      return {
+        startLineNumber: safeLine,
+        endLineNumber: safeLine,
+        startColumn: safeStartCol,
+        endColumn: safeEndCol,
+        message: d?.message || "Issue",
+        severity: sev,
+      };
+    });
+
+    monaco.editor.setModelMarkers(model, "my-linter", markers);
   }
 
   async function runLinter() {
@@ -717,6 +822,7 @@
         lintResults +=
           '\n\n Click "Show Diff View" to review the suggested fixes, "Apply Fixes to Editor" to accept the fix.';
       }
+      await setOutput(lintResults);
 
       if (showDiff) {
         updateDiffModels();
@@ -855,7 +961,7 @@
         "multiple",
         fixedMarkdown,
       );
-      lintResults = combinedResults;
+      await setOutput(combinedResults);
     } catch (e) {
       console.error("runMultipleRules failed", e);
       multiLintState = "error";
@@ -1053,7 +1159,27 @@
               style="max-height: 100%; flex: 1;"
               class:hidden={mode !== "loader"}
             >
-              <h3 class="font-semibold text-sm">Available Rules</h3>
+              <div class="flex items-center justify-between">
+                <h3 class="font-semibold text-sm">Available Rules</h3>
+
+                <div class="flex items-center gap-2">
+                  <label class="text-xs text-gray-600" for="preset-select"
+                    >Preset:</label
+                  >
+                <select
+                  id="preset-select"
+                  bind:value={selectedPreset}
+                  on:change={handlePresetChange}
+                  class="text-sm border rounded px-2 py-1 bg-white"
+                  style="min-width: 260px;"
+                >
+                  <option value="">Select a preset</option> 
+                  {#each Object.entries(rulePresets) as [key, p]}
+                    <option value={key}>{p.label}</option>
+                  {/each}
+                </select>
+                </div>
+              </div>
 
               {#each categoriesMeta as cat}
                 <div class="mb-2 p-2 border rounded bg-white">
@@ -1097,9 +1223,20 @@
                           <div class="rule-row">
                             <input
                               type="checkbox"
-                              bind:group={selectedRuleIds}
-                              value={rule.id}
+                              checked={selectedRuleIds.includes(rule.id)}
                               on:click|stopPropagation
+                              on:change={(e) => {
+                                const id = rule.id;
+                                if (e.currentTarget.checked) {
+                                  if (!selectedRuleIds.includes(id)) {
+                                    selectedRuleIds = [...selectedRuleIds, id];
+                                  }
+                                } else {
+                                  selectedRuleIds = selectedRuleIds.filter(
+                                    (x) => x !== id,
+                                  );
+                                }
+                              }}
                             />
                             <span
                               class="rule-name"
