@@ -1,6 +1,6 @@
 <script>
   import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
-  import YamlWorker from "monaco-yaml/yaml.worker?worker";
+  import YamlWorker from "monaco-yaml/yaml.worker?worker&inline";
   if (typeof self !== "undefined") {
     self.require = undefined;
     self.define = undefined;

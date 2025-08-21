@@ -172,35 +172,24 @@ function compareOp(actual, type, expected) {
   }
 }
 
-function buildMessage({ scope, line, actual, type, expected, noun, examples }) {
-  const where =
-    scope === 'document'     ? 'Document' :
-    scope === 'endoffile'    ? 'End of file' :
-    scope === 'line'         ? `Line ${line}` :
-    scope === 'paragraph'    ? `Paragraph starting at line ${line ?? 1}` :
-                               'Defined scope';
+function buildMessage({ actual, type, expected, noun, examples }) {
+  const want =
+    type === '>=' ? `at least ${expected}` :
+    type === '>'  ? `more than ${expected}` :
+    type === '<=' ? `at most ${expected}` :
+    type === '<'  ? `fewer than ${expected}` :
+    (type === '=' || type === '==') ? `exactly ${expected}` :
+    `${type} ${expected}`;
 
-  const opText = {
-    '<':  'fewer than',
-    '<=': 'at most',
-    '>':  'more than',
-    '>=': `${expected}+`,
-    '=':  'exactly'
-  }[type] || `(${type})`;
-
-  const expect =
-    type === '>='
-      ? `${expected}+ ${pluralize(noun, expected)} expected`
-      : `Expected ${opText} ${expected} ${pluralize(noun, expected)}`;
-
-  const prefix = `${expect}; found ${actual}.`;
+  const base = `Expected ${want} ${pluralize(noun, expected)}; found ${actual}.`;
 
   const ex = Array.isArray(examples) && examples.length
-    ? ` Examples: ${examples.slice(0,3).map(formatExample).join(' · ')}`
+    ? ` Examples: ${examples.slice(0, 3).map(formatExample).join(' · ')}`
     : '';
 
-  return `${where} — ${prefix}${ex}`;
+  return base + ex;
 }
+
 
 function pickExamples(sources, scope) {
   const fromScope = arrayLike(sources[scope]) ? sources[scope] : null;
