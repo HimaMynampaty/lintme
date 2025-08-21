@@ -1,0 +1,36 @@
+name: Generate RULES.md
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # allow manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Generate RULES.md
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: yarn generate:rules
+
+      - name: Commit and push RULES.md
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add RULES.md
+          git commit -m "chore: update RULES.md [skip ci]" || echo "No changes to commit"
+          git push
