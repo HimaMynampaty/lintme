@@ -24,7 +24,7 @@ export const rulePresets = {
       //"terminologyConsistency(LLM)",
 
       // Content
-      "codeBlockExecution(LLM)",
+      //"codeBlockExecution(LLM)",
       "consistentExternalLinkFormat",
       "dateValidationLint",
       //"jargonExplanationCheck(LLM)",
