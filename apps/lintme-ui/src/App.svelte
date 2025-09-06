@@ -130,6 +130,85 @@
     return id;
   }
 
+  function extractJson(text = "") {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start === -1 || end === -1 || end < start) {
+      throw new Error("LLM did not return JSON.");
+    }
+    return text.slice(start, end + 1);
+  }
+
+  function stripCodeFence(text = "") {
+    return text
+      .replace(/^\s*```(?:\w+)?\s*\n?/i, "")
+      .replace(/\n?```\s*$/i, "");
+  }
+
+  function buildFixPrompt({ markdown, rulesYaml, diagnostics }) {
+    const issues = (diagnostics || []).slice(0, 30).map((d) => ({
+      line: d.line,
+      column: d.column || 1,
+      severity: d.severity,
+      message: d.message,
+    }));
+
+    return `
+      You are a strict Markdown fixer.
+
+      TASK:
+      - Correct ONLY the issues explicitly listed in diagnostics.
+      - Do NOT modify any other text or formatting.
+
+      RULES:
+      1) Apply the minimum edit necessary to resolve each diagnostic.
+      2) Do not touch content without a diagnostic unless it is strictly required to resolve a diagnostic.
+      3) Do not reflow, rewrap, reorder, or restyle anything unless a diagnostic requires it.
+      4) Be deterministic and idempotent (same input ⇒ same output).
+      5) Output ONLY the corrected Markdown. No code fences, no JSON, no explanations.
+
+      rules.yaml (context)
+      ---
+      ${rulesYaml}
+      ---
+
+      diagnostics
+      ${JSON.stringify(issues, null, 2)}
+
+      FULL README
+      <<<MD
+      ${markdown}
+      MD
+      `.trim();
+  }
+
+  function textFromMaybeJson(s) {
+    try {
+      const j = JSON.parse(s);
+      if (typeof j?.text === "string") return j.text;
+      if (typeof j?.result === "string") return j.result;
+      return s;
+    } catch {
+      return s;
+    }
+  }
+
+  async function requestAIFix({ prompt, model = "llama-3.3-70b-versatile" }) {
+    const res = await fetch(
+      "https://lintme-backend.onrender.com/api/groq-chat",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model, prompt }),
+      },
+    );
+    const body = await res.text();
+    if (!res.ok) {
+      throw new Error(`LLM endpoint failed: ${body || res.status}`);
+    }
+    return stripCodeFence(textFromMaybeJson(body)).trimEnd();
+  }
+
   function recomputeCategorySelection() {
     const selectedSet = new Set(selectedRuleIds);
     for (const cat of categoriesMeta.map((c) => c.name)) {
@@ -376,6 +455,64 @@
 
     markdownEditor.onDidChangeModelContent(() => {
       markdownText = markdownEditor.getValue();
+    });
+
+    let aiFixCommandId;
+
+    aiFixCommandId = markdownEditor.addCommand(
+      0,
+      async (_ctx) => {
+        try {
+          const model = markdownEditor.getModel();
+          const fullText = model.getValue();
+
+          const prompt = buildFixPrompt({
+            markdown: fullText,
+            rulesYaml: rulesEditor?.getValue() || rulesYaml || "",
+            diagnostics,
+          });
+
+          await setOutput("LLM is preparing a fix…");
+          const aiText = await requestAIFix({ prompt });
+
+          originalText = fullText;
+          fixedMarkdown = aiText;
+
+          await setOutput(
+            "LLM fix prepared. Use Show Diff to review, then Apply Fixes.",
+          );
+          if (!showDiff) showDiff = true;
+          updateDiffModels();
+        } catch (e) {
+          console.error(e);
+          alert(`LLM fix failed: ${e.message}`);
+        }
+      },
+      null,
+    );
+
+    const QUICK_FIX_KIND =
+      monaco.languages.CodeActionKind?.QuickFix ?? "quickfix";
+
+    monaco.languages.registerCodeActionProvider("markdown", {
+      providedCodeActionKinds: [QUICK_FIX_KIND],
+      provideCodeActions(/* model, range */) {
+        const total = (diagnostics || []).length;
+        if (!total) return { actions: [], dispose: () => {} };
+
+        return {
+          actions: [
+            {
+              title: total
+                ? `LLM: Fix document (${total} issue${total === 1 ? "" : "s"})`
+                : "LLM: Fix document",
+              kind: "quickfix.lintme.ai",
+              command: { id: aiFixCommandId, title: "AI Fix" },
+            },
+          ],
+          dispose: () => {},
+        };
+      },
     });
 
     diffEditor = monaco.editor.createDiffEditor(diffEditorContainer, {
@@ -1166,18 +1303,18 @@
                   <label class="text-xs text-gray-600" for="preset-select"
                     >Preset:</label
                   >
-                <select
-                  id="preset-select"
-                  bind:value={selectedPreset}
-                  on:change={handlePresetChange}
-                  class="text-sm border rounded px-2 py-1 bg-white"
-                  style="min-width: 260px;"
-                >
-                  <option value="">Select a preset</option> 
-                  {#each Object.entries(rulePresets) as [key, p]}
-                    <option value={key}>{p.label}</option>
-                  {/each}
-                </select>
+                  <select
+                    id="preset-select"
+                    bind:value={selectedPreset}
+                    on:change={handlePresetChange}
+                    class="text-sm border rounded px-2 py-1 bg-white"
+                    style="min-width: 260px;"
+                  >
+                    <option value="">Select a preset</option>
+                    {#each Object.entries(rulePresets) as [key, p]}
+                      <option value={key}>{p.label}</option>
+                    {/each}
+                  </select>
                 </div>
               </div>
 
