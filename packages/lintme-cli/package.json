@@ -1,0 +1,17 @@
+{
+  "name": "lintme-cli",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "LintMe CLI",
+  "bin": { "lintme": "./bin/lintme.js" },
+  "files": ["bin", "lib"],
+  "engines": { "node": ">=18" },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "lintme-pipeline-runner": "^0.1.0",
+    "commander": "^12.1.0",
+    "js-yaml": "^4.1.0"
+  },
+  "publishConfig": { "access": "public" }
+}
