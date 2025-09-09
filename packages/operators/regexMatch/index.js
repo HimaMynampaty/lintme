@@ -16,7 +16,15 @@ export function run(ctx, cfg = {}) {
 
   const regexes = [];
   for (const p of patterns) {
-    try { regexes.push(new RegExp(p, 'i')); }
+    try { 
+        let src = p, flags = 'i';
+        const m = /^(\(\?[-i]+\))/.exec(p);
+        if (m) {
+          if (m[1].includes('?-i')) flags = flags.replace('i', ''); // turn off i
+          src = p.slice(m[1].length);
+        }
+        regexes.push(new RegExp(src, flags));
+     }
     catch (e) {
       ctx.diagnostics.push({
         line: 1,
