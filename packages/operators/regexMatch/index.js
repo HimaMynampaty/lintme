@@ -122,7 +122,7 @@ export function run(ctx, cfg = {}) {
 
     walk(prev);
 
-    if (!result[scope].length) {
+   if (!result[scope].length && scope !== 'previousstepoutput') {
       const asJson = JSON.stringify(prev);
       if (keepHit(asJson)) push(1, asJson);
     }
