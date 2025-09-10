@@ -1,5 +1,5 @@
 {
-  "name": "@himamynampaty/operator-markdownrender",
+  "name": "@lintme/operator-markdownrender",
   "version": "1.0.0",
   "main": "index.js",
   "private": "true",

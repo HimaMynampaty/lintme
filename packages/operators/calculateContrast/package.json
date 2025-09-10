@@ -1,5 +1,5 @@
 {
-  "name": "@himamynampaty/operator-calculatecontrast",
+  "name": "@lintme/operator-calculatecontrast",
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",

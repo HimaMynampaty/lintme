@@ -1,5 +1,5 @@
 {
-  "name": "@himamynampaty/operator-extract",
+  "name": "@lintme/operator-extract",
   "version": "1.0.0",
   "main": "index.js",
   "private": "true",
