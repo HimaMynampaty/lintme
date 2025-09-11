@@ -1,3 +1,4 @@
+<a id="top"></a>
 # LintMe - Markdown Linter
 LintMe is a Markdown linting tool focused on README files, designed to help users detect, fix, and improve documentation quality through a combination of rule-based checks, customizable operators, and LLM-powered suggestions.
 <p align="center">
@@ -59,8 +60,10 @@ Run with npx:
 ```bash
 npx lintme --help
 ```
+[back to top](#top)
 
 ---
+
 ## Quick start
 
 Please follow [Global install (recommended)](#global-install-recommended) so the `lintme` command is available in your shell.
@@ -113,6 +116,8 @@ lintme run -r lintrule.yaml --in README.md --write
 npx lintme-cli run --rule lintrule.yaml --in README.md
 ```
 
+[back to top](#top)
+
 ---
 
 ## Related work 
@@ -125,6 +130,8 @@ Documentation quality strongly influences usability and onboarding. Existing lin
 **LintMe** generalizes this space by letting users compose **programmatic operators** with **optional LLM checks and fixes**, so projects can enforce standards that match their context rather than a one-size-fits-all rule set.
 
 ![Comparison matrix of documentation linters](images/markdownLinters.png)
+
+[back to top](#top)
 
 ## LintMe Operators
 
@@ -158,7 +165,7 @@ Edit above/below the markers freely; the table between them is auto-generated.
 | `threshold` | Compares computed metrics from a previous step (e.g., count or length) against threshold rules per scope and reports violations. | `conditions` | `conditions` |
 
 <!-- END:OPS-TABLE -->
-
+[back to top](#top)
 
 ## Lint Rules
 
@@ -218,6 +225,8 @@ _Last updated: 2025-08-21 02:13 UTC_
 
 _Total rules: 49_
 
+[back to top](#top)
+
 ## Project Status 
 The tool is deployed and available to use at [Tool link](https://lintme.netlify.app/)
 ## Project Plans
@@ -237,3 +246,5 @@ The md files in this repository serve as a documentation to the tool. Link to a 
 
 ## Licensing
 `To be updated`
+
+[back to top](#top)
