@@ -11,6 +11,8 @@ LintMe is a Markdown linting tool focused on README files, designed to help user
 - [Related work](#related-work)
 - [Quick Start](#quick-start)
 - [Related Work](#related-work)
+- [LintMe Operators](#lintme-operators)
+- [Lint Rules](#lint-rules)
 - [Porject Status](#project-status)
 - [Project Plans](#project-plans)
 
@@ -123,6 +125,98 @@ Documentation quality strongly influences usability and onboarding. Existing lin
 **LintMe** generalizes this space by letting users compose **programmatic operators** with **optional LLM checks and fixes**, so projects can enforce standards that match their context rather than a one-size-fits-all rule set.
 
 ![Comparison matrix of documentation linters](images/markdownLinters.png)
+
+## LintMe Operators
+
+This file is generated from the JSON schemas in `src/lib/operatorSchemas/*`.
+Edit above/below the markers freely; the table between them is auto-generated.
+
+<!-- BEGIN:OPS-TABLE -->
+
+| Operator | Description | Fields | Required |
+|---|---|---|---|
+| `calculateContrast` | Measures foreground/background contrast for inline HTML extracted from Markdown and records the lowest ratio per line. Flags insufficient contrast to support WCAG compliance. | — | — |
+| `codeBlockFormatting` | Ensures Markdown code blocks follow consistent style(fenced, indented) and allowed language tags, helping maintain a uniform and readable document structure. | `allowedLanguages`, `allowedFormats` | — |
+| `compare` | Compares outputs from two earlier steps either structurally (missing/extra items) or by similarity scoring. | `baseline`, `against`, `comparison_mode`, `similarity_method`, `threshold` | `baseline`, `against` |
+| `count` | Aggregates counts from the previous step’s extracted results and summarizes them by scope (e.g., per line, per paragraph, or per collection). | — | — |
+| `customCode` | Executes user-provided JavaScript that defines `run(ctx)`. Useful for bespoke checks or quick experiments that don’t fit a built-in operator. | `code` | `code` |
+| `detectDuplicateSentences` | Finds repeated sentences within the chosen scope and reports duplicates with line references. | `scope` | — |
+| `detectHateSpeech` | Flags potentially offensive, biased, or hateful language within the chosen scope and annotates findings with line numbers. | `scope` | — |
+| `evaluateUsingLLM` | Evaluates the current document against a provided rule definition using an LLM and returns PASS or FAIL with diagnostics. | `model`, `ruleDefinition` | — |
+| `execute` | Runs inline commands found in the README. Prefers the previous `extract` (target: inlineCode) output when available; otherwise scans backtick code spans. | `timeout` | — |
+| `extract` | Finds Markdown nodes or text matches (including built-ins like emoji/newline/date and regex patterns) and returns them grouped by requested scopes. | `target`, `scopes` | — |
+| `fetchFromGithub` | Fetches README files (paths or content) or repository metadata from a GitHub repo via a backend endpoint. | `repo`, `branch`, `fileName`, `fetchType`, `metaPath`, `useCustomMetaPath` | `repo` |
+| `fixUsingLLM` | Calls an LLM with a rule-aware prompt to produce a fixed version of the Markdown when the rule is violated. | `model`, `prompt` | `prompt` |
+| `isLinkAlive` | Checks all external links found in the Markdown content to verify they are reachable and return an allowed HTTP status code. | `timeout`, `allowed_status_codes` | — |
+| `isPresent` | Checks that a specific attribute is present on each extracted node. Supported attributes depend on the extracted target type: image (alt, title, url), link (title, url), code (lang), listItem (checked), paragraph (content), heading (depth). You can also specify any custom field name extracted earlier in the pipeline. | `target` | `target` |
+| `length` | Calculates the total text length for extracted nodes in the given scopes (document, paragraph, line, or endoffile). | — | — |
+| `markdownRender` | Renders Markdown using a selected renderer and returns HTML, a serialized DOM snippet, or a URL to a rendered image. | `renderer`, `output` | `renderer`, `output` |
+| `readmeLocationCheck` | Validates that README.md files exist in expected locations of a repository. Uses README paths discovered by a previous fetchFromGithub step (fetchType: "path"). You can optionally supply expected paths or patterns (exact paths or regex-like patterns) to enforce specific locations. | `paths` | — |
+| `regexMatch` | Flags lines that DO match (mode: "match") or do NOT match (mode: "unmatch") one or more regular expressions. Can run on the whole document or on the previous step's structured output. | `patterns`, `mode`, `scope` | `patterns` |
+| `sage` | Converts headings from the previous extract step into GitHub-style slug anchors (e.g., "My Title" → "#my-title"). No configuration required. | — | — |
+| `search` | Finds lines or values containing one or more comma-separated terms. Can scan the whole Markdown document or walk the previous step’s structured output. | `query`, `scope` | `query` |
+| `threshold` | Compares computed metrics from a previous step (e.g., count or length) against threshold rules per scope and reports violations. | `conditions` | `conditions` |
+
+<!-- END:OPS-TABLE -->
+
+
+## Lint Rules
+
+_Last updated: 2025-08-21 02:13 UTC_
+
+| Name | Category | Description | Operators Used |
+|---|---|---|---|
+| bestPracticesGuidelines(LLM) | content | Ensures the document advises users on security best practices, like not using environment variables for secrets. | evaluateUsingLLM |
+| citationBibTeXPresent | content | Ensure the README includes at least one BibTeX entry (e.g., for citation purposes) | extract, search, count, threshold |
+| codeBlockExecution(LLM) | content | Checks all code blocks in the README for potential errors, incorrect usage, or missing steps by analyzing them with an LLM | evaluateUsingLLM |
+| compareMarkdownRenderings | content | Compares Markdown renderings across different engines and formats (e.g., image, HTML, DOM) to detect visual or structural differences between them. | markdownRender, compare |
+| compareReadmeSimilarity | content | Compare README files from two sources using cosine similarity and require at least 80% similarity. | fetchFromGithub, compare |
+| consistentExternalLinkFormat | content | Ensures all URLs use a valid HTTPS format for secure and consistent URL usage. | extract, regexMatch |
+| dateValidationLint | content | This rule checks that all dates in the Markdown file follow the format DD/MM/YYYY. It helps ensure consistency. | regexMatch |
+| demoLinkRequiredLint | content | This rule checks that the file includes at least one link containing the word demo. It ensures that documentation provides access to a working demonstration, which helps users better understand and evaluate the project. | extract, search, count, threshold |
+| demoLinkRequiredLint - Interactive systems | content | This rule checks that the file includes at least one link containing the word demo. It ensures that documentation provides access to a working demonstration, which helps users better understand and evaluate the project. | extract, search, count, threshold |
+| detectDuplicateSentences | content | Detects repeated full-line sentences in the document. Flags lines that appear more than once, which may indicate redundancy or copy-paste errors. | detectDuplicateSentences |
+| githubContributorCheck | content | Checks if the specified GitHub repository has any contributors matching a given name. | fetchFromGithub, search, count, threshold |
+| jargonExplanationCheck(LLM) | content | Ensures jargon is avoided or clearly explained for general audience understanding. | fixUsingLLM |
+| limitWordRepetition | content | Flags documents that overuse filler or weak words like basically, repeat, or actually. Helps reduce redundancy and improve clarity by enforcing a maximum of two uses per term. | search, count, threshold |
+| minimumReadmeLength | content | Checks whether the README contains more than 1000 characters of text, ensuring sufficient content depth and substance. | extract, length, threshold |
+| minimumReadmeLength - Interactive systems | content | Checks whether the README contains more than 1000 characters of text, ensuring sufficient content depth and substance. | extract, length, threshold |
+| noUnreachableLinks | content | Ensures all external links are valid and reachable by checking their HTTP status codes. | extract, isLinkAlive |
+| objectivityCheck(LLM) | content | Ensures that information is factual, unbiased, and clearly presented, avoiding promotional or vague language. | fixUsingLLM |
+| richContentCheck | content | This rule ensures that a healthy mix of content types, such as headings, images, and emphasis are included. It encourages structured, visually engaging, and well-emphasized content to improve readability and user experience. | extract, count, threshold |
+| textContrastCompliance | content | Ensures that text elements within the HTML document maintain a minimum contrast ratio of 4.5:1, in line with WCAG AA accessibility standards, to support visual clarity and readability for users with visual impairments. | extract, calculateContrast, threshold |
+| timelinessCheckVersionUpdate(LLM) | content | Ensures the Markdown includes the tools version and it matches the latest GitHub release | fetchFromGithub, evaluateUsingLLM |
+| validateInlineCommands | content | Run inline commands from README and report failures using the OS shell(Windows) | extract, execute |
+| validateLinkFormatting | content | Validates that all external links in markdown are correctly formatted with matching brackets, parentheses, and non-empty text and URLs. | extract, regexMatch, count, threshold |
+| valueAddedLint | content | This rule checks that the file includes meaningful and helpful content such as integration guides, extendability notes, documentation links, or descriptions of advantages. It encourages content that adds value for users by supporting learning, reuse, and deeper understanding. | search, count, threshold |
+| ambiguityUnderstandabilityCheck(LLM) | sensitive | Checks that instructions and terminology are clear, unambiguous, and appropriate for the target audience. Uses a language model to improve understandability and ensure the content is easy to follow. | fixUsingLLM |
+| customCodeHateSpeech | sensitive | Flags potentially offensive, profane, or insensitive language in markdown content using retext-equality and retext-profanities. | customCode |
+| detectHateSpeechLint(LLM) | sensitive | Detects harmful, biased, or profane language in Markdown content and uses a language model to suggest respectful, inclusive alternatives. | detectHateSpeech, fixUsingLLM |
+| detectSensitiveSecrets | sensitive | Detects hardcoded secrets like API keys, tokens, and private keys | regexMatch, count, threshold |
+| ensureNeutralTone(LLM) | sensitive | Uses a language model to assess whether the content maintains a credible and trustworthy tone that reflects a high standard of reputation. | fixUsingLLM |
+| checkBackToTopLinkPresence | structure | Verify that internal links include common Back to top phrases to support in-page navigation and accessibility. Helps ensure users can easily return to the beginning of the document. | extract, search, count, threshold |
+| codeBlockLanguageCheck | structure | Ensure all code blocks specify a language tag for syntax highlighting. | extract, isPresent |
+| customCodeSentenceLength | structure | Detects markdown lines that exceed a configurable word count for better readability. | customCode |
+| enforceNewLineAtEOF | structure | This rule ensures that a Markdown file ends with exactly one newline character. It helps maintain consistency across files and prevents formatting issues in some tools and version control systems. | extract, count, threshold |
+| ensureReadmeIsPresent | structure | Ensures that the repository contains a top-level README.md file for better visibility and documentation. Fetches README locations from GitHub and checks if a root-level file exists. | fetchFromGithub, readmeLocationCheck |
+| quickStartSectionCheck | structure | Ensures the document includes a Quick Start or similar section to help users get started quickly. | extract, search, count, threshold |
+| sectionCompleteness(LLM) | structure | Checks if all the standard sections are present | evaluateUsingLLM |
+| sectionCompleteness(LLM) - Interactive systems | structure | Checks if all the standard sections are present | evaluateUsingLLM |
+| tableOfContentsCheck | structure | Ensures that the document contains exactly one Table of Contents heading, such as TOC or Table of Contents, indicating proper navigation structure. | extract, search, count, threshold |
+| validateInternalLinksToHeadings | structure | Checks that all internal links point to existing headings and that all headings are referenced by at least one internal link. Ensures navigability and structural integrity within the Markdown document. | extract, sage, compare |
+| codeBlockConsistency | style | Ensures that all code blocks in the Markdown adhere to consistent formatting and language usage. | codeBlockFormatting |
+| consistentHeadingFormat | style | Ensures all markdown headings follow the same style (e.g., all ATX or all Setext) to maintain consistent document formatting. | extract, regexMatch, count, threshold |
+| consistentListFormat | style | Ensures all markdown list items use a consistent format (e.g., starting with -) for clean and readable structure. | extract, regexMatch, count, threshold |
+| disallowConsecutiveDuplicateWords | style | Flags documents that contain consecutive repeated words (e.g., the the or is is). This rule helps eliminate redundancy and improves text clarity. | extract, regexMatch, count, threshold |
+| enforceEmojiLimit | style | This rule limits the number of emojis in a Markdown file. It counts emojis at the document level, paragraph level, and line level, and checks that they do not exceed the allowed values. This helps keep the content clean, readable, and professional. | extract, count, threshold |
+| fixSpellingAndGrammar(LLM) | style | This rule uses a language model to automatically correct spelling and grammar issues in the Markdown content. It helps ensure quality and clarity. | fixUsingLLM |
+| headingListFormattingChecks | style | Ensures Markdown headings follow proper hierarchy and lists are correctly ordered and formatted | customCode |
+| requireAltTextForImages | style | Ensures that all images in the Markdown document include descriptive alt text for accessibility and proper semantic structure. | extract, isPresent |
+| sentenceLengthLimit | style | Ensures that each line in the document is shorter than 80 characters, promoting better readability and formatting consistency. | extract, length, threshold |
+| sentenceLengthLimit - datasets | style | Ensures that each line in the document is shorter than 80 characters, promoting better readability and formatting consistency. | extract, length, threshold |
+| terminologyConsistency(LLM) | style | Ensure consistent usage of enforced terminology in markdown content. | fixUsingLLM |
+
+_Total rules: 49_
 
 ## Project Status 
 The tool is deployed and available to use at [Tool link](https://lintme.netlify.app/)
