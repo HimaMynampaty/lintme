@@ -304,6 +304,11 @@
       label: "Sensitive",
       description: "Detects hate speech, harmful or inappropriate language.",
     },
+      {
+      name: "recipe",
+      label: "Recipe",
+      description: "Checks for issues in recipe markdowns.",
+    },
   ];
 
   categoriesMeta.forEach((c) => (categorySelection[c.name] = false));
@@ -549,7 +554,7 @@
     if (!name) return;
 
     const category = prompt(
-      "Category? (e.g. structure, style, content, sensitive)",
+      "Category? (e.g. structure, style, content, sensitive, recipe)",
       "structure",
     );
     if (!category) return;

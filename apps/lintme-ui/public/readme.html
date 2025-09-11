@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>README</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- Make #anchors resolve to /readme.html#... -->
+  <base href="/readme.html" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <style>
+    html { scroll-behavior: smooth; }
+    body { margin: 0; }
+    .markdown-body { box-sizing: border-box; max-width: 980px; margin: 0 auto; padding: 2rem; }
+  </style>
+</head>
+<body>
+  <article id="app" class="markdown-body">Loading…</article>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>
+    // Simple slug for anchors
+    function simpleSlugify(text) {
+      return String(text).toLowerCase().trim()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+    }
+
+    const renderer = new marked.Renderer();
+    // Works with both new and old marked heading APIs
+    renderer.heading = function (...args) {
+      if (args.length === 1 && typeof args[0] === 'object') {
+        const token = args[0];
+        const text = token.text ?? '';
+        const level = token.depth ?? token.level ?? 1;
+        const id = simpleSlugify(text);
+        return `<h${level} id="${id}">${text}</h${level}>`;
+      }
+      const [text, level, _raw, providedSlugger] = args;
+      const id = providedSlugger?.slug ? providedSlugger.slug(text) : simpleSlugify(text);
+      return `<h${level} id="${id}">${text}</h${level}>`;
+    };
+
+    marked.setOptions({
+      gfm: true,
+      renderer,
+      highlight: (code, lang) => {
+        try { return hljs.highlight(code, { language: lang }).value; }
+        catch { return hljs.highlightAuto(code).value; }
+      }
+    });
+
+    function jumpToHash() {
+      if (!location.hash) return;
+      const id = decodeURIComponent(location.hash.slice(1));
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView();
+    }
+
+    // Keep navigation on this page for links like <a href="#section">
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('a[href^="#"]');
+      if (!a) return;
+      e.preventDefault();
+      const id = decodeURIComponent(a.getAttribute('href').slice(1));
+      history.pushState(null, '', `#${id}`);
+      jumpToHash();
+    });
+
+    fetch('/docs/readme.md', { cache: 'no-cache' })
+      .then(r => r.text())
+      .then(md => {
+        const html = marked.parse(md);
+        document.getElementById('app').innerHTML = DOMPurify.sanitize(html);
+        requestAnimationFrame(jumpToHash);
+        document.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+      })
+      .catch(err => {
+        console.error(err);
+        document.getElementById('app').textContent = 'Failed to load README.';
+      });
+
+    window.addEventListener('hashchange', jumpToHash);
+  </script>
+</body>
+</html>

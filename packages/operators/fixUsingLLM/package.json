@@ -1,5 +1,5 @@
 {
-  "name": "@himamynampaty/operator-fixusingllm",
+  "name": "@lintme/operator-fixusingllm",
   "version": "1.0.0",
   "main": "index.js",
   "private": "true",

@@ -128,7 +128,7 @@
       <br />
       See the
       <a
-        href="https://github.com/HimaMynampaty/lintme/blob/main/packages/operators/customCode/README.md"
+        href="https://github.com/lintme/lintme/blob/main/packages/operators/customCode/README.md"
         target="_blank"
         class="text-blue-600 hover:underline"
       >

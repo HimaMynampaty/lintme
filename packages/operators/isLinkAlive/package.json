@@ -1,5 +1,5 @@
 {
-  "name": "@himamynampaty/operator-islinkalive",
+  "name": "@lintme/operator-islinkalive",
   "version": "1.0.0",
   "main": "index.js",
   "private": "true",
