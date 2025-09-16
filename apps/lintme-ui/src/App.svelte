@@ -80,6 +80,7 @@
   let ruleWarning = "";
   let ruleValidationErrors = [];
   let selectedPreset = "";
+  let appliedPreset = "";
   const baseURL = import.meta.env.VITE_BACKEND_URL;
 
   function setRuleStatus(id, status) {
@@ -90,8 +91,9 @@
   $: if (ruleList.length) {
     recomputeCategorySelection();
   }
-  $: if (selectedPreset && ruleList.length) {
+  $: if (selectedPreset && ruleList.length && appliedPreset !== selectedPreset) {
     applyPreset(selectedPreset);
+    appliedPreset = selectedPreset;
   }
 
   $: {
@@ -227,10 +229,12 @@
 
     if (!key) {
       clearSelections();
+      appliedPreset = "";
       return;
     }
 
     applyPreset(key);
+    appliedPreset = key;
   }
 
   function applyPreset(presetKey) {
