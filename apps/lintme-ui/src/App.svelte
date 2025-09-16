@@ -82,6 +82,7 @@
   let selectedPreset = "";
   let appliedPreset = "";
   const baseURL = import.meta.env.VITE_BACKEND_URL;
+  const LOGGING_ENABLED = false;
 
   function setRuleStatus(id, status) {
     ruleStatus[id] = status;
@@ -1166,6 +1167,11 @@
 </script>
 
 <main>
+  {#if !LOGGING_ENABLED}
+    <div class="review-banner" role="note" aria-live="polite">
+      Logging to database is temporarily disabled for review.
+    </div>
+  {/if}  
   <div class="header-container">
     <div class="left-header">
       <h2>LintMe - Markdown Linter</h2>

@@ -470,3 +470,12 @@ button.edit-btn,
 #target-listbox li.bg-gray-100 {
   background: #f3f4f6 !important;
 }
+
+.review-banner{
+  background:#fffbe6;
+  color:#7a5b00;
+  border-bottom:1px solid #f0e6b6;
+  padding:3px 12px;
+  font-size:12.5px;
+  text-align:center;
+}
