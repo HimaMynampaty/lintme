@@ -241,18 +241,14 @@
 
       {#if showPalette}
         <div
-          class="absolute top-12 left-0 z-20 w-64 animate-fade-in"
+          class="absolute top-12 left-0 z-20 w-64 animate-fade-in operator-palette"
           bind:this={paletteRef}
         >
-          <div
-            class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-white"
-          ></div>
-          <OperatorPalette
-            on:select={(e) => addOperator(e.detail)}
-            on:close={() => (showPalette = false)}
-          />
+          <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-white"></div>
+          <OperatorPalette on:select={(e) => addOperator(e.detail)} on:close={() => (showPalette = false)} />
         </div>
       {/if}
+
     </div>
 
     <button

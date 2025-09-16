@@ -307,41 +307,40 @@ button {
     transition: background 0.2s;
 }
 
-/* one definition only */
 .rule-row {
   display: flex;
-  align-items: center;  /* <— this is the fix */
+  align-items: center; 
   gap: 8px;
   min-height: 28px;
 }
 
 .rule-row input[type="checkbox"] {
-  margin: 0;            /* remove UA margin so columns line up */
+  margin: 0;           
   flex: 0 0 auto;
 }
 
-.rule-name {            /* the text */
-  flex: 1 1 auto;       /* pushes the pencil to the right edge */
+.rule-name {           
+  flex: 1 1 auto;     
   line-height: 1.4;
   margin-right: 8px;
   text-decoration: none;
 }
 
-.rule-actions {         /* pencil area */
+.rule-actions {      
   margin-left: auto;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .edit-btn:hover { opacity: 0.8; }
-.edit-btn {             /* make the pencil sit dead-center */
+.edit-btn {            
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   line-height: 1;
 }
-/* kill the global button styling for the pencil */
+
 button.edit-btn,
 .rule-actions .edit-btn {
   background: transparent !important;
@@ -349,7 +348,7 @@ button.edit-btn,
   padding: 0;
   border: none;
   border-radius: 0;
-  width: 22px;              /* tidy tap target */
+  width: 22px;             
   height: 22px;
   display: inline-flex;
   align-items: center;
@@ -359,7 +358,7 @@ button.edit-btn,
 
 .rule-actions .edit-btn:hover {
   background: transparent;
-  opacity: 0.8;             /* subtle hover, no purple */
+  opacity: 0.8;            
 }
 
 @keyframes flashBorder {
@@ -370,4 +369,104 @@ button.edit-btn,
     100% {
         box-shadow: 0 0 0 0 transparent;
     }
+}
+
+#preset-select,
+#preset-select option {
+  color: #111 !important;
+  background-color: #fff !important;
+}
+
+.svelte-select,
+.svelte-select * {
+  color: #111 !important;
+}
+.svelte-select .list {
+  background: #fff !important;
+}
+
+.bg-white label,
+.bg-white .rule-name,
+.bg-white .rule-description,
+.bg-white .text-gray-600 {
+  color: #111 !important;
+}
+
+.operator-palette { color: #111; }               
+.operator-palette button { color: #111 !important; }
+.operator-palette .text-gray-600,
+.operator-palette .text-gray-700,
+.operator-palette .text-gray-800 { color: #111 !important; }
+
+.operator-palette input::placeholder { color: #6b7280 !important; }
+.operator-palette .bg-gray-800 { background-color: #fff !important; }
+.operator-palette .text-gray-300 { color: #111 !important; }
+
+.operator-palette input[type="search"],
+.operator-palette input[type="text"],
+.operator-palette input {
+  background: #fff !important;
+  color: #111 !important;
+  border: 1px solid #e5e7eb !important;
+  caret-color: #111;
+}
+
+.operator-palette input::placeholder {
+  color: #6b7280 !important; 
+  opacity: 1;
+}
+
+.bg-white,
+.bg-gray-50 {
+  color-scheme: light;
+}
+
+.rule-row input[type="checkbox"] {
+  accent-color: #7859c3;
+}
+
+.bg-gray-50 label,
+.bg-gray-50 h3,
+.bg-gray-50 .text-gray-600,
+.bg-gray-50 .text-gray-700 {
+  color: #111 !important;
+}
+
+.bg-gray-50 input,
+.bg-gray-50 textarea,
+.bg-gray-50 select {
+  color: #111 !important;
+  background: #fff !important;
+}
+
+.bg-gray-50 input::placeholder,
+.bg-gray-50 textarea::placeholder {
+  color: #6b7280 !important;
+  opacity: 1;
+}
+
+.bg-gray-50 { color-scheme: light; }
+
+.combo input {
+  color: #111 !important;
+  background: #fff !important;
+  border: 1px solid #d1d5db !important;
+  caret-color: #111;
+}
+.combo input::placeholder {
+  color: #6b7280 !important;
+  opacity: 1;
+}
+
+#target-listbox {
+  background: #fff !important;
+  color: #111 !important;
+  border: 1px solid #d1d5db !important;
+}
+#target-listbox li {
+  color: #111 !important;
+}
+#target-listbox li:hover,
+#target-listbox li.bg-gray-100 {
+  background: #f3f4f6 !important;
 }

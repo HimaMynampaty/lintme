@@ -1302,7 +1302,7 @@
               class:hidden={mode !== "loader"}
             >
               <div class="flex items-center justify-between">
-                <h3 class="font-semibold text-sm">Available Rules</h3>
+                <h3 class="font-semibold text-sm  text-black">Available Rules</h3>
 
                 <div class="flex items-center gap-2">
                   <label class="text-xs text-gray-600" for="preset-select"
