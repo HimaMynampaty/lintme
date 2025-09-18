@@ -1,5 +1,7 @@
 import { parseRules } from './utils/parseRules.js';
 import { OPERATORS } from './operator-registry.js';
+import { parseSuppressions, applySuppressionsToDiagnostics } from './suppressions.js';
+import { createDiagnosticsProxy } from './diagnostics-proxy.js';
 
 /**
  *
@@ -15,12 +17,14 @@ export async function runPipeline(yamlText, markdown) {
   /** @type {object} */
     const ctx = {
       markdown,
-      diagnostics: [],
       rule       : parsed.rule || 'Unnamed Rule',
       description: parsed.description || '',
       pipeline   : pipeline,
       ruleYaml   : yamlText                
     };
+  ctx.suppressions = parseSuppressions(markdown);
+  ctx.diagnostics = createDiagnosticsProxy(ctx);
+
   const generateAST = await OPERATORS['generateAST']();
   await generateAST(ctx);
 
@@ -31,6 +35,7 @@ export async function runPipeline(yamlText, markdown) {
     if (!loader) {
       ctx.diagnostics.push({
         severity: 'error',
+        line: 1,
         message: `Unknown operator "${opName}"`,
       });
       continue;
@@ -46,7 +51,7 @@ export async function runPipeline(yamlText, markdown) {
     }
   }
 
-
+  ctx.diagnostics = applySuppressionsToDiagnostics(ctx.diagnostics, ctx.suppressions, ctx.rule);
   return ctx;
 }
 export { parseRules } from './utils/parseRules.js';
