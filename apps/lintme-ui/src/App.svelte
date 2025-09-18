@@ -14,7 +14,7 @@
       },
     };
   }
-  import { onMount, tick } from "svelte";
+  import { onMount, tick, onDestroy } from "svelte";
   import * as monaco from "monaco-editor";
   import OperatorTriggerPanel from "./components/OperatorTriggerPanel.svelte";
   const params = new URLSearchParams(window.location.search);
@@ -80,8 +80,13 @@
   let ruleWarning = "";
   let ruleValidationErrors = [];
   let selectedPreset = "";
-  const baseURL = import.meta.env.VITE_BACKEND_URL;
+  let appliedPreset = "";
+  let ignoreProviderDisposable;
+  let aiProviderDisposable;
 
+  const baseURL = import.meta.env.VITE_BACKEND_URL;
+  const LOGGING_ENABLED = false;
+  const disposables = [];
   function setRuleStatus(id, status) {
     ruleStatus[id] = status;
     ruleStatus = { ...ruleStatus };
@@ -90,8 +95,9 @@
   $: if (ruleList.length) {
     recomputeCategorySelection();
   }
-  $: if (selectedPreset && ruleList.length) {
+  $: if (selectedPreset && ruleList.length && appliedPreset !== selectedPreset) {
     applyPreset(selectedPreset);
+    appliedPreset = selectedPreset;
   }
 
   $: {
@@ -227,10 +233,12 @@
 
     if (!key) {
       clearSelections();
+      appliedPreset = "";
       return;
     }
 
     applyPreset(key);
+    appliedPreset = key;
   }
 
   function applyPreset(presetKey) {
@@ -458,6 +466,32 @@
       wordWrap: "on",
     });
 
+    const cmdInsertIgnoreInline = markdownEditor.addCommand(
+      0,
+      (_ctx, line, ruleName) => {
+        const model = markdownEditor.getModel();
+        if (!model || !line || !ruleName) return;
+        const lineEnd = model.getLineMaxColumn(line);
+        markdownEditor.executeEdits("lintme-ignore", [{
+          range: new monaco.Range(line, lineEnd, line, lineEnd),
+          text: ` <ignore-line-for:${ruleName}/>`
+        }]);
+      }
+    );
+
+    const cmdInsertIgnoreForNextLine = markdownEditor.addCommand(
+      0,
+      (_ctx, line, ruleName) => {
+        const model = markdownEditor.getModel();
+        if (!model || !line || !ruleName) return;
+        markdownEditor.executeEdits("lintme-ignore", [{
+          range: new monaco.Range(line, 1, line, 1),
+          text: `<ignore-line-for:${ruleName}/>\n`
+        }]);
+      }
+    );
+
+
     markdownEditor.onDidChangeModelContent(() => {
       markdownText = markdownEditor.getValue();
     });
@@ -495,6 +529,45 @@
       },
       null,
     );
+    const QUICK_FIX = monaco.languages.CodeActionKind?.QuickFix ?? "quickfix";
+
+    const ignoreProvider = monaco.languages.registerCodeActionProvider("markdown", {
+      providedCodeActionKinds: [QUICK_FIX],
+      provideCodeActions(model, range) {
+        const yaml = rulesEditor?.getValue?.() || "";
+        const ruleName = (yaml.match(/^\s*rule\s*:\s*(\S+)/m)?.[1]) || "";
+        if (!ruleName) return { actions: [], dispose() {} };
+
+        const line = range?.startLineNumber ?? 1;
+
+        return {
+          actions: [
+            {
+              title: `Ignore "${ruleName}" on this line`,
+              kind: "quickfix.lintme.ignore.inline",
+              isPreferred: true,
+              command: {
+                id: cmdInsertIgnoreInline,
+                title: "Insert ignore tag inline",
+                arguments: [line, ruleName]
+              }
+            },
+            {
+              title: `Ignore "${ruleName}" on the next line`,
+              kind: "quickfix.lintme.ignore.nextline",
+              command: {
+                id: cmdInsertIgnoreForNextLine,
+                title: "Insert ignore tag for next line",
+                arguments: [line, ruleName]
+              }
+            }
+          ],
+          dispose() {}
+        };
+      }
+    });
+    disposables.push(ignoreProvider);
+
 
     const QUICK_FIX_KIND =
       monaco.languages.CodeActionKind?.QuickFix ?? "quickfix";
@@ -543,6 +616,11 @@
 
     readmeFiles = await loadReadmesFromFirestore();
     ruleList = await loadRulesFromFirestore();
+  });
+  onDestroy(() => {
+    for (const d of disposables) {
+      try { d?.dispose?.(); } catch {}
+    }
   });
 
   async function saveCurrentRule() {
@@ -1162,6 +1240,11 @@
 </script>
 
 <main>
+  {#if !LOGGING_ENABLED}
+    <div class="review-banner" role="note" aria-live="polite">
+      Logging to database is temporarily disabled for review.
+    </div>
+  {/if}  
   <div class="header-container">
     <div class="left-header">
       <h2>LintMe - Markdown Linter</h2>
@@ -1302,7 +1385,7 @@
               class:hidden={mode !== "loader"}
             >
               <div class="flex items-center justify-between">
-                <h3 class="font-semibold text-sm">Available Rules</h3>
+                <h3 class="font-semibold text-sm  text-black">Available Rules</h3>
 
                 <div class="flex items-center gap-2">
                   <label class="text-xs text-gray-600" for="preset-select"
