@@ -20,7 +20,7 @@
                    focus:outline-none focus:ring-2 focus:ring-indigo-500"
             on:change={changed}>
       <option value="llama-3.3-70b-versatile">llama-3</option>
-      <option value="gemma2-9b-it">gemma2</option>
+      <option value="llama-3.1-8b-instant">llama-3-instant</option>
     </select>
   </div>
 
