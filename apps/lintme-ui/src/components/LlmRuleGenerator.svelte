@@ -46,7 +46,7 @@
             <option value="llama-3.3-70b-versatile"
                 >llama-3.3-70b-versatile</option
             >
-            <option value="gemma2-9b-it">gemma2-9b-it</option>
+            <option value="llama-3.1-8b-instant">llama-3 instant</option>
             <option value="openai/gpt-oss-120b">openai/gpt-oss-120b</option>
         </select>
     </div>

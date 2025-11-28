@@ -238,6 +238,7 @@ app.post("/api/groq-chat", async (req, res) => {
     const response = await groq.chat.completions.create({
       model,
       messages: [{ role: "user", content: prompt }],
+      temperature: 0,
     });
 
     const result = response.choices[0]?.message?.content.trim() || "";

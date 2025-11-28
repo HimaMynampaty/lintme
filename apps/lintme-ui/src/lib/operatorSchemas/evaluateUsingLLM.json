@@ -19,7 +19,7 @@
             "type": "string",
             "enum": [
                 "llama-3.3-70b-versatile",
-                "gemma2-9b-it"
+                "llama-3.1-8b-instant"
             ],
             "default": "llama-3.3-70b-versatile",
             "description": "The LLM model to use for evaluation."
