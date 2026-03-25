@@ -7,7 +7,7 @@ export async function fetchWordListFromServer(absolutePath) {
     if (!absolutePath) return [];
 
     try {
-        const response = await fetch(`http://localhost:5000/api/wordlist?path=${encodeURIComponent(absolutePath)}`);
+        const response = await fetch(`https://lintme-backend.onrender.com/api/wordlist?path=${encodeURIComponent(absolutePath)}`);
         const data = await response.json();
 
         if (!response.ok) {

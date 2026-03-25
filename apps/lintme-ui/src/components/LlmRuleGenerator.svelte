@@ -1,6 +1,6 @@
 <script>
-    export let data = { model: "llama-3.3-70b-versatile", prompt: "" };
-    $: data.model ||= "llama-3.3-70b-versatile";
+    export let data = { model: "gpt-4.1", prompt: "" };
+    $: data.model ||= "gpt-4.1";
     $: data.prompt ||= "";
 
     import { createEventDispatcher } from "svelte";
@@ -43,11 +43,8 @@
             bind:value={data.model}
             class="w-full border rounded px-3 py-2 text-sm"
         >
-            <option value="llama-3.3-70b-versatile"
-                >llama-3.3-70b-versatile</option
-            >
-            <option value="llama-3.1-8b-instant">llama-3 instant</option>
-            <option value="openai/gpt-oss-120b">openai/gpt-oss-120b</option>
+            <option value="gpt-4.1-mini">GPT-4.1-Mini</option>
+            <option value="gpt-4.1">GPT-4.1</option>
         </select>
     </div>
 

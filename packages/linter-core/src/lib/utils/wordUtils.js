@@ -14,7 +14,7 @@ export async function resolveWordsFromRuleConfig(config) {
 
     if (filePath) {
         try {
-            const response = await fetch(`http://localhost:5000/api/wordlist?path=${encodeURIComponent(filePath)}`);
+            const response = await fetch(`https://lintme-backend.onrender.com/api/wordlist?path=${encodeURIComponent(filePath)}`);
             const data = await response.json();
 
             if (!response.ok) {

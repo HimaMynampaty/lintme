@@ -1,4 +1,4 @@
-export async function callBackendGroq({ model, system, context, user }) {
+export async function callBackendGpt({ model, system, context, user }) {
     const prompt =
         `${system}
 
@@ -11,7 +11,7 @@ ${user}
 - Output YAML ONLY (no code fences, no prose).
 - Keys must be: rule, description, pipeline.`;
 
-    const res = await fetch("https://lintme-backend.onrender.com/api/groq-chat", {
+    const res = await fetch("https://lintme-backend.onrender.com/api/gpt-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model, prompt })

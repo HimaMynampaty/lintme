@@ -1,4 +1,4 @@
-import { getGroqChatCompletion } from "../llmHelperGroq.js";
+import { getGptChatCompletion } from "../llmHelperGpt.js";
 
 /**
  * LLM validation: Injects rule definitions & parses fixed Markdown if `fix: true`
@@ -7,7 +7,7 @@ export async function runLLMValidation({ markdown, ruleConfig, ruleName = "custo
   const {
     llm_validation: {
       prompt: userPrompt = "",
-      model = "llama-3.3-70b-versatile",
+      model = "gpt-4.1",
       fix = false,
     } = {},
   } = ruleConfig;
@@ -39,7 +39,7 @@ ${userPrompt}
 `.trim();
 
   try {
-    const rawResponse = await getGroqChatCompletion(model, fullPrompt);
+    const rawResponse = await getGptChatCompletion(model, fullPrompt);
     //console.log(`[LLM-${ruleName}] Raw response:\n`, rawResponse);
 
     let fixedText = markdown;

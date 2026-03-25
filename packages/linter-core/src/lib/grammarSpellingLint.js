@@ -1,4 +1,4 @@
-import { getGroqChatCompletion } from "./llmHelperGroq.js";
+import { getGptChatCompletion } from "./llmHelperGpt.js";
 
 /**
  * Sanitize LLM response to ensure it's parsable JSON
@@ -64,7 +64,7 @@ export async function checkGrammarOrSpelling(markdown, rules, type = "grammar") 
 
     const {
         prompt: userPrompt = "",
-        model = "llama-3.3-70b-versatile",
+        model = "gpt-4.1",
         fix = false,
     } = rules.llm_validation;
 
@@ -100,7 +100,7 @@ ${markdown}
 
     let raw = "";
     try {
-        raw = await getGroqChatCompletion(model, fullPrompt);
+        raw = await getGptChatCompletion(model, fullPrompt);
         const cleaned = cleanJSONResponse(raw);
 
         if (!cleaned.startsWith("{")) {

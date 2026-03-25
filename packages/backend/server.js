@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import Groq from "groq-sdk";
+import OpenAI from "openai";
 import dotenv from "dotenv";
 import fs from "fs";
 import os from "os";
@@ -222,29 +222,29 @@ app.post('/api/run-pipeline', async (req, res) => {
   }
 });
 
-// API to interact with Groq
-app.post("/api/groq-chat", async (req, res) => {
-  const { model, prompt } = req.body;
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-  if (!model || !prompt) {
-    return res.status(400).json({ error: "Missing model or prompt." });
+// API to interact with GPT
+app.post("/api/gpt-chat", async (req, res) => {
+  const { model = "gpt-4.1", prompt } = req.body;
+
+  if (!prompt) {
+    return res.status(400).json({ error: "Missing prompt." });
   }
 
-  const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY,
-  });
-
   try {
-    const response = await groq.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model,
       messages: [{ role: "user", content: prompt }],
       temperature: 0,
     });
 
-    const result = response.choices[0]?.message?.content.trim() || "";
+    const result = response.choices[0]?.message?.content?.trim() || "";
     res.json({ result });
   } catch (error) {
-    console.error("Groq API error:", error);
+    console.error("OpenAI API error:", error?.response?.data || error.message || error);
     res.status(500).json({ error: "LLM generation failed." });
   }
 });

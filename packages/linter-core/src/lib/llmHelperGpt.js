@@ -1,17 +1,17 @@
 /**
- * Request AI-generated responses from your backend Groq proxy.
+ * Request AI-generated responses from your backend Gpt proxy.
  * @param {string} model - The LLM model to use.
  * @param {string} prompt - The prompt for the AI.
  * @returns {Promise<string>} The AI's response.
  */
-export async function getGroqChatCompletion(model, prompt) {
+export async function getGptChatCompletion(model, prompt) {
     if (!prompt || prompt.trim().length === 0) {
         console.warn("Empty prompt provided for LLM.");
         return "Error: Empty prompt.";
     }
 
     try {
-        const response = await fetch("http://localhost:5000/api/groq-chat", {
+        const response = await fetch("https://lintme-backend.onrender.com/api/gpt-chat", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"

@@ -1,4 +1,4 @@
-import { getGroqChatCompletion } from "./llmHelperGroq.js";
+import { getGptChatCompletion } from "./llmHelperGpt.js";
 
 /**
  * Check README for sensitive data using regex and optional LLM
@@ -64,7 +64,7 @@ export async function checkSensitiveData(content, config) {
 
     // 2. LLM-based review
     if (config.llm_validation?.required) {
-        const model = config.llm_validation.model || "llama-3.3-70b-versatile";
+        const model = config.llm_validation.model || "gpt-4.1";
         const prompt = config.llm_validation.prompt || "Check for any sensitive information or credentials.";
 
         let fullPrompt = `${prompt}\n\nContent:\n---\n${content}\n---`;
@@ -73,7 +73,7 @@ export async function checkSensitiveData(content, config) {
             fullPrompt = `${prompt}\nThese patterns are already being scanned:\n- ${patterns.join("\n- ")}\n\nContent:\n---\n${content}\n---`;
         }
 
-        const llmResponse = await getGroqChatCompletion(model, fullPrompt);
+        const llmResponse = await getGptChatCompletion(model, fullPrompt);
         output += `\nLLM Security Review:\n${llmResponse}\n`;
     }
 

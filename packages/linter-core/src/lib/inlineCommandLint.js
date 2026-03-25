@@ -1,4 +1,4 @@
-import { getGroqChatCompletion } from "./llmHelperGroq.js";
+import { getGptChatCompletion } from "./llmHelperGpt.js";
 
 
 /**
@@ -35,7 +35,7 @@ export async function validateCommands(commands, executionRules) {
     if (!executionRules?.required) return [];
 
     try {
-        const res = await fetch("http://localhost:5000/api/validate-commands", {
+        const res = await fetch("https://lintme-backend.onrender.com/api/validate-commands", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

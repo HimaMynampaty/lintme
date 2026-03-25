@@ -23,10 +23,10 @@
             "type": "string",
             "description": "Backend model id to use for the request.",
             "enum": [
-                "llama-3.3-70b-versatile",
-                "llama-3.1-8b-instant"
+                "gpt-4.1-mini",
+                "gpt-4.1"
             ],
-            "default": "llama-3.3-70b-versatile",
+            "default": "gpt-4.1",
             "required": false
         },
         "prompt": {
@@ -53,12 +53,12 @@
     "examples": [
         {
             "operator": "fixUsingLLM",
-            "model": "llama-3.3-70b-versatile",
+            "model": "gpt-4.1-mini",
             "prompt": "Fix lines that violate the heading capitalization rule; do not rewrite other text."
         },
         {
             "operator": "fixUsingLLM",
-            "model": "llama-3.1-8b-instant",
+            "model": "gpt-4.1",
             "prompt": "Remove trailing whitespace from all lines; preserve content and spacing elsewhere."
         }
     ]

@@ -1,6 +1,6 @@
 export async function checkCrossPlatformDifference(markdown, compare = { first: 'marked', second: 'puppeteer' }) {
   try {
-    const res = await fetch('http://localhost:5000/api/cross-platform-diff', {
+    const res = await fetch('https://lintme-backend.onrender.com/api/cross-platform-diff', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ markdown, compare })

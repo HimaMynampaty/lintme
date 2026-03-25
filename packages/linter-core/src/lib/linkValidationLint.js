@@ -220,7 +220,7 @@
         console.log("external links checking")
         for (const link of externalLinks) {
             try {
-                const res = await fetch("http://localhost:5000/api/check-link", {
+                const res = await fetch("https://lintme-backend.onrender.com/api/check-link", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ url: link.url }),

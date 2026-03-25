@@ -17,7 +17,7 @@
 
   // LLM UI state
   let showLLM = false;
-  let llmConfig = { model: "llama-3.3-70b-versatile", prompt: "" };
+  let llmConfig = { model: "gpt-4.1", prompt: "" };
 
   let syncingFromPipeline = false;
   let syncingFromEditor = false;
@@ -144,7 +144,7 @@
             {
               id,
               operator: "evaluateUsingLLM",
-              model: "llama-3.3-70b-versatile",
+              model: "gpt-4.1",
               ruleDefinition:
                 "Define the rule, along with criteria that indicates when the LLM should consider the rule passed or failed.",
             },

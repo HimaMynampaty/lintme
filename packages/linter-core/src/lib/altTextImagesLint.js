@@ -1,6 +1,6 @@
 import axios from "axios";
 import { getLLMSuggestions } from "./llmHelper.js";
-import { getGroqChatCompletion } from "./llmHelperGroq.js";
+import { getGptChatCompletion } from "./llmHelperGpt.js";
 
 /**
  * Extract Images from AST
@@ -57,18 +57,18 @@ export function isValidAltText(altText) {
 }
   
 /**
- * Generate AI-based alt text suggestions using Groq API.
+ * Generate AI-based alt text suggestions using GPT API.
  * @param {Array} missingAltList - List of images missing alt text.
  * @param {object} suggestionsConfig - User-defined LLM settings.
  * @returns {Promise<string>} AI-generated alt text suggestions.
  */
-export async function generateAltTextSuggestionsGroq(missingAltList, suggestionsConfig) {
+export async function generateAltTextSuggestionsGpt(missingAltList, suggestionsConfig) {
     if (!missingAltList || missingAltList.length === 0) {
         console.warn("No images found for alt text suggestions.");
         return "No images found for suggestions.";
     }
 
-    const model = suggestionsConfig.model || "llama-3.3-70b-versatile"; 
+    const model = suggestionsConfig.model || "gpt-4.1"; 
     const promptTemplate = suggestionsConfig.prompt || "Generate descriptive alt text for these images.";
     const imageDescriptions = missingAltList.map((img, index) => `Image ${index + 1}: ${img.url}`).join("\n");
     const formattedPrompt = `${promptTemplate}\n${imageDescriptions}`;
@@ -76,7 +76,7 @@ export async function generateAltTextSuggestionsGroq(missingAltList, suggestions
     console.log("Formatted Prompt:", formattedPrompt);
 
     try {
-        const result = await getGroqChatCompletion(model, formattedPrompt);
+        const result = await getGptChatCompletion(model, formattedPrompt);
         return result;
     } catch (error) {
         console.error("Error generating suggestions:", error);
