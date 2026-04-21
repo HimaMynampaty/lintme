@@ -16,7 +16,6 @@
     "diff-dom": "^5.1.4",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "groq-sdk": "^0.21.0",
     "js-yaml": "^4.1.0",
     "jsdom": "^26.1.0",
     "markdown-it": "^14.1.0",

@@ -85,7 +85,7 @@
   let aiProviderDisposable;
 
   const baseURL = import.meta.env.VITE_BACKEND_URL;
-  const LOGGING_ENABLED = false;
+  const LOGGING_ENABLED = true;
   const disposables = [];
   function setRuleStatus(id, status) {
     ruleStatus[id] = status;
@@ -199,9 +199,9 @@
     }
   }
 
-  async function requestAIFix({ prompt, model = "llama-3.3-70b-versatile" }) {
+  async function requestAIFix({ prompt, model = "gpt-4.1" }) {
     const res = await fetch(
-      "https://lintme-backend.onrender.com/api/groq-chat",
+      "https://lintme-backend.onrender.com/api/gpt-chat",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

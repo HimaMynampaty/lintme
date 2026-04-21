@@ -1,6 +1,6 @@
 import YAML from "yaml";
 import { buildAllowlist } from "./allowList.js";
-import { callBackendGroq } from "./llmClient.js";
+import { callBackendGpt } from "./llmClient.js";
 import { validatePipeline } from "../validatePipeline.js";
 
 function makeSystem() {
@@ -49,13 +49,13 @@ ${fieldsBlock}${examples}`;
 ${items}`;
 }
 
-export async function suggestRuleFromIdea({ idea, model = "llama-3.3-70b-versatile" }) {
+export async function suggestRuleFromIdea({ idea, model = "gpt-4.1" }) {
     const allow = buildAllowlist();
     const system = makeSystem();
     const context = makeContext(allow);
     const user = [`Idea: ${idea}`, "Return the final YAML now."].join("\n");
 
-    let yaml = await callBackendGroq({ model, system, context, user });
+    let yaml = await callBackendGpt({ model, system, context, user });
 
     let obj;
     try { obj = YAML.parse(yaml); } catch { throw new Error("Model did not return YAML."); }
@@ -86,7 +86,7 @@ export async function suggestRuleFromIdea({ idea, model = "llama-3.3-70b-versati
             YAML.stringify(obj)
         ].join("\n");
 
-        yaml = await callBackendGroq({ model, system: repairSystem, context, user: repairUser });
+        yaml = await callBackendGpt({ model, system: repairSystem, context, user: repairUser });
 
         obj = YAML.parse(yaml);
         const unknown2 = obj.pipeline.map(s => s?.operator).filter(op => !allowed.has(op));
