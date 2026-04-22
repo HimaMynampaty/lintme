@@ -14,7 +14,7 @@
       },
     };
   }
-  import { onMount, tick } from "svelte";
+  import { onMount, tick, onDestroy } from "svelte";
   import * as monaco from "monaco-editor";
   import OperatorTriggerPanel from "./components/OperatorTriggerPanel.svelte";
   const params = new URLSearchParams(window.location.search);
@@ -80,8 +80,13 @@
   let ruleWarning = "";
   let ruleValidationErrors = [];
   let selectedPreset = "";
-  const baseURL = import.meta.env.VITE_BACKEND_URL;
+  let appliedPreset = "";
+  let ignoreProviderDisposable;
+  let aiProviderDisposable;
 
+  const baseURL = import.meta.env.VITE_BACKEND_URL;
+  const LOGGING_ENABLED = false;
+  const disposables = [];
   function setRuleStatus(id, status) {
     ruleStatus[id] = status;
     ruleStatus = { ...ruleStatus };
@@ -90,8 +95,9 @@
   $: if (ruleList.length) {
     recomputeCategorySelection();
   }
-  $: if (selectedPreset && ruleList.length) {
+  $: if (selectedPreset && ruleList.length && appliedPreset !== selectedPreset) {
     applyPreset(selectedPreset);
+    appliedPreset = selectedPreset;
   }
 
   $: {
@@ -130,6 +136,85 @@
     return id;
   }
 
+  function extractJson(text = "") {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start === -1 || end === -1 || end < start) {
+      throw new Error("LLM did not return JSON.");
+    }
+    return text.slice(start, end + 1);
+  }
+
+  function stripCodeFence(text = "") {
+    return text
+      .replace(/^\s*```(?:\w+)?\s*\n?/i, "")
+      .replace(/\n?```\s*$/i, "");
+  }
+
+  function buildFixPrompt({ markdown, rulesYaml, diagnostics }) {
+    const issues = (diagnostics || []).slice(0, 30).map((d) => ({
+      line: d.line,
+      column: d.column || 1,
+      severity: d.severity,
+      message: d.message,
+    }));
+
+    return `
+      You are a strict Markdown fixer.
+
+      TASK:
+      - Correct ONLY the issues explicitly listed in diagnostics.
+      - Do NOT modify any other text or formatting.
+
+      RULES:
+      1) Apply the minimum edit necessary to resolve each diagnostic.
+      2) Do not touch content without a diagnostic unless it is strictly required to resolve a diagnostic.
+      3) Do not reflow, rewrap, reorder, or restyle anything unless a diagnostic requires it.
+      4) Be deterministic and idempotent (same input ⇒ same output).
+      5) Output ONLY the corrected Markdown. No code fences, no JSON, no explanations.
+
+      rules.yaml (context)
+      ---
+      ${rulesYaml}
+      ---
+
+      diagnostics
+      ${JSON.stringify(issues, null, 2)}
+
+      FULL README
+      <<<MD
+      ${markdown}
+      MD
+      `.trim();
+  }
+
+  function textFromMaybeJson(s) {
+    try {
+      const j = JSON.parse(s);
+      if (typeof j?.text === "string") return j.text;
+      if (typeof j?.result === "string") return j.result;
+      return s;
+    } catch {
+      return s;
+    }
+  }
+
+  async function requestAIFix({ prompt, model = "llama-3.3-70b-versatile" }) {
+    const res = await fetch(
+      "https://lintme-backend.onrender.com/api/groq-chat",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model, prompt }),
+      },
+    );
+    const body = await res.text();
+    if (!res.ok) {
+      throw new Error(`LLM endpoint failed: ${body || res.status}`);
+    }
+    return stripCodeFence(textFromMaybeJson(body)).trimEnd();
+  }
+
   function recomputeCategorySelection() {
     const selectedSet = new Set(selectedRuleIds);
     for (const cat of categoriesMeta.map((c) => c.name)) {
@@ -148,10 +233,12 @@
 
     if (!key) {
       clearSelections();
+      appliedPreset = "";
       return;
     }
 
     applyPreset(key);
+    appliedPreset = key;
   }
 
   function applyPreset(presetKey) {
@@ -224,6 +311,11 @@
       name: "sensitive",
       label: "Sensitive",
       description: "Detects hate speech, harmful or inappropriate language.",
+    },
+      {
+      name: "recipe",
+      label: "Recipe",
+      description: "Checks for issues in recipe markdowns.",
     },
   ];
 
@@ -374,8 +466,131 @@
       wordWrap: "on",
     });
 
+    const cmdInsertIgnoreInline = markdownEditor.addCommand(
+      0,
+      (_ctx, line, ruleName) => {
+        const model = markdownEditor.getModel();
+        if (!model || !line || !ruleName) return;
+        const lineEnd = model.getLineMaxColumn(line);
+        markdownEditor.executeEdits("lintme-ignore", [{
+          range: new monaco.Range(line, lineEnd, line, lineEnd),
+          text: ` <ignore-line-for:${ruleName}/>`
+        }]);
+      }
+    );
+
+    const cmdInsertIgnoreForNextLine = markdownEditor.addCommand(
+      0,
+      (_ctx, line, ruleName) => {
+        const model = markdownEditor.getModel();
+        if (!model || !line || !ruleName) return;
+        markdownEditor.executeEdits("lintme-ignore", [{
+          range: new monaco.Range(line, 1, line, 1),
+          text: `<ignore-line-for:${ruleName}/>\n`
+        }]);
+      }
+    );
+
+
     markdownEditor.onDidChangeModelContent(() => {
       markdownText = markdownEditor.getValue();
+    });
+
+    let aiFixCommandId;
+
+    aiFixCommandId = markdownEditor.addCommand(
+      0,
+      async (_ctx) => {
+        try {
+          const model = markdownEditor.getModel();
+          const fullText = model.getValue();
+
+          const prompt = buildFixPrompt({
+            markdown: fullText,
+            rulesYaml: rulesEditor?.getValue() || rulesYaml || "",
+            diagnostics,
+          });
+
+          await setOutput("LLM is preparing a fix…");
+          const aiText = await requestAIFix({ prompt });
+
+          originalText = fullText;
+          fixedMarkdown = aiText;
+
+          await setOutput(
+            "LLM fix prepared. Use Show Diff to review, then Apply Fixes.",
+          );
+          if (!showDiff) showDiff = true;
+          updateDiffModels();
+        } catch (e) {
+          console.error(e);
+          alert(`LLM fix failed: ${e.message}`);
+        }
+      },
+      null,
+    );
+    const QUICK_FIX = monaco.languages.CodeActionKind?.QuickFix ?? "quickfix";
+
+    const ignoreProvider = monaco.languages.registerCodeActionProvider("markdown", {
+      providedCodeActionKinds: [QUICK_FIX],
+      provideCodeActions(model, range) {
+        const yaml = rulesEditor?.getValue?.() || "";
+        const ruleName = (yaml.match(/^\s*rule\s*:\s*(\S+)/m)?.[1]) || "";
+        if (!ruleName) return { actions: [], dispose() {} };
+
+        const line = range?.startLineNumber ?? 1;
+
+        return {
+          actions: [
+            {
+              title: `Ignore "${ruleName}" on this line`,
+              kind: "quickfix.lintme.ignore.inline",
+              isPreferred: true,
+              command: {
+                id: cmdInsertIgnoreInline,
+                title: "Insert ignore tag inline",
+                arguments: [line, ruleName]
+              }
+            },
+            {
+              title: `Ignore "${ruleName}" on the next line`,
+              kind: "quickfix.lintme.ignore.nextline",
+              command: {
+                id: cmdInsertIgnoreForNextLine,
+                title: "Insert ignore tag for next line",
+                arguments: [line, ruleName]
+              }
+            }
+          ],
+          dispose() {}
+        };
+      }
+    });
+    disposables.push(ignoreProvider);
+
+
+    const QUICK_FIX_KIND =
+      monaco.languages.CodeActionKind?.QuickFix ?? "quickfix";
+
+    monaco.languages.registerCodeActionProvider("markdown", {
+      providedCodeActionKinds: [QUICK_FIX_KIND],
+      provideCodeActions(/* model, range */) {
+        const total = (diagnostics || []).length;
+        if (!total) return { actions: [], dispose: () => {} };
+
+        return {
+          actions: [
+            {
+              title: total
+                ? `LLM: Fix document (${total} issue${total === 1 ? "" : "s"})`
+                : "LLM: Fix document",
+              kind: "quickfix.lintme.ai",
+              command: { id: aiFixCommandId, title: "AI Fix" },
+            },
+          ],
+          dispose: () => {},
+        };
+      },
     });
 
     diffEditor = monaco.editor.createDiffEditor(diffEditorContainer, {
@@ -402,6 +617,11 @@
     readmeFiles = await loadReadmesFromFirestore();
     ruleList = await loadRulesFromFirestore();
   });
+  onDestroy(() => {
+    for (const d of disposables) {
+      try { d?.dispose?.(); } catch {}
+    }
+  });
 
   async function saveCurrentRule() {
     const yamlContent = rulesEditor.getValue();
@@ -412,7 +632,7 @@
     if (!name) return;
 
     const category = prompt(
-      "Category? (e.g. structure, style, content, sensitive)",
+      "Category? (e.g. structure, style, content, sensitive, recipe)",
       "structure",
     );
     if (!category) return;
@@ -1020,6 +1240,11 @@
 </script>
 
 <main>
+  {#if !LOGGING_ENABLED}
+    <div class="review-banner" role="note" aria-live="polite">
+      Logging to database is temporarily disabled for review.
+    </div>
+  {/if}  
   <div class="header-container">
     <div class="left-header">
       <h2>LintMe - Markdown Linter</h2>
@@ -1160,24 +1385,24 @@
               class:hidden={mode !== "loader"}
             >
               <div class="flex items-center justify-between">
-                <h3 class="font-semibold text-sm">Available Rules</h3>
+                <h3 class="font-semibold text-sm  text-black">Available Rules</h3>
 
                 <div class="flex items-center gap-2">
                   <label class="text-xs text-gray-600" for="preset-select"
                     >Preset:</label
                   >
-                <select
-                  id="preset-select"
-                  bind:value={selectedPreset}
-                  on:change={handlePresetChange}
-                  class="text-sm border rounded px-2 py-1 bg-white"
-                  style="min-width: 260px;"
-                >
-                  <option value="">Select a preset</option> 
-                  {#each Object.entries(rulePresets) as [key, p]}
-                    <option value={key}>{p.label}</option>
-                  {/each}
-                </select>
+                  <select
+                    id="preset-select"
+                    bind:value={selectedPreset}
+                    on:change={handlePresetChange}
+                    class="text-sm border rounded px-2 py-1 bg-white"
+                    style="min-width: 260px;"
+                  >
+                    <option value="">Select a preset</option>
+                    {#each Object.entries(rulePresets) as [key, p]}
+                      <option value={key}>{p.label}</option>
+                    {/each}
+                  </select>
                 </div>
               </div>
 

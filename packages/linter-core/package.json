@@ -1,5 +1,5 @@
 {
-  "name": "@himamynampaty/linter-core",
+  "name": "@lintme/linter-core",
   "version": "1.0.0",
   "main": "src/index.js",
   "dependencies": {

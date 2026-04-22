@@ -15,9 +15,31 @@ export function run(ctx, cfg = {}) {
   }
 
   const regexes = [];
+  const cleanedPatterns = []; 
+
   for (const p of patterns) {
-    try { regexes.push(new RegExp(p, 'i')); }
-    catch (e) {
+    try {
+      let src = p;
+      let flags = 'i';
+
+      const m = /^(?:\uFEFF)?\s*\(\?(?:-?[imsu])+\)/.exec(p);
+      if (m) {
+        const cluster = m[0].replace(/^(?:\uFEFF)?\s*\(\?/, '').replace(/\)$/, '');
+        for (const token of cluster.match(/-?[imsu]/g) || []) {
+          const on = token[0] !== '-';
+          const ch = on ? token : token.slice(1);
+          if (on) {
+            if (!flags.includes(ch)) flags += ch;
+          } else {
+            flags = flags.replace(ch, '');
+          }
+        }
+        src = p.slice(m[0].length);
+      }
+
+      regexes.push(new RegExp(src, flags));
+      cleanedPatterns.push(src);
+    } catch (e) {
       ctx.diagnostics.push({
         line: 1,
         severity: 'error',
@@ -26,6 +48,7 @@ export function run(ctx, cfg = {}) {
     }
   }
   if (!regexes.length) return ctx;
+
 
   const mode  = cfg.mode  === 'unmatch' ? 'unmatch' : 'match';
   const scope = cfg.scope === 'previousstepoutput' ? 'previousstepoutput' : 'document';
@@ -99,7 +122,7 @@ export function run(ctx, cfg = {}) {
 
     walk(prev);
 
-    if (!result[scope].length) {
+   if (!result[scope].length && scope !== 'previousstepoutput') {
       const asJson = JSON.stringify(prev);
       if (keepHit(asJson)) push(1, asJson);
     }

@@ -1,5 +1,5 @@
 {
-  "name": "@himamynampaty/operator-generate-ast",
+  "name": "@lintme/operator-generate-ast",
   "version": "1.0.0",
   "main": "index.js",
   "private": "true",

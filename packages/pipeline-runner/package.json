@@ -1,13 +1,15 @@
 {
-  "name": "@himamynampaty/pipeline-runner",   
+  "name": "lintme-pipeline-runner",
   "version": "0.1.0",
-  "private": true,       
+  "private": false,
   "type": "module",
-  "main": "/index.js",
-  "exports": {
-    ".": "./index.js"
-  },
+  "main": "./index.js",
+  "exports": { ".": "./index.js" },
+  "files": ["index.js", "operator-registry.js", "operators", "utils"],
+  "publishConfig": { "access": "public" },
+  "engines": { "node": ">=18" },
+  "license": "UNLICENSED",
   "dependencies": {
-    "js-yaml": "^4.1.0" 
+    "js-yaml": "^4.1.0"
   }
 }

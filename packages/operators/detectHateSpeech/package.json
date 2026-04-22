@@ -1,5 +1,5 @@
 {
-  "name": "@himamynampaty/operator-detecthatespeech",
+  "name": "@lintme/operator-detecthatespeech",
   "version": "1.0.0",
   "private": "true",
   "main": "index.js",

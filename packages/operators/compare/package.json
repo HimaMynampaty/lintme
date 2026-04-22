@@ -1,5 +1,5 @@
 {
-  "name": "@himamynampaty/operator-compare",
+  "name": "@lintme/operator-compare",
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",

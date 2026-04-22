@@ -24,7 +24,7 @@ export const rulePresets = {
       //"terminologyConsistency(LLM)",
 
       // Content
-      "codeBlockExecution(LLM)",
+      //"codeBlockExecution(LLM)",
       "consistentExternalLinkFormat",
       "dateValidationLint",
       //"jargonExplanationCheck(LLM)",
@@ -120,6 +120,24 @@ export const rulePresets = {
       //"ambiguityUnderstandabilityCheck(LLM)",
       "customCodeHateSpeech",
       "detectSensitiveSecrets"
+    ]
+  },
+
+  recipes: {
+    label: "Recipe READMEs",
+    rulesByName: [
+      "genericIngredientNames(Recipe)",
+      "ingredientMustHaveWeightAndVolume(Recipe)",
+      "ingredientsAndPreparationSections(Recipe)",
+      "ingredientsOrdering(Recipe)",
+      "mustHaveMetricAndUsImperialWeights(Recipe)",
+      "nestedListItems(Recipe)",
+      "requireBuyAndUseAmounts(Recipe)",
+      "requirePrepOrTotalTime(Recipe)",
+      "substitutionsSectionCheck(Recipe)",
+      "temperatureFormatCheck(Recipe)",
+      "temperatureMissingUnitCheck(Recipe)",
+      "unknownTimerUnits(Recipe)"
     ]
   }
 };

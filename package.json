@@ -1,7 +1,6 @@
 {
   "name": "lintme",
   "version": "1.0.0",
-  "author": "Hima Mynampaty",
   "description": "Composable markdown lint rule builder and engine",
   "private": true,
   "scripts": {

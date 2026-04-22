@@ -1,5 +1,5 @@
 {
-  "name": "@himamynampaty/operator-fetchfromgithub",
+  "name": "@lintme/operator-fetchfromgithub",
   "version": "1.0.0",
   "main": "index.js",
   "private": "true",

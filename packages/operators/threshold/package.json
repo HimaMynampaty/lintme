@@ -1,5 +1,5 @@
 {
-  "name": "@himamynampaty/operator-threshold",
+  "name": "@lintme/operator-threshold",
   "version": "1.0.0",
   "main": "index.js",
   "private": "true",

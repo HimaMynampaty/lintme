@@ -1,26 +1,6 @@
-rules:
-  grammar:
-    required: true
-    llm_validation:
-      prompt: "Identify grammar issues in the markdown and suggest corrected sentences."
-      model: gemma2-9b-it
-      fix: true
-  spelling:
-    required: true
-    llm_validation:
-      prompt: "Detect spelling errors in the markdown and suggest correct spellings."
-      model: gemma2-9b-it
-      fix: true
-
-description: |
-  These rules leverage AI-based language validation to detect and correct grammar and spelling errors within Markdown content. Specifically, they:
-    - Identify grammatical mistakes, awkward sentence structures, and misspelled words.
-    - Provide AI-generated suggestions for corrections.
-    - Optionally apply auto-fixes to the entire markdown document based on these suggestions.
-
-error: |
-  Possible failure scenarios include:
-    - Detection of grammatical errors, such as incorrect verb tenses, incomplete sentences, or awkward phrasing.
-    - Identification of spelling mistakes or typographical errors.
-    - Failures in parsing or applying AI-generated grammar or spelling corrections.
-    - Communication issues or invalid responses from the AI backend.
+rule: fixSpellingAndGrammar(LLM)
+description: 'This rule uses a language model to automatically correct spelling and grammar issues in the Markdown content. It helps ensure quality and clarity.'
+pipeline:
+  - operator: fixUsingLLM
+    prompt: Can you fix only the spelling and grammar issues with this content
+    model: gemma2-9b-it

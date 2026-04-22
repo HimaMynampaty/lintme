@@ -73,11 +73,11 @@ export async function run(ctx, cfg = {}) {
   `
 
 
-  console.log('[fixUsingLLM] Prompt sent to LLM:\n', fullPrompt);
+  //console.log('[fixUsingLLM] Prompt sent to LLM:\n', fullPrompt);
 
   const llmResult = await callGroqModel(model, fullPrompt);
 
-  console.log('[fixUsingLLM] Raw LLM response:\n', llmResult);
+  //console.log('[fixUsingLLM] Raw LLM response:\n', llmResult);
 
   const marker = "---FIXED MARKDOWN BELOW---";
   let fixedText = ctx.markdown;

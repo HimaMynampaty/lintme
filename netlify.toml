@@ -10,6 +10,13 @@ framework = "vite"
 publish = "apps/lintme-ui"
 autoLaunch = true
 
+# special case: render README
+[[redirects]]
+  from = "/readme.md"
+  to = "/readme.html"
+  status = 200
+
+# fallback for everything else (SPA)
 [[redirects]]
   from = "/*"
   to = "/index.html"

@@ -13,7 +13,7 @@ function makeSystem() {
         "Use enum values exactly as listed when present.",
         "Include a field only if it appears in Allowed fields for that operator.",
         "YAML only. No prose. No code fences.",
-        "Prefer built-in operators; use customCode only if no built-in can achieve the goal."
+        "Prefer built-in operators; Do not use customCode."
     ].join(" ");
 }
 

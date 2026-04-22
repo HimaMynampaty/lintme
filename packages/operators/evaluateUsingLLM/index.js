@@ -64,10 +64,10 @@ Suggestion: [suggest a fix using natural language]
 Respond only in the above format — no code blocks, no additional comments.
 `.trim();
 
-  console.log('[evaluateUsingLLM] Prompt sent to LLM:\n', fullPrompt);
+  //console.log('[evaluateUsingLLM] Prompt sent to LLM:\n', fullPrompt);
 
   const llmResult = await callGroqModel(model, fullPrompt);
-  console.log('[evaluateUsingLLM] Raw LLM response:\n', llmResult);
+  //console.log('[evaluateUsingLLM] Raw LLM response:\n', llmResult);
 
   ctx.llmResponse = llmResult;
   const result = llmResult.trim();
