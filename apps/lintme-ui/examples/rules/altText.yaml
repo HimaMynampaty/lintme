@@ -1,9 +1,0 @@
-rule: requireAltTextForImages
-description: 'Ensures that all images in the Markdown document include descriptive alt text for accessibility and proper semantic structure.'
-pipeline:
-  - operator: extract
-    target: image
-    scopes:
-      - document
-  - operator: isPresent
-    target: alt

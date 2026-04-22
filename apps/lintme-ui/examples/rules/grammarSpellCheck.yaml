@@ -1,6 +1,0 @@
-rule: fixSpellingAndGrammar(LLM)
-description: 'This rule uses a language model to automatically correct spelling and grammar issues in the Markdown content. It helps ensure quality and clarity.'
-pipeline:
-  - operator: fixUsingLLM
-    prompt: Can you fix only the spelling and grammar issues with this content
-    model: gemma2-9b-it
