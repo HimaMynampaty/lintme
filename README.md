@@ -125,21 +125,22 @@ Documentation quality strongly influences usability and onboarding. Existing lin
 ![Comparison matrix of documentation linters](images/markdownLinters.png)
 
 ## Project Status 
-The tool is deployed and available to use at [Tool link](https://lintme.netlify.app/)
+The tool is deployed and available to use at [Tool link](https://lintme.netlify.app/) and it is connected to Firebase in the backend.
+
 ## Project Plans
 This is a prototype to demonstrate the idea; we’re in the process of publishing and iterating, so rule formats, and defaults may change—please try it on sample READMEs (not production ready yet) and share feedback/issues to help prioritize more preset rule packs, stronger checks and fixes
 
 ## Contributors to the project 
-`To be updated`
+Hima Mynampaty, Nathania Josephine, Katherine E. Isaacs, and Andrew M. McNutt.
 
 ## Documentation links
 The md files in this repository serve as a documentation to the tool. Link to a live demo `To be updated`
 
 ## Citation 
-`To be updated`
-
-## Contributions
-`To be updated`
+Linting Style and Substance in READMEs. In Proceedings
+of the 2026 CHI Conference on Human Factors in Computing Systems (CHI
+’26), April 13–17, 2026, Barcelona, Spain. ACM, New York, NY, USA, 23 pages.
+https://doi.org/10.1145/3772318.3791597
 
 ## Licensing
-`To be updated`
+MIT
