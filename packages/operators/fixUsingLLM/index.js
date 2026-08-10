@@ -3,7 +3,7 @@ import yaml from 'js-yaml';
 export async function run(ctx, cfg = {}) {
   const {
     prompt = '',
-    model = 'llama-3.3-70b-versatile'
+    model = 'gpt-4.1'
   } = cfg;
 
   if (!prompt.trim()) {
@@ -75,7 +75,7 @@ export async function run(ctx, cfg = {}) {
 
   //console.log('[fixUsingLLM] Prompt sent to LLM:\n', fullPrompt);
 
-  const llmResult = await callGroqModel(model, fullPrompt);
+  const llmResult = await callGptModel(model, fullPrompt);
 
   //console.log('[fixUsingLLM] Raw LLM response:\n', llmResult);
 
@@ -121,9 +121,9 @@ function stripCodeFence(text = '') {
   return text;
 }
 
-async function callGroqModel(model, prompt) {
+async function callGptModel(model, prompt) {
   try {
-    const response = await fetch("https://lintme-backend.onrender.com/api/groq-chat", {
+    const response = await fetch("https://lintme-backend.onrender.com/api/gpt-chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model, prompt })
@@ -132,7 +132,7 @@ async function callGroqModel(model, prompt) {
     const data = await response.json();
     return data.result || "No valid response.";
   } catch (error) {
-    console.error("fixUsingLLM: Error calling Groq API", error);
+    console.error("fixUsingLLM: Error calling GPT API", error);
     return "Error generating suggestions.";
   }
 }

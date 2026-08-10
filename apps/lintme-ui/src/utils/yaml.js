@@ -54,7 +54,7 @@ export function parseYAML(text = '') {
 
         case 'evaluateUsingLLM': {
           const out = { id, ...raw, operator: 'evaluateUsingLLM' };
-          if (out.model == null) out.model = 'llama-3.3-70b-versatile';
+          if (out.model == null) out.model = 'gpt-4.1';
           if (out.ruleDefinition == null) out.ruleDefinition = '';
           return out;
         }

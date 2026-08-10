@@ -1,7 +1,7 @@
 <script>
   export let data;
 
-  $: data.model ||= 'llama-3';    
+  $: data.model ||= 'gpt-4.1';    
   $: data.prompt ||= '';         
 
   const changed = () => dispatch('input');
@@ -19,8 +19,8 @@
             class="w-full border border-gray-300 rounded px-3 py-2 text-sm
                    focus:outline-none focus:ring-2 focus:ring-indigo-500"
             on:change={changed}>
-      <option value="llama-3.3-70b-versatile">llama-3</option>
-      <option value="gemma2-9b-it">gemma2</option>
+      <option value="gpt-4.1-mini">GPT-4.1-Mini</option>
+      <option value="gpt-4.1">GPT-4.1</option>
     </select>
   </div>
 

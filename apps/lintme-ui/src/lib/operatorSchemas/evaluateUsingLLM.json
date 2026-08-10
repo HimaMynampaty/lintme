@@ -18,10 +18,10 @@
         "model": {
             "type": "string",
             "enum": [
-                "llama-3.3-70b-versatile",
-                "gemma2-9b-it"
+                "gpt-4.1-mini",
+                "gpt-4.1"
             ],
-            "default": "llama-3.3-70b-versatile",
+            "default": "gpt-4.1",
             "description": "The LLM model to use for evaluation."
         },
         "ruleDefinition": {
@@ -45,12 +45,12 @@
     "examples": [
         {
             "operator": "evaluateUsingLLM",
-            "model": "llama-3.3-70b-versatile",
+            "model": "gpt-4.1-mini",
             "ruleDefinition": "All headings must be in title case."
         },
         {
             "operator": "evaluateUsingLLM",
-            "model": "gemma2-9b-it",
+            "model": "gpt-4.1",
             "ruleDefinition": "Avoid passive voice in the document."
         }
     ]
